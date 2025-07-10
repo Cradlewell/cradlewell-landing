@@ -1,6 +1,7 @@
 /* src/app/globals.css */
+
 :root {
-  --bs-body-font-family: 'Inter', sans-serif;
+  --bs-body-font-family: 'Outfit', sans-serif;
 }
 
 .nextjs-toast{

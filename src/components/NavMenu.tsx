@@ -82,7 +82,7 @@ const Navigation5: React.FC = () => {
 		<div className="ezy__nav5 light">
 			<Navbar expand="lg" className="flex-column py-3">
 				<Container>
-					<Navbar.Brand href="#"><img src="/images/logo.png" alt="" /></Navbar.Brand>
+					<Navbar.Brand href="#"><img className="img-fluid" width={'200px'} src="/images/logo.png" alt="" /></Navbar.Brand>
 					<Navbar.Toggle aria-controls="ezy__nav5-navbar-nav">
 						<span>
 							<span />

@@ -38,7 +38,7 @@ const Footer = () => {
           {/* Logo & newsletter */}
           <Col md={5} className="mb-4 mb-md-0">
             <div className="d-flex align-items-center mb-3">
-              <Image src="/images/logo2.png" alt="logo" width={180} height={50} className="me-2" />
+              <Image src="/images/logo2.png" alt="logo" width={180} height={40} className="me-2" />
               <h5 className="mb-0 fw-bold"></h5>
             </div>
             <p style={{ color: '#C4C4C4' }}>

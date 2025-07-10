@@ -30,7 +30,7 @@ const PricingSection = () => {
 </div>
 
 <h5 className="primary-color text-center mb-3 fw-semibold">Care Light</h5>
-							<h1>₹45,000/mo</h1>
+							<h1 className="fw-bold">₹45,000/mo</h1>
 							<p className="text-muted">4 hrs/day</p>
                             <ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
@@ -85,7 +85,7 @@ const PricingSection = () => {
 </div>
 <h5 className="text-white text-center mb-3 fw-semibold">Care Plus</h5>
 
-							<h1>₹75,000/mo</h1>
+							<h1 className="fw-bold">₹75,000/mo</h1>
 							<p>8 hrs/day</p>
 						<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
@@ -139,7 +139,7 @@ const PricingSection = () => {
 </div>
 
 <h5 className="primary-color text-center mb-3 fw-semibold">Night Guardian</h5>
-							<h1>₹90,000/mo</h1>
+							<h1 className="fw-bold">₹90,000/mo</h1>
 							<p className="text-muted">12 hrs/night</p>
 							<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">

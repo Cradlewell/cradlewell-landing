@@ -8,6 +8,7 @@ import NavMenu from "@/components/NavMenu";
 import PricingSection from "@/components/PricingSection";
 import PromoTrialSection from "@/components/PromoTrialSection";
 import StepsSection from "@/components/StepsSection";
+import TeamCarousel from "@/components/TeamCarousel";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
@@ -23,6 +24,7 @@ export default function Home() {
     <StepsSection/>
     <TestimonialsSection/>
     <FoundersCarousel/>
+    <TeamCarousel/>
     <FAQSection/>
     <PromoTrialSection/>
     <Footer/>

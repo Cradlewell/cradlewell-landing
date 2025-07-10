@@ -6,52 +6,60 @@ import Image from 'next/image';
 
 const teamMembers: any[] = [
    {
-    name: 'Lokesh',
-    role: 'CEO',
+    name: 'Vijaya',
+    experience: '25 years experience',
+    role: 'Senior Nurse (Level III)',
     roleColor: '#E0D8FF',
-    image: '/founders/lokesh.jpg',
+    image: '/team/vijaya.png',
   },
   {
-    name: 'Venu Annareddy',
-    role: 'CFO',
+    name: 'Sneha Marcel',
+    experience: '3 years experience',
+    role: 'Senior Nurse (Level I)',
     roleColor: '#D9E7FF',
-    image: '/founders/venu.jpg',
+    image: '/team/sneha.png',
   },
   {
-    name: 'Madhu Sudhan',
-    role: 'COO',
+    name: 'Phelomit Lepcha',
+    experience: '1 year experience',
+    role: 'Junior Nurse',
     roleColor: '#D5F8DD',
-    image: '/founders/madhu.jpg',
+    image: '/team/phelomit.png',
   },
   {
-    name: 'Vishnu Vardhan',
-    role: 'CMO',
+    name: 'Pavithra',
+    experience: '15 years experience',
+    role: 'Yoga Consultant',
     roleColor: '#D5F8DD',
-    image: '/founders/vishnu.jpg',
+    image: '/team/pavithra.jpg',
   },
-     {
-    name: 'Lokesh',
-    role: 'CEO',
+   {
+    name: 'Vijaya',
+    experience: '25 years experience',
+    role: 'Senior Nurse (Level III)',
     roleColor: '#E0D8FF',
-    image: '/founders/lokesh.jpg',
+    image: '/team/vijaya.png',
   },
   {
-    name: 'Venu Annareddy',
-    role: 'CFO',
+    name: 'Sneha Marcel',
+    experience: '3 years experience',
+    role: 'Senior Nurse (Level I)',
     roleColor: '#D9E7FF',
-    image: '/founders/venu.jpg',
+    image: '/team/sneha.png',
   },
   {
-    name: 'Madhu Sudhan',
-    role: 'COO',
+    name: 'Phelomit Lepcha',
+    experience: '1 year experience',
+    role: 'Junior Nurse',
     roleColor: '#D5F8DD',
-    image: '/founders/madhu.jpg',
+    image: '/team/phelomit.png',
   },
   {
-    name: 'Vishnu Vardhan',
-    role: 'CMO',
+    name: 'Pavithra',
+    experience: '15 years experience',
+    role: 'Yoga Consultant',
     roleColor: '#D5F8DD',
-    image: '/founders/vishnu.jpg',
+    image: '/team/pavithra.jpg',
   },
 
 ];
@@ -65,7 +73,7 @@ const chunkArray = (arr: any[], size: number) => {
   return chunks;
 };
 
-const FoundersCarousel = () => {
+const TeamCarousel = () => {
   const [itemsPerSlide, setItemsPerSlide] = useState(4);
 
   // Update number of items per slide based on window width
@@ -93,7 +101,7 @@ const FoundersCarousel = () => {
       <Container>
         <div className="text-center mb-4">
           <h1 className="fw-bold">
-            Meet Our <span style={{ color: '#5B7CFA' }}>Founders</span>
+            Meet Our <span style={{ color: '#5B7CFA' }}>Team</span>
           </h1>
         </div>
 
@@ -152,4 +160,4 @@ const FoundersCarousel = () => {
   );
 };
 
-export default FoundersCarousel;
+export default TeamCarousel;
