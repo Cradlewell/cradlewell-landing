@@ -29,31 +29,6 @@ const teamMembers: any[] = [
     roleColor: '#D5F8DD',
     image: '/founders/vishnu.jpg',
   },
-     {
-    name: 'Lokesh',
-    role: 'CEO',
-    roleColor: '#E0D8FF',
-    image: '/founders/lokesh.jpg',
-  },
-  {
-    name: 'Venu Annareddy',
-    role: 'CFO',
-    roleColor: '#D9E7FF',
-    image: '/founders/venu.jpg',
-  },
-  {
-    name: 'Madhu Sudhan',
-    role: 'COO',
-    roleColor: '#D5F8DD',
-    image: '/founders/madhu.jpg',
-  },
-  {
-    name: 'Vishnu Vardhan',
-    role: 'CMO',
-    roleColor: '#D5F8DD',
-    image: '/founders/vishnu.jpg',
-  },
-
 ];
 
 // Utility function to chunk array
