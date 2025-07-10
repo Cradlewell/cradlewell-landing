@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Carousel, Row, Col } from 'react-bootstrap';
 import Image from 'next/image';
 
-const teamMembers = [
-  {
+const teamMembers: any[] = [
+   {
     name: 'Wade Warren',
     experience: '12 years experience',
     role: 'Founder',
@@ -61,8 +61,10 @@ const teamMembers = [
     roleColor: '#E0D8FF',
     image: '/images/founder4.png',
   },
+
 ];
 
+// Utility function to chunk array
 const chunkArray = (arr: any[], size: number) => {
   const chunks = [];
   for (let i = 0; i < arr.length; i += size) {
@@ -72,24 +74,43 @@ const chunkArray = (arr: any[], size: number) => {
 };
 
 const FoundersCarousel = () => {
-  const groupedMembers = chunkArray(teamMembers, 4);
+  const [itemsPerSlide, setItemsPerSlide] = useState(4);
+
+  // Update number of items per slide based on window width
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 576) {
+        setItemsPerSlide(1); // Mobile
+      } else if (width < 768) {
+        setItemsPerSlide(2); // Tablet
+      } else {
+        setItemsPerSlide(4); // Desktop
+      }
+    };
+
+    handleResize(); // initial call
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const groupedMembers = chunkArray(teamMembers, itemsPerSlide);
+
   return (
- <section className="py-5">
+    <section className="py-5">
       <Container>
-        {/* Heading */}
         <div className="text-center mb-4">
           <h1 className="fw-bold">
             Meet Our <span style={{ color: '#5B7CFA' }}>Founders</span>
           </h1>
         </div>
 
-        {/* Carousel (with indicators only) */}
-        <Carousel className="text-center" controls={false} indicators interval={null}>
+        <Carousel controls={false} indicators interval={null}>
           {groupedMembers.map((group, idx) => (
             <Carousel.Item key={idx}>
               <Row className="g-3">
                 {group.map((member, index) => (
-                  <Col key={index} xs={12} sm={6} md={3}>
+                  <Col key={index} xs={12} sm={6} md={12 / itemsPerSlide}>
                     <div
                       className="text-center p-3 h-100"
                       style={{
