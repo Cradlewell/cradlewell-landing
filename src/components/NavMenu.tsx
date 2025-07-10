@@ -12,6 +12,7 @@ import {
 } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
+import { FaBars } from "react-icons/fa";
 
 // Route type
 type Route = {
@@ -88,6 +89,7 @@ const Navigation5: React.FC = () => {
 						</span>
 					</Navbar.Toggle>
 					<Navbar.Collapse id="ezy__nav5-navbar-nav">
+					<FaBars />
 						<NavMenu />
 						<NavMenu2 toggleSearch={toggleSearch} />
 					</Navbar.Collapse>
