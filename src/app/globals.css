@@ -272,6 +272,7 @@
 
 .carousel-indicators {
   position: absolute;
+  padding-top: 20px !important;
   margin-top: 1.5rem;
   justify-content: center;
 }

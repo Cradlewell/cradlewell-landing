@@ -109,7 +109,7 @@ const Footer = () => {
 
         <Row className="pt-4 border-top border-secondary" style={{ fontSize: '0.875rem' }}>
           <Col md={6} className="text-start text-light">
-            © Copyright 2025, All Rights Reserved by jumatechs
+            @ Copyright 2025, All Rights Reserved by TENDERKIN WELLNESS PRIVATE LIMITED
           </Col>
           <Col md={6} className="text-md-end mt-3 mt-md-0">
             <span className="me-3 text-light">Privacy Policy</span>
