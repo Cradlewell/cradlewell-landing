@@ -86,7 +86,11 @@ const Navigation5: React.FC = () => {
 					<Navbar.Toggle aria-controls="ezy__nav5-navbar-nav">
 						<span>
 							<span />
+						</span>
+						<span>
 							<span />
+						</span>
+						<span>
 							<span />
 						</span>
 					</Navbar.Toggle>
