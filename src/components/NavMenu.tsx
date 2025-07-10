@@ -35,7 +35,7 @@ const routes: Route[] = [
 ];
 
 const NavMenu: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
-	<Nav className="mx-auto mb-2 mb-lg-0 mt-4 mt-lg-0">
+	<Nav className="mx-auto mb-2 mb-lg-0 mt-4 mt-lg-0 px-2">
 		{children}
 		{routes.map((route) => (
 			<Nav.Item key={route.name}>

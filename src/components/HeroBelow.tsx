@@ -9,7 +9,7 @@ const HeroBelow = () => {
 			<Container>
 				<Row className="">
 					{/* Text Section */}
-					<Col lg={6} className="mb-4 mt-2 mb-lg-0">
+					<Col lg={6} className="mb-4 mt-2 mb-lg-0 px-2">
 						<h2 className="fw-bold display-6">
 							Designed for New <span className="text-primary">Moms</span><br />
 							<span className="text-primary">Who Deserve</span> to Breathe
