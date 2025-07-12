@@ -11,7 +11,7 @@ export default function PrivacyPolicy() {
           <h1 className="mb-4 text-center">Privacy Policy</h1>
 
           <section className="mb-4">
-            <p><strong>Cradlewell</strong> (“We”, “Us”, or “Our”) is committed to safeguarding the privacy and personal information of every individual (“You” or “User”) using Our web and mobile platforms to access home-based postnatal and newborn care services. This Privacy Policy outlines how We collect, use, store, process, and disclose Your personal data, and explains Your rights and choices regarding the same.</p>
+            <p><strong>Cradlewell</strong> (We, Us, or Our) is committed to safeguarding the privacy and personal information of every individual (You or User) using Our web and mobile platforms to access home-based postnatal and newborn care services. This Privacy Policy outlines how We collect, use, store, process, and disclose Your personal data, and explains Your rights and choices regarding the same.</p>
 
             <p>To ensure seamless and personalized access to Our caregiving services, We may collect certain personal data from You. Such processing is carried out in accordance with this Privacy Policy and applicable data protection laws. Your data will be processed either on the basis of your explicit consent or for other legitimate purposes permitted under law.</p>
 

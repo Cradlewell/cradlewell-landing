@@ -9,7 +9,7 @@ const TermsOfUse: React.FC = () => {
 
       <section className="mb-8">
         <p>
-          Welcome to Cradlewell’s Terms of Use. We, <strong>Tenderkin Wellness Private Limited</strong>,
+          Welcome to Cradlewells Terms of Use. We, <strong>Tenderkin Wellness Private Limited</strong>,
           a company incorporated under the Companies Act, 2013 and having its registered office at
           No.26, Laskar Hosur, Adugodi, Koramangala, Bangalore South, Bangalore- 560030, Karnataka
           (hereinafter referred to as the “Company”), operate our business under the brand name
@@ -43,7 +43,7 @@ const TermsOfUse: React.FC = () => {
         <h3 className="font-semibold">1.2 Interpretation</h3>
         <ul className="list-disc list-inside">
           <li><strong>Company/We/Us:</strong> Tenderkin Wellness Pvt Ltd and Cradlewell brand.</li>
-          <li><strong>Platform:</strong> Cradlewell’s Website and app.</li>
+          <li><strong>Platform:</strong> Cradlewells Website and app.</li>
           <li><strong>User/You:</strong> Any person who accesses or uses the Platform.</li>
           <li>Headings are for convenience and not for interpretation.</li>
           <li><strong>Parties:</strong> The Company and the User collectively.</li>
@@ -90,7 +90,7 @@ const TermsOfUse: React.FC = () => {
         <li>
           Rule 3(1) of the Information Technology (Intermediary Guidelines and Digital Media
           Ethics Code) Rules, 2021, which mandates the publication of terms and conditions,
-          privacy policy, and user agreement for access or usage of an intermediary’s computer
+          privacy policy, and user agreement for access or usage of an intermediarys computer
           resource; and
         </li>
         <li>
@@ -149,7 +149,7 @@ const TermsOfUse: React.FC = () => {
       <h5>7.3. Refund Eligibility</h5>
       <ul>
         <li>Cancellation within 5 days of payment or service start</li>
-        <li>Cradlewell’s operational non-fulfillment</li>
+        <li>Cradlewells operational non-fulfillment</li>
         <li>Medical emergency or relocation (with proof)</li>
         <li>Verified service quality issue (within 3 days)</li>
         <li>Duplicate transactions</li>
@@ -187,7 +187,7 @@ const TermsOfUse: React.FC = () => {
       <h2 className="mt-5">9. Content</h2>
       <h5>9.1. General</h5>
       <p>
-        While we strive to provide accurate content, we don’t guarantee its completeness or
+        While we strive to provide accurate content, we dont guarantee its completeness or
         reliability.
       </p>
       <h5>9.2. Intellectual Property</h5>
@@ -263,7 +263,7 @@ const TermsOfUse: React.FC = () => {
   <li>20.1.1. Acts of God, natural disasters, earthquakes, floods, pandemics, epidemics, or adverse weather conditions;</li>
   <li>20.1.2. Acts of war, terrorism, civil unrest, government orders or lockdowns;</li>
   <li>20.1.3. Labor shortages, strikes, caregiver unavailability, or disruptions in third-party caregiving networks;</li>
-  <li>20.1.4. Technical issues such as internet outages, disruption of telecommunications, cloud infrastructure failure, data center downtime, sea cable breakages, or any other failure of digital service infrastructure not within Cradlewell’s direct control;</li>
+  <li>20.1.4. Technical issues such as internet outages, disruption of telecommunications, cloud infrastructure failure, data center downtime, sea cable breakages, or any other failure of digital service infrastructure not within Cradlewells direct control;</li>
   <li>20.1.5. Cyber incidents, including but not limited to hacking, phishing attacks, malicious software intrusion, or other unauthorized access attempts;</li>
   <li>20.1.6. Festive disruptions, regional curfews, or public safety restrictions that impact service delivery or movement of caregiving professionals.</li>
 </ul>
