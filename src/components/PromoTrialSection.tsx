@@ -1,6 +1,10 @@
+'use client';
+
 import React from 'react';
 import { Container, Button } from 'react-bootstrap';
 import Image from 'next/image';
+import { FaWhatsapp } from "react-icons/fa";
+
 
 const PromoTrialSection = () => {
   return (
@@ -12,13 +16,13 @@ const PromoTrialSection = () => {
       }}
     >
       {/* Left SVG */}
-      <div className="position-absolute top-50 start-0 translate-middle-y" style={{ zIndex: 0 }}>
-        <Image src="/images/illustration.svg" alt="left-svg" width={200} height={200} />
+      <div className="position-absolute top-50 start-0 translate-middle-y" style={{ zIndex: 2 }}>
+        <Image src="/images/layer.svg" alt="left-svg" width={200} height={200} />
       </div>
 
       {/* Right SVG */}
-      <div className="position-absolute top-50 end-0 translate-middle-y" style={{ zIndex: 0 }}>
-        <Image src="/images/illustration.svg" alt="right-svg" width={200} height={200} />
+      <div className="position-absolute top-50 end-0 translate-middle-y mx-3" style={{ zIndex: 2 }}>
+        <Image src="/images/layer.svg" alt="right-svg" width={200} height={200} />
       </div>
 
       <Container style={{ position: 'relative', zIndex: 1 }}>
@@ -27,10 +31,19 @@ const PromoTrialSection = () => {
         </h2>
         <Button
           variant="dark"
-          className="rounded-3 px-4 py-2 fw-semibold mb-4"
+          className="rounded-3 px-4 mx-2 fw-semibold mb-4"
           style={{ fontSize: '1rem' }}
         >
           Active Trial
+        </Button>
+
+          <Button
+          variant="light"
+          onClick={() => window.open('https://wa.me/919363893639', '_blank')}
+          className="rounded-3 px-4 mx-2 fw-semibold mb-4"
+          style={{ fontSize: '1rem' }}
+        >
+          <FaWhatsapp style={{ fontSize: '1.3rem' }}/> Chat On WhatsApp
         </Button>
 
         {/* Features */}

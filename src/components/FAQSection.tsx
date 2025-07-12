@@ -16,30 +16,37 @@ const FaqSection = () => {
 
         <Accordion defaultActiveKey="0" className="custom-accordion">
           <Accordion.Item eventKey="0">
-            <Accordion.Header>What is this platform about?</Accordion.Header>
+            <Accordion.Header>What kind of services does Cradlewell provide?</Accordion.Header>
             <Accordion.Body>
-             Absolutely. Beautiful Homes Service offers personalised solutions for your interior design needs. Our designers talk to you in detail to understand your vision and help you design a space that is in sync.            
+             We offer certified nursing care at home for newborns and postnatal mothers. Our services include baby bathing, feeding support, sleep training, postpartum recovery, lactation guidance, night care, and hygiene management delivered by trained professionals.           
              </Accordion.Body>
           </Accordion.Item>
 
           <Accordion.Item eventKey="1">
-            <Accordion.Header>How can I find a caregiver?</Accordion.Header>
+            <Accordion.Header>Are your nurses trained and background-verified?</Accordion.Header>
             <Accordion.Body>
-              You can browse available caregivers in your area, read reviews, and contact them directly through the platform.
+              Yes. Every Cradlewell nurse is a certified caregiver with experience in postnatal and newborn care. We conduct thorough background checks, skill assessments, and in-person training before assigning them to any home.
             </Accordion.Body>
           </Accordion.Item>
 
           <Accordion.Item eventKey="2">
-            <Accordion.Header>Is my data secure?</Accordion.Header>
+            <Accordion.Header>How are Cradlewell nurses different from nannies or japa maids?</Accordion.Header>
             <Accordion.Body>
-              Absolutely. We prioritize privacy and implement strong security measures to keep your data protected.
+              Cradlewell provides professional nursing care, not babysitting. Our nurses are medically trained to support recovery, hygiene, feeding, and sleep for both mother and baby. They follow protocols and report health updates daily unlike untrained helpers.
             </Accordion.Body>
           </Accordion.Item>
 
           <Accordion.Item eventKey="3">
-            <Accordion.Header>Can I cancel my subscription?</Accordion.Header>
+            <Accordion.Header>What areas do you currently serve?</Accordion.Header>
             <Accordion.Body>
-              Yes, you can cancel anytime from your account settings. There are no cancellation fees.
+              We are currently operational in Bangalore. If you’re located outside this area, you can contact us we’ll inform you as soon as we expand to your location.
+            </Accordion.Body>
+          </Accordion.Item>
+
+          <Accordion.Item eventKey="4">
+            <Accordion.Header>Is there a minimum duration to book a nurse?</Accordion.Header>
+            <Accordion.Body>
+              Yes. Our minimum care package starts from 7 days, designed to build trust and ensure continuity in care. Longer-term packages (60 or 90 days) are also available and often more cost-effective.
             </Accordion.Body>
           </Accordion.Item>
         </Accordion>

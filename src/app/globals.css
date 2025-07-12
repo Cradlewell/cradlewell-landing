@@ -1,4 +1,7 @@
 /* src/app/globals.css */
+html {
+  scroll-behavior: smooth;
+}
 
 :root {
   --bs-body-font-family: 'roboto', sans-serif;
@@ -322,3 +325,32 @@
 .form-control::placeholder {
   color: rgba(255, 255, 255, 0.6);
 }
+
+
+
+
+
+.nav-link-hover {
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.nav-link-hover::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 2px;
+  background-color: #5B7CFA; /* Your brand color */
+  transition: width 0.3s ease;
+}
+
+.nav-link-hover:hover {
+  color: #5B7CFA !important;
+}
+
+.nav-link-hover:hover::after {
+  width: 100%;
+}
+

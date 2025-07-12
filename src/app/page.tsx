@@ -16,7 +16,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 export default function Home() {
   return (
    <>
-   <NavMenu/>
+   {/* <NavMenu/> */}
     <HeroHeader1/>
     <HeroBelow/>
     <BackgroundBox/>
@@ -24,10 +24,10 @@ export default function Home() {
     <StepsSection/>
     <TestimonialsSection/>
     <FoundersCarousel/>
-    <TeamCarousel/>
+    {/* <TeamCarousel/> */}
     <FAQSection/>
     <PromoTrialSection/>
-    <Footer/>
+    {/* <Footer/> */}
     </>
 
   );

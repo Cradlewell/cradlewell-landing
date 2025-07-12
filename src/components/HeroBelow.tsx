@@ -5,7 +5,7 @@ import { Container, Row, Col } from "react-bootstrap";
 
 const HeroBelow = () => {
 	return (
-		<div className="py-5">
+		<div className="py-5" id="whychoose">
 			<Container>
 				<Row className="">
 					{/* Text Section */}

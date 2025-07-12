@@ -27,20 +27,25 @@ type NavMenuProps = {
 };
 
 const routes: Route[] = [
-	{ name: "Why Choose", href: "#" },
-	{ name: "How It Works", href: "#" },
-	{ name: "Our App", href: "#" },
-	{ name: "Testimonials", href: "#" },
-    { name: "Blogs", href: "#" },
+	{ name: "Why Choose", href: "#whychoose" },
+	{ name: "How It Works", href: "#howitworks" },
+	{ name: "Testimonials", href: "#testimonials" },
+	{ name: "Our Team", href: "#ourteam" },
+	{ name: "FAQs", href: "#faq" },
+
 ];
+	
 
 const NavMenu: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
 	<Nav className="mx-auto mb-2 mb-lg-0 mt-4 mt-lg-0 px-2">
 		{children}
 		{routes.map((route) => (
 			<Nav.Item key={route.name}>
-				<Nav.Link href={route.href}>{route.name}</Nav.Link>
-			</Nav.Item>
+  <Nav.Link href={route.href} className="nav-link-hover">
+    {route.name}
+  </Nav.Link>
+</Nav.Item>
+
 		))}
 	</Nav>
 );
@@ -54,10 +59,10 @@ type NavMenu2Props = {
 const NavMenu2: React.FC<NavMenu2Props> = ({ toggleSearch }) => (
 	<Nav className="flex-row mb-2 mb-lg-0">
 		<Nav.Item className="nav-item mt-2 px-2">
-				<h6>See Plan</h6>
+				<a className="text-dark" href="#ourplans"><h6>See Plan</h6></a>
 		</Nav.Item>
 		<Nav.Item className="nav-item mx-2">
-		   <a className="btn btn-primary"> Start Free Trial</a>
+		   <a className="btn btn-primary" href="#ourplans"> Start Free Trial</a>
 		</Nav.Item>
 	</Nav>
 );
@@ -82,7 +87,7 @@ const Navigation5: React.FC = () => {
 		<div className="ezy__nav5 light">
 			<Navbar expand="lg" className="flex-column py-3">
 				<Container>
-					<Navbar.Brand href="#"><img className="img-fluid" width={'200px'} src="/images/logo.png" alt="" /></Navbar.Brand>
+					<Navbar.Brand href="/"><img className="img-fluid" width={'200px'} src="/images/logo.png" alt="" /></Navbar.Brand>
 					<Navbar.Toggle aria-controls="ezy__nav5-navbar-nav">
 						<span>
 							<span />

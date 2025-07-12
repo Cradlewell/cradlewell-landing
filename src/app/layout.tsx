@@ -3,6 +3,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import { ReactNode } from 'react';
 import '@fontsource/outfit'; // Defaults to weight 400
+import NavMenu from '@/components/NavMenu';
+import Footer from '@/components/Footer';
 
 export const metadata = {
   title: 'Landing Page',
@@ -80,8 +82,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             src="https://www.facebook.com/tr?id=1065344801687565&ev=PageView&noscript=1"
           />
         </noscript>
-
-        {children}
+          <NavMenu/>
+       <main> {children}</main>
+        <Footer/>
       </body>
     </html>
   );

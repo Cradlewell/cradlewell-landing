@@ -5,7 +5,7 @@ import { Container, Row, Col, Button } from 'react-bootstrap';
 
 const StepsSection = () => {
   return (
-    <section className="py-5 bg-white">
+    <section className="py-5 bg-white" id='howitworks'>
       <Container>
         {/* Heading */}
         <div className="text-center mb-5">
