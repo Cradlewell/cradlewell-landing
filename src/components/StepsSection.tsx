@@ -77,6 +77,7 @@ const StepsSection = () => {
         {/* CTA Button */}
         <div className="text-center mt-5">
           <Button
+          href='#ourplans'
             variant="primary"
             style={{
               backgroundColor: '#5B7CFA',

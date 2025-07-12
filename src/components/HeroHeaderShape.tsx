@@ -45,7 +45,7 @@ const HeroHeader1 = () => {
 						<p className="ezy__header1-sub-heading">
 							Book professional postpartum care from certified nurses—when you need it, where you need it.
 						</p>
-						<a
+						<a href="#ourplans"
 							className="btn btn-primary fs-5 mt-4 mt-md-5"
 						>
 							Start Free Trial

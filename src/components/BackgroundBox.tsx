@@ -9,7 +9,7 @@ const BackgroundBox = () => {
 			<Container className="p-4">
 				<div className="content">
 					<p>Book professional postpartum care from certified <br /> nurses—when you need it, where you need it.</p>
-                        <Button
+                        <Button href="#ourplans"
                             className="btn btn-primary fs-5 ">
                             Start Free Trial
                         </Button>				

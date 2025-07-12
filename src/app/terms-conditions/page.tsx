@@ -13,8 +13,8 @@ const TermsOfUse: React.FC = () => {
           a company incorporated under the Companies Act, 2013 and having its registered office at
           No.26, Laskar Hosur, Adugodi, Koramangala, Bangalore South, Bangalore- 560030, Karnataka
           (hereinafter referred to as the “Company”), operate our business under the brand name
-          <strong> "Cradlewell"</strong>. These Terms of Use (hereinafter referred to as the
-          "Terms") represent our commitment to maintaining your trust and ensuring transparent use
+          <strong> Cradlewell</strong>. These Terms of Use (hereinafter referred to as the
+          Terms) represent our commitment to maintaining your trust and ensuring transparent use
           of our Platform.
         </p>
         <p className="mt-4">
@@ -179,7 +179,7 @@ const TermsOfUse: React.FC = () => {
       </ul>
       <h5>8.3. Privacy Policy</h5>
       <p>
-        All data practices are covered under our{" "}
+        All data practices are covered under our
         <a href="/privacy-policy">Privacy Policy</a>. By using the Platform, you agree to its
         terms.
       </p>
@@ -210,7 +210,7 @@ const TermsOfUse: React.FC = () => {
       <p>We reserve the right to suspend or terminate your access to our Services at our sole discretion, without notice, for conduct that we believe violates these Terms or is harmful to other users, us, or third parties, or for any other reason.</p>
 
       <h2>11. Disclaimers</h2>
-      <p>Our Services are provided "as is" and "as available" without warranties of any kind, either express or implied. We disclaim all warranties, including but not limited to merchantability, fitness for a particular purpose, and non-infringement. We do not guarantee that the Services will be uninterrupted, secure, or error-free.</p>
+      <p>Our Services are provided as is and as available without warranties of any kind, either express or implied. We disclaim all warranties, including but not limited to merchantability, fitness for a particular purpose, and non-infringement. We do not guarantee that the Services will be uninterrupted, secure, or error-free.</p>
 
       <h2>12. Limitation of Liability</h2>
       <p>To the fullest extent permitted by law, Cradlewell and its affiliates, officers, employees, agents, and partners shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses, resulting from:
@@ -224,7 +224,7 @@ const TermsOfUse: React.FC = () => {
       </p>
 
       <h2>13. Indemnification</h2>
-      <p>You agree to indemnify, defend, and hold harmless Cradlewell, its affiliates, officers, agents, and employees from any claim, demand, damages, or other losses, including reasonable attorneys' fees, arising out of your use of the Services, your violation of these Terms, or your violation of any rights of another.</p>
+      <p>You agree to indemnify, defend, and hold harmless Cradlewell, its affiliates, officers, agents, and employees from any claim, demand, damages, or other losses, including reasonable attorneys fees, arising out of your use of the Services, your violation of these Terms, or your violation of any rights of another.</p>
 
       <h2>14. Governing Law</h2>
       <p>These Terms shall be governed by and construed in accordance with the laws of India, without regard to its conflict of law provisions. Any disputes arising out of or relating to these Terms or the Services shall be subject to the exclusive jurisdiction of the courts located in Hyderabad, India.</p>
@@ -250,7 +250,6 @@ const TermsOfUse: React.FC = () => {
       <h2>19. Severability</h2>
       <p>If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions shall remain in full force and effect.</p>
 
-// TermsOfUse.tsx (continued)
 
 <h2>20. FORCE MAJEURE</h2>
 <p>
