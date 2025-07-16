@@ -229,12 +229,27 @@ const PricingSection = () => {
         <!-- Zoho-rendered fields -->
         <div class='form-group mb-3'>
           <label for='Last_Name'>Full Name*</label>
-          <input type='text' name='Last Name' class='form-control' required />
+          <input type="text"
+           name="Last Name"
+           class="form-control"
+           required
+           pattern="[A-Za-z ]+"
+          title="Please enter a valid fullname"
+          />
+
         </div>
 
         <div class='form-group mb-3'>
           <label for='Mobile'>Phone Number*</label>
-          <input type='text' name='Mobile' class='form-control' required />
+          <input
+            type="tel"
+            name="Mobile"
+            class="form-control"
+            required
+            pattern="^[0-9]{10}$"
+            title="Please enter a valid 10-digit phone number"
+            maxlength="10"
+          />
           <div class="form-check mt-2">
             <input type="checkbox" class="form-check-input" name="LEADCF101" id="whatsappOptin">
             <label class="form-check-label" for="whatsappOptin">Opt-in for WhatsApp</label>

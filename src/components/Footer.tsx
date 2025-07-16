@@ -157,54 +157,90 @@ Terms & Conditions
         </Row>
       </Container>
     </footer>
-      <Modal show={showSupportModal} onHide={() => setShowSupportModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Need Help? We’ll Call You Back</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3" controlId="supportName">
-              <Form.Label>Full Name *</Form.Label>
-              <Form.Control type="text" placeholder="Enter your name" required />
-            </Form.Group>
+      <Modal show={showSupportModal} onHide={() => setShowSupportModal(false)} centered size="lg">
+  <Modal.Header closeButton>
+    <Modal.Title>Need Help? We’ll Call You Back</Modal.Title>
+  </Modal.Header>
+  <Modal.Body>
+    <div
+      dangerouslySetInnerHTML={{
+        __html: `
+          <form id="webform941304000000475011" action="https://crm.zoho.in/crm/WebToLeadForm"
+            name="WebToLeads941304000000475011" method="POST"
+            onSubmit="javascript:document.charset='UTF-8'; return checkMandatory941304000000475011();"
+            accept-charset="UTF-8">
 
-            <Form.Group className="mb-3" controlId="supportPhone">
-              <Form.Label>Phone Number *</Form.Label>
-              <Form.Control type="tel" placeholder="Enter your phone number" required />
-            </Form.Group>
+            <!-- Required Zoho Fields -->
+            <input type="text" style="display:none;" name="xnQsjsdp" value="ed70e75daf868e22b0b3fd743e12dc0005b7b4aa65666436ac6f51a086d43316" />
+            <input type="hidden" name="zc_gad" id="zc_gad" value="" />
+            <input type="text" style="display:none;" name="xmIwtLD" value="24192fb6bab63e1a2aad26bad1bcb0604dc25969a105ff878cf1328903b60e23af63509661cd13ec16e83fdd13f096a7" />
+            <input type="text" style="display:none;" name="actionType" value="TGVhZHM=" />
+            <input type="text" style="display:none;" name="returnURL" value="null" />
 
-            <Form.Group className="mb-3" controlId="supportTime">
-              <Form.Label>Preferred Time for Call</Form.Label>
-              <Form.Select>
-                <option>Anytime</option>
-                <option>10 AM – 12 PM</option>
-                <option>12 PM – 4 PM</option>
-                <option>4 PM – 8 PM</option>
-              </Form.Select>
-            </Form.Group>
+            <div class="form-group mb-3">
+              <label>Full Name*</label>
+              <input type="text" name="Last Name" class="form-control" required pattern="[A-Za-z ]+" title="Please enter letters only" maxlength="80" />
+            </div>
 
-            <Form.Group className="mb-3" controlId="supportType">
-              <Form.Label>Type of Support Needed</Form.Label>
-              <Form.Select>
-                <option>Booking Help</option>
-                <option>Service Feedback</option>
-                <option>Nurse Concern</option>
-                <option>Change Package</option>
-                <option>Other</option>
-              </Form.Select>
-            </Form.Group>
+            <div class="form-group mb-3">
+              <label>Phone Number*</label>
+              <input type="tel" name="Phone" class="form-control" required pattern="^[0-9]{10}$" maxlength="10" title="Please enter a valid 10-digit phone number" />
+            </div>
 
-            <Form.Group className="mb-3" controlId="supportMessage">
-              <Form.Label>Message / Additional Notes</Form.Label>
-              <Form.Control as="textarea" rows={3} placeholder="Optional" />
-            </Form.Group>
+            <div class="form-group mb-3">
+              <label>Preferred Time for Call</label>
+              <select name="LEADCF4" class="form-select">
+                <option value="-None-">-None-</option>
+                <option value="Anytime">Anytime</option>
+                <option value="10 AM - 12 PM">10 AM – 12 PM</option>
+                <option value="12 PM - 4 PM">12 PM – 4 PM</option>
+                <option value="4 PM - 8 PM">4 PM – 8 PM</option>
+              </select>
+            </div>
 
-            <Button variant="primary" type="submit" className="w-100">
-              Submit Request
-            </Button>
-          </Form>
-        </Modal.Body>
-      </Modal>
+            <div class="form-group mb-3">
+              <label>Type of Support Needed</label>
+              <select name="LEADCF5" class="form-select">
+                <option value="-None-">-None-</option>
+                <option value="Booking Help">Booking Help</option>
+                <option value="Service Feedback">Service Feedback</option>
+                <option value="Nurse Concern">Nurse Concern</option>
+                <option value="Change Package">Change Package</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group mb-3">
+              <label>Message / Additional Notes</label>
+              <textarea name="Description" class="form-control" rows="3"></textarea>
+            </div>
+
+            <div class="d-grid">
+              <input type="submit" class="btn btn-primary w-100" value="Submit Request" />
+            </div>
+
+            <script>
+              function checkMandatory941304000000475011 () {
+                var mndFields = ['Last Name', 'Phone'];
+                var fldLabels = ['Full Name', 'Phone'];
+                for (var i = 0; i < mndFields.length; i++) {
+                  var field = document.forms['WebToLeads941304000000475011'][mndFields[i]];
+                  if (field && field.value.trim().length === 0) {
+                    alert(fldLabels[i] + ' cannot be empty.');
+                    field.focus();
+                    return false;
+                  }
+                }
+                return true;
+              }
+            </script>
+          </form>
+        `,
+      }}
+    />
+  </Modal.Body>
+</Modal>
+
       </>
   );
 };
