@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   Row,
@@ -16,6 +16,22 @@ const PricingSection = () => {
 
   const handleShow = () => setShowModal(true);
   const handleClose = () => setShowModal(false);
+
+  useEffect(() => {
+  if (showModal) {
+    const timer = setTimeout(() => {
+      const dateInput = document.getElementById('start-date-field') as HTMLInputElement;
+      if (dateInput) {
+        const today = new Date().toISOString().split("T")[0];
+        dateInput.min = today;
+      }
+    }, 100); // slight delay to ensure modal is mounted
+
+    return () => clearTimeout(timer);
+  }
+}, [showModal]);
+
+
 	return (
 		<div className="pricing-section bg-light py-5" id="ourplans">
 			<Container className="text-center text-dark">
@@ -279,7 +295,7 @@ const PricingSection = () => {
 
         <div class='form-group mb-3'>
           <label for='LEADCF116'>Preferred Start Date</label>
-          <input type='date' name='LEADCF116' class='form-control' />
+          <input type='date' id='start-date-field' name='LEADCF116' class='form-control' />
         </div>
 
         <div class='form-group mb-3'>

@@ -5,6 +5,7 @@ import { ReactNode } from 'react';
 import '@fontsource/outfit'; // Defaults to weight 400
 import NavMenu from '@/components/NavMenu';
 import Footer from '@/components/Footer';
+import Script from 'next/script';
 
 export const metadata = {
   title: 'Landing Page',
@@ -85,6 +86,22 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <NavMenu/>
        <main> {children}</main>
         <Footer/>
+
+
+           {/* Zoho SalesIQ Chatbot */}
+    <Script id="zoho-salesiq" strategy="afterInteractive">
+      {`
+        window.$zoho = window.$zoho || {};
+        $zoho.salesiq = $zoho.salesiq || {
+          ready: function () { }
+        };
+      `}
+    </Script>
+    <Script
+      id="zoho-salesiq-widget"
+      src="https://salesiq.zohopublic.in/widget?wc=siqff2837401ef098932e99f42c34a99d5032abb5c8efb6ffe3506b63bde446afdf"
+      strategy="afterInteractive"
+    />
       </body>
     </html>
   );

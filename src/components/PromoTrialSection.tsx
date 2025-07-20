@@ -29,7 +29,7 @@ const PromoTrialSection = () => {
         <h2 className="fw-semibold mb-4" style={{ fontSize: '1.8rem' }}>
           Wait! Get your first day of<br />care completely free.
         </h2>
-        <Button
+        <Button href='#ourplans'
           variant="dark"
           className="rounded-3 px-4 mx-2 fw-semibold mb-4"
           style={{ fontSize: '1rem' }}

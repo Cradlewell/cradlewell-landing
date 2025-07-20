@@ -50,32 +50,30 @@ const Footer = () => {
             <p style={{ color: '#C4C4C4' }}>
               Providing premium, hospital-grade postnatal and newborn care in the comfort of your home. Your peace of mind is our priority.
             </p>
-           <Form
-  className="d-flex align-items-center"
-  style={{
-    backgroundColor: 'rgba(255, 255, 255, 0.06)', // Slight outer container visibility
-    borderRadius: 999,
-    padding: 4,
-    width: '100%',
-    maxWidth: 360,
-  }}
->
-  <Form.Control
-    type="email"
-    placeholder="Enter your phone number"
-    className="border-0"
-    style={{
-      backgroundColor: 'rgba(255, 255, 255, 0.12)', // Softer purple-gray
-      borderRadius: 999,
-      padding: '10px 16px',
-      fontSize: '0.9rem',
-      color: '#ffffff', // Make text white
-      flex: 1,
-    }}
-  />
+<Form className="d-flex align-items-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.06)', borderRadius: 999, padding: 4, width: '100%', maxWidth: 360, }} action="https://crm.zoho.in/crm/WebToLeadForm" method="POST" target="_blank" acceptCharset="UTF-8" > {/* Required Zoho Hidden Fields */} <input type="hidden" name="xnQsjsdp" value="ab57b5b359d00f17753c941644d97aeae606c083f09556afcb2c2379fc14a70e" /> <input type="hidden" name="xmIwtLD" value="4fa3f4e2ad017703fd868e31ccdc8072c25fbd99924ea5fb0cf4d96832587a30510aa3c76c4fdb67a0092f76a7a4daca" /> <input type="hidden" name="actionType" value="TGVhZHM=" /> <input type="hidden" name="returnURL" value="https://yourdomain.com/thank-you" />
+{/* Zoho requires Last Name field */}
+<input type="hidden" name="Last Name" value="WebUser" />
+
+{/* Visible Phone input */}
+<Form.Control
+type="tel"
+name="Phone"
+placeholder="Enter your phone number"
+required
+pattern="[0-9]{10}"
+maxLength={10}
+className="border-0"
+style={{
+backgroundColor: 'rgba(255, 255, 255, 0.12)',
+borderRadius: 999,
+padding: '10px 16px',
+fontSize: '0.9rem',
+color: '#ffffff',
+flex: 1,
+}}
+/>
   <Button
     type="submit"
-     onClick={() => window.open('https://wa.me/919363893639', '_blank')}
     className="border-0 ms-2"
     style={{
       backgroundColor: '#6675F7',
