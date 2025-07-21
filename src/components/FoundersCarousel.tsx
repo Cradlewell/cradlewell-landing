@@ -92,7 +92,7 @@ const FoundersCarousel = () => {
   const groupedMembers = chunkArray(teamMembers, itemsPerSlide);
 
   return (
-    <section className="py-5">
+    <section className="py-5" id='ourteam'>
       <Container>
         <div className="text-center mb-4">
           <h1 className="fw-bold">

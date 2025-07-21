@@ -70,7 +70,7 @@ const TeamCarousel = () => {
   const groupedMembers = chunkArray(teamMembers, itemsPerSlide);
 
   return (
-    <section className="py-5" id='ourteam'>
+    <section id='ourteam' className="py-5">
       <Container>
         <div className="text-center mb-4">
           <h1 className="fw-bold">
