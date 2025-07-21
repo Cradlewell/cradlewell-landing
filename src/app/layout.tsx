@@ -8,8 +8,8 @@ import Footer from '@/components/Footer';
 import Script from 'next/script';
 
 export const metadata = {
-  title: 'Landing Page',
-  description: 'Simple Bootstrap landing page using Next.js App Router.',
+  title: 'Cradlewell',
+  description: 'Book professional postpartum care from certified nurses—when you need it, where you need it.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
