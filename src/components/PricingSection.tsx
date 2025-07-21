@@ -217,7 +217,7 @@ const PricingSection = () => {
         </Modal.Header>
         <Modal.Body>
           <p className="text-muted">
-            Get expert mother & baby care at home, starting from 30 days.
+            Get expert mother & baby care at home, starting from 7 days.
           </p>
           <div
   id="crmWebToEntityForm"
