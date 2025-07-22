@@ -58,8 +58,8 @@ const PricingSection = () => {
 </div>
 
 <h5 className="primary-color text-center mb-3 fw-semibold">Care Light</h5>
-							<h1 className="fw-bold">₹45,000/mo</h1>
-							<p className="text-muted">4 hrs/day</p>
+							<h1 className="fw-bold">₹1,500/day</h1>
+							<p className="text-muted">4 hrs</p>
                             <ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
@@ -113,8 +113,8 @@ const PricingSection = () => {
 </div>
 <h5 className="text-white text-center mb-3 fw-semibold">Care Plus</h5>
 
-							<h1 className="fw-bold">₹75,000/mo</h1>
-							<p>8 hrs/day</p>
+							<h1 className="fw-bold">₹2,500/day</h1>
+							<p>8 hrs</p>
 						<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
@@ -167,8 +167,8 @@ const PricingSection = () => {
 </div>
 
 <h5 className="primary-color text-center mb-3 fw-semibold">Night Guardian</h5>
-							<h1 className="fw-bold">₹90,000/mo</h1>
-							<p className="text-muted">12 hrs/night</p>
+							<h1 className="fw-bold">₹3,000/day</h1>
+							<p className="text-muted">12 hrs</p>
 							<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
