@@ -172,7 +172,7 @@ const PricingSection = () => {
 							<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Night nurse for 10 hours</span>
+    <span>Night nurse for 12 hours</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
