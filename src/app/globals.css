@@ -282,7 +282,7 @@ html {
 }
 
 .carousel-indicators [data-bs-target] {
-  background-color: #5B7CFA; /* Match your brand color */
+  background-color: #5B7CFA;
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -354,3 +354,4 @@ html {
   width: 100%;
 }
 
+/* NURSES CSS */

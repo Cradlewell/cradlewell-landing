@@ -6,13 +6,17 @@ import '@fontsource/outfit'; // Defaults to weight 400
 import NavMenu from '@/components/NavMenu';
 import Footer from '@/components/Footer';
 import Script from 'next/script';
+import { headers } from 'next/headers';
+import NurseHeader from '@/components/NursesHeader';
+import LayoutClient from '@/components/LayoutClient';
 
 export const metadata = {
   title: 'Cradlewell',
   description: 'Book professional postpartum care from certified nurses—when you need it, where you need it.',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+
   return (
     <html lang="en">
       <head>
@@ -84,8 +88,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             src="https://www.facebook.com/tr?id=1065344801687565&ev=PageView&noscript=1"
           />
         </noscript>
-          <NavMenu/>
-       <main> {children}</main>
+ {/* Conditional Header */}
+        <LayoutClient/>
+        <main> {children}</main>
         <Footer/>
 
 
