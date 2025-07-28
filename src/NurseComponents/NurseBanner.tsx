@@ -44,7 +44,7 @@ const NurseBanner = () => {
                             <span className="primary-color">Not Just Assigned</span> 
 						</h2>
 						<p className="ezy__header1-sub-heading">
-							Join India's Most trusted Postnatal home care services that puts Nurses First.
+							Join Indias Most trusted Postnatal home care services that puts Nurses First.
 						</p>
 						<a href="#ourplans"
 							className="btn btn-primary fs-5 mt-4 mt-md-5"

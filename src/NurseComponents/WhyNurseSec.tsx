@@ -15,7 +15,7 @@ const WhyNurseSec = () => {
           </h1>
           <h4 className="" style={{ color: '#676767ff' }}>
             Because Your
-            <span style={{ color: '#5B7CFA' }}> Safety, Dignity & Growth</span> shouldn't be Optional,
+            <span style={{ color: '#5B7CFA' }}> Safety, Dignity & Growth</span> shouldn&rsquo;t be Optional,
             it should be <span style={{ color: '#5B7CFA' }}> Guaranteed</span>
           </h4>
         </div>

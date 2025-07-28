@@ -30,9 +30,9 @@ const NurseFaq = () => {
           </Accordion.Item>
 
           <Accordion.Item eventKey="2">
-            <Accordion.Header>Q. Do I get support if there's a problem at work?</Accordion.Header>
+            <Accordion.Header>Q. Do I get support if theres a problem at work?</Accordion.Header>
             <Accordion.Body>
-              Yes. Cradlewell provides 24x7 team support—you can contact our doctors, care coordinators, or emergency line anytime. You're never alone on the job.
+              Yes. Cradlewell provides 24x7 team support—you can contact our doctors, care coordinators, or emergency line anytime. Youre never alone on the job.
             </Accordion.Body>
           </Accordion.Item>
 
@@ -46,7 +46,7 @@ const NurseFaq = () => {
           <Accordion.Item eventKey="4">
             <Accordion.Header>Q. What are the benefits and salary?</Accordion.Header>
             <Accordion.Body>
-              We offer a fixed monthly salary, travel allowance, and optional accommodation. You'll also get certificates, bonuses, and access to our growing nurse community.
+              We offer a fixed monthly salary, travel allowance, and optional accommodation. Youll also get certificates, bonuses, and access to our growing nurse community.
             </Accordion.Body>
           </Accordion.Item>
         </Accordion>
