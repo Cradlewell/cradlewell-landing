@@ -16,15 +16,28 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-
   return (
     <html lang="en">
       <head>
         <link rel="icon" href="/images/favicon.png" />
+        
         {/* Font Awesome CDN */}
         <link
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
           rel="stylesheet"
+        />
+
+        {/* Google Analytics (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-VX71D6T1WD"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-VX71D6T1WD');
+            `,
+          }}
         />
 
         {/* Google Tag Manager */}
@@ -35,20 +48,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
             })(window,document,'script','dataLayer','GTM-P7VGGBDB');`,
-          }}
-        />
-
-        {/* Google Analytics 4 */}
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=G-HVXB2SSY2Z"
-        ></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-HVXB2SSY2Z');`,
           }}
         />
 
@@ -88,26 +87,26 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             src="https://www.facebook.com/tr?id=1065344801687565&ev=PageView&noscript=1"
           />
         </noscript>
- {/* Conditional Header */}
-        <LayoutClient/>
-        <main> {children}</main>
-        <Footer/>
 
+        {/* Conditional Header */}
+        <LayoutClient />
+        <main>{children}</main>
+        <Footer />
 
-           {/* Zoho SalesIQ Chatbot */}
-    <Script id="zoho-salesiq" strategy="afterInteractive">
-      {`
-        window.$zoho = window.$zoho || {};
-        $zoho.salesiq = $zoho.salesiq || {
-          ready: function () { }
-        };
-      `}
-    </Script>
-    <Script
-      id="zoho-salesiq-widget"
-      src="https://salesiq.zohopublic.in/widget?wc=siqff2837401ef098932e99f42c34a99d5032abb5c8efb6ffe3506b63bde446afdf"
-      strategy="afterInteractive"
-    />
+        {/* Zoho SalesIQ Chatbot */}
+        <Script id="zoho-salesiq" strategy="afterInteractive">
+          {`
+            window.$zoho = window.$zoho || {};
+            $zoho.salesiq = $zoho.salesiq || {
+              ready: function () { }
+            };
+          `}
+        </Script>
+        <Script
+          id="zoho-salesiq-widget"
+          src="https://salesiq.zohopublic.in/widget?wc=siqff2837401ef098932e99f42c34a99d5032abb5c8efb6ffe3506b63bde446afdf"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
