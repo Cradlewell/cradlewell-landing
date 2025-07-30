@@ -26,7 +26,6 @@ const ModalController = () => {
 
   return (
     <>
-      <PricingSection openModal={openModal} />
       {/* Add other sections needing openModal here */}
 
            {/* Popup Modal */}

@@ -12,6 +12,7 @@ import {
 } from "react-bootstrap";
 import { useModal } from './ModalContext'; // adjust path if needed
 
+
 const PricingSection = () => {
 
   useEffect(() => {
