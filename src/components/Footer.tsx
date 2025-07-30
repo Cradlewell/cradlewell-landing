@@ -158,7 +158,7 @@ Terms & Conditions
     </footer>
       <Modal show={showSupportModal} onHide={() => setShowSupportModal(false)} centered size="lg">
   <Modal.Header closeButton>
-    <Modal.Title>Need Help? We'll Call You Back</Modal.Title>
+    <Modal.Title>Need Help? We Will Call You Back</Modal.Title>
   </Modal.Header>
   <Modal.Body>
     <div
