@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function ThankYouPage() {
   return (
     <div className="d-flex align-items-center justify-content-center vh-100 bg-light px-3">
@@ -16,9 +18,9 @@ export default function ThankYouPage() {
         <p className="text-muted fs-5 mb-4">
           Your details has been received. Our team will contact you shortly
         </p>
-        <a href="/" className="btn btn-primary px-4 py-2">
+        <Link href="/" className="btn btn-primary px-4 py-2">
           Back to Home
-        </a>
+        </Link>
       </div>
     </div>
   );
