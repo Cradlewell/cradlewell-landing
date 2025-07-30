@@ -124,7 +124,7 @@ const Navigation5: React.FC = () => {
 			{/* Free Trial Modal */}
 			   <Modal show={showModal} onHide={closeModal} centered>
                    <Modal.Header closeButton>
-                     <Modal.Title>Need Help? We'll Call You Back</Modal.Title>
+                     <Modal.Title>Need Help? We Will Call You Back</Modal.Title>
                    </Modal.Header>
                    <Modal.Body>
                        <div
@@ -157,9 +157,9 @@ const Navigation5: React.FC = () => {
                                  <select name="LEADCF4" class="form-select">
                                    <option value="-None-">-None-</option>
                                    <option value="Anytime">Anytime</option>
-                                   <option value="10 AM - 12 PM">10 AM – 12 PM</option>
-                                   <option value="12 PM - 4 PM">12 PM – 4 PM</option>
-                                   <option value="4 PM - 8 PM">4 PM – 8 PM</option>
+                                   <option value="10 AM - 12 PM">10 AM - 12 PM</option>
+                                   <option value="12 PM - 4 PM">12 PM - 4 PM</option>
+                                   <option value="4 PM - 8 PM">4 PM - 8 PM</option>
                                  </select>
                                </div>
                    
