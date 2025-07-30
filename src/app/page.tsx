@@ -24,7 +24,7 @@ export default function Home() {
     <HeroHeader1/>
     <HeroBelow/>
     <BackgroundBox/>
-    <ModalController/>
+    <PricingSection/>
     <StepsSection/>
     <TestimonialsSection/>
     <FoundersCarousel/>
