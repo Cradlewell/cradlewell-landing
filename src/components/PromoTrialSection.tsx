@@ -4,9 +4,11 @@ import React from 'react';
 import { Container, Button } from 'react-bootstrap';
 import Image from 'next/image';
 import { FaWhatsapp } from "react-icons/fa";
+import { useModal } from './ModalContext'; // adjust path if needed
 
 
 const PromoTrialSection = () => {
+        const { openModal } = useModal();
   return (
     <section
       className="position-relative py-5 text-center text-white"
@@ -29,7 +31,7 @@ const PromoTrialSection = () => {
         <h2 className="fw-semibold mb-4" style={{ fontSize: '1.8rem' }}>
           Wait! Get your first day of<br />care completely free.
         </h2>
-        <Button href='#ourplans'
+        <Button onClick={openModal}
           variant="dark"
           className="rounded-3 px-4 mx-2 fw-semibold mb-4"
           style={{ fontSize: '1rem' }}

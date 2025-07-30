@@ -93,7 +93,8 @@ flex: 1,
           <Col md={5} className="mb-4 mb-md-0">
             <h4 className=" mb-3">Contact Us</h4>
             <p className="mb-2" style={{ color: '#C4C4C4' }}>
-              Bangalore, Karnataka<br />
+              Site No. 26, Laskar Hosur, Adugodi, Koramangala,<br />
+              Bangalore South, Bangalore - 560030, Karnataka
             </p>
             <p className="mb-2"><FaPhoneAlt className="me-2 text-success" /> +91 9363893639</p>
             <p><FaEnvelope className="me-2 text-success" /> care@cradlewell.com</p>
@@ -157,7 +158,7 @@ Terms & Conditions
     </footer>
       <Modal show={showSupportModal} onHide={() => setShowSupportModal(false)} centered size="lg">
   <Modal.Header closeButton>
-    <Modal.Title>Need Help? We’ll Call You Back</Modal.Title>
+    <Modal.Title>Need Help? We'll Call You Back</Modal.Title>
   </Modal.Header>
   <Modal.Body>
     <div

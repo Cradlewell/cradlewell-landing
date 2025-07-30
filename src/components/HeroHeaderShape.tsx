@@ -1,5 +1,10 @@
+'use client'
+
 import React from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
+import { useModal } from './ModalContext'; // adjust path if needed
+
+
 
 const HeroHeaderShape = () => (
 	<svg
@@ -32,6 +37,7 @@ const HeroHeaderShape = () => (
 );
 
 const HeroHeader1 = () => {
+	const { openModal } = useModal();
 	return (
 		<section className="ezy__header1 light dark">
 			<HeroHeaderShape />
@@ -45,7 +51,7 @@ const HeroHeader1 = () => {
 						<p className="ezy__header1-sub-heading">
 							Book professional postpartum care from certified nurses—when you need it, where you need it.
 						</p>
-						<a href="#ourplans"
+						<a onClick={openModal}
 							className="btn btn-primary fs-5 mt-4 mt-md-5"
 						>
 							Start Free Trial

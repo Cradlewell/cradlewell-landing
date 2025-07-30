@@ -2,8 +2,11 @@
 
 import React from 'react';
 import { Container, Row, Col, Button } from 'react-bootstrap';
+import { useModal } from './ModalContext'; // adjust path if needed
+
 
 const StepsSection = () => {
+      const { openModal } = useModal();
   return (
     <section className="py-5 bg-white" id='howitworks'>
       <Container>
@@ -77,7 +80,7 @@ const StepsSection = () => {
         {/* CTA Button */}
         <div className="text-center mt-5">
           <Button
-          href='#ourplans'
+          onClick={openModal}
             variant="primary"
             style={{
               backgroundColor: '#5B7CFA',

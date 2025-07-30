@@ -10,27 +10,19 @@ import {
   Modal,
   Form,
 } from "react-bootstrap";
+import { useModal } from './ModalContext'; // adjust path if needed
 
 const PricingSection = () => {
-  const [showModal, setShowModal] = useState(false);
-
-  const handleShow = () => setShowModal(true);
-  const handleClose = () => setShowModal(false);
 
   useEffect(() => {
-  if (showModal) {
-    const timer = setTimeout(() => {
-      const dateInput = document.getElementById('start-date-field') as HTMLInputElement;
-      if (dateInput) {
-        const today = new Date().toISOString().split("T")[0];
-        dateInput.min = today;
-      }
-    }, 100); // slight delay to ensure modal is mounted
+    const dateInput = document.getElementById('start-date-field') as HTMLInputElement;
+    if (dateInput) {
+      const today = new Date().toISOString().split("T")[0];
+      dateInput.min = today;
+    }
+  }, []);
 
-    return () => clearTimeout(timer);
-  }
-}, [showModal]);
-
+    const { openModal } = useModal();
 
 	return (
 		<div className="pricing-section bg-light py-5" id="ourplans">
@@ -57,9 +49,9 @@ const PricingSection = () => {
   </div>
 </div>
 
-<h5 className="primary-color text-center mb-3 fw-semibold">Care Light</h5>
-							<h1 className="fw-bold">₹1,500/day</h1>
-							<p className="text-muted">4 hrs</p>
+<h3 className="primary-color text-center mb-3 fw-semibold">Care Light</h3>
+							{/* <h1 className="fw-bold">₹1,500/day</h1>
+							<p className="text-muted">4 hrs</p> */}
                             <ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
@@ -92,7 +84,7 @@ const PricingSection = () => {
 </ul>
 
 
-							<Button variant="primary" className="mt-auto" onClick={handleShow}>Get Started</Button>
+							<Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
 						</Card>
 					</Col>
 
@@ -111,10 +103,10 @@ const PricingSection = () => {
     <i className="fas fa-layer-group text-light" style={{ fontSize: '20px' }}></i>
   </div>
 </div>
-<h5 className="text-white text-center mb-3 fw-semibold">Care Plus</h5>
+<h3 className="text-white text-center mb-3 fw-semibold">Care Plus</h3>
 
-							<h1 className="fw-bold">₹2,500/day</h1>
-							<p>8 hrs</p>
+							{/* <h1 className="fw-bold">₹2,500/day</h1>
+							<p>8 hrs</p> */}
 						<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
@@ -146,7 +138,7 @@ const PricingSection = () => {
   </li>
 </ul>
 
-							<Button variant="light" className="text-primary mt-auto" onClick={handleShow}>Get Started</Button>
+							<Button variant="light" className="text-primary mt-auto" onClick={openModal}>Get Started</Button>
 						</Card>
 					</Col>
 
@@ -166,9 +158,9 @@ const PricingSection = () => {
   </div>
 </div>
 
-<h5 className="primary-color text-center mb-3 fw-semibold">Night Guardian</h5>
-							<h1 className="fw-bold">₹3,000/day</h1>
-							<p className="text-muted">12 hrs</p>
+<h3 className="primary-color text-center mb-3 fw-semibold">Night Guardian</h3>
+							{/* <h1 className="fw-bold">₹3,000/day</h1>
+							<p className="text-muted">12 hrs</p> */}
 							<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
@@ -196,12 +188,12 @@ const PricingSection = () => {
   </li>
 </ul>
 
-							<Button variant="primary" className="mt-auto" onClick={handleShow}>Get Started</Button>
+							<Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
 						</Card>
 					</Col>
 				</Row>
 
-				<Button variant="btm btn-primary" className="mt-5" onClick={handleShow}>
+				<Button variant="btm btn-primary" className="mt-5" onClick={openModal}>
 					Start Free Trial
 				</Button>
 				<p className="mt-2 text-muted fw-bold">
@@ -211,7 +203,7 @@ const PricingSection = () => {
 
 
       {/* Popup Modal */}
-      <Modal show={showModal} onHide={handleClose} centered>
+      {/* <Modal show={showModal} onHide={handleClose} centered>
         <Modal.Header closeButton>
           <Modal.Title>Book Your Nurse Now</Modal.Title>
         </Modal.Header>
@@ -318,7 +310,7 @@ const PricingSection = () => {
 />
 
         </Modal.Body>
-      </Modal>
+      </Modal> */}
     
 		</div>
 	);
