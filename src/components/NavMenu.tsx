@@ -26,7 +26,7 @@ type Route = {
 const routes: Route[] = [
 	{ name: "Why Choose", href: "#whychoose" },
 	{ name: "How It Works", href: "#howitworks" },
-	{ name: "See Plan", href: "#howitworks" },
+	{ name: "See Plan", href: "#ourplans" },
 	{ name: "Testimonials", href: "#testimonials" },
 	{ name: "Our Team", href: "#ourteam" },
 	{ name: "FAQs", href: "#faq" },
