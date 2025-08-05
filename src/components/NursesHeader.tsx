@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
 	Button,
 	Collapse,
@@ -34,7 +34,7 @@ const NavMenu = () => (
 const NavActions = () => (
 	<Nav className="flex-row mb-2 mb-lg-0">
 		<Nav.Item className="nav-item mx-2">
-			<a className="btn btn-primary" href="#ourplans">
+			<a className="btn btn-primary" target="_blank" href="https://forms.gle/hdU6nT2sV2yh5XwJ7">
 				Apply Now To Join
 			</a>
 		</Nav.Item>
@@ -54,9 +54,20 @@ const SearchForm = () => (
 
 const NurseHeader = () => {
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
+	const [scrolled, setScrolled] = useState(false);
+	
 
+		useEffect(() => {
+			const handleScroll = () => {
+				setScrolled(window.scrollY > 0);
+			};
+	
+			window.addEventListener('scroll', handleScroll);
+			return () => window.removeEventListener('scroll', handleScroll);
+		}, []);
+		
 	return (
-		<div className="ezy__nav5 light">
+		<div className={`ezy__nav5 light sticky-top ${scrolled ? 'shadow-sm' : ''}`}>
 			<Navbar expand="lg" className="flex-column py-3">
 				<Container>
 					<Navbar.Brand href="/">

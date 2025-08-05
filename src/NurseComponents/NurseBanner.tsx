@@ -35,7 +35,7 @@ const NurseBanner = () => {
 	return (
 		<section className="ezy__header1 light dark">
 			<NurseHeroHeaderShape />
-			<Container className="position-relative">
+			<Container className="position-relative"> 
 				<Row className="align-items-center">
 					<Col lg={7} className="pe-xl-5 text-center text-lg-start">
 						<h2 className="display-5 mb-4 fw-bold">
@@ -46,7 +46,7 @@ const NurseBanner = () => {
 						<p className="ezy__header1-sub-heading">
 							Join Indias Most trusted Postnatal home care services that puts Nurses First.
 						</p>
-						<a href="#ourplans"
+						<a target="_blank" href="https://forms.gle/hdU6nT2sV2yh5XwJ7"
 							className="btn btn-primary fs-5 mt-4 mt-md-5"
 						>
 							Apply Now To Join
