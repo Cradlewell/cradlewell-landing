@@ -80,7 +80,7 @@ const PricingSection = () => {
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>1 consultation (lactation or pediatric)</span>
+{/*     <span>1 consultation (lactation or pediatric)</span> */}
   </li>
 </ul>
 
@@ -111,31 +111,35 @@ const PricingSection = () => {
 						<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Daily 6 hours care</span>
+    <span>Daily 12 hours care</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Baby massage & bath</span>
+    <span>Extended baby care during day or night shift</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Mother hygiene + Pad change</span>
+    <span>Sleep supervision (night shift)</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Breastfeeding Support</span>
+    <span>Postnatal recovery support for mother</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Diapering & baby sleep setup</span>
+    <span>Feeding schedule guidance</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Basic vitals (mother & baby)</span>
+    <span>Light household assistance for baby care (e.g., bottle sterilization, nursery arrangement)</span>
+  </li>
+	<li className="d-flex align-items-start mb-3">
+    <i className="far fa-check-circle text-light me-2 mt-1"></i>
+    <span>Basic vitals check (mother & baby)</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>2 consultations (lactation or pediatric)</span>
+    <span>1 consultation (lactation or pediatric)</span>
   </li>
 </ul>
 
@@ -159,34 +163,39 @@ const PricingSection = () => {
   </div>
 </div>
 
-<h3 className="primary-color text-center mb-3 fw-semibold">Night Guardian</h3>
+<h3 className="primary-color text-center mb-3 fw-semibold">Care 360</h3>
 							{/* <h1 className="fw-bold">₹3,000/day</h1>
 							<p className="text-muted">12 hrs</p> */}
 							<ul className="list-unstyled mt-4">
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Night nurse for 12 hours</span>
+    <span>All Care Plus services</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Baby feeding support</span>
+    <span>Continuous 24-hour baby monitoring and comfort care</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Diaper change & burping</span>
+    <span>Full-day recovery support for mother</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Sleep routine support</span>
+    <span>Managed feeding & sleep cycles for baby</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Soothing techniques</span>
+    <span>Coordinated nurse shift change for uninterrupted service</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Mother rest tracking</span>
+    <span>Daily wellbeing updates for mother & baby</span>
   </li>
+	<li className="d-flex align-items-start mb-3">
+    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
+    <span>2 consultations (lactation or pediatric)</span>
+  </li>
+								
 </ul>
 
 							<Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
