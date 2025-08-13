@@ -78,9 +78,9 @@ const PricingSection = () => {
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
     <span>Basic vitals (mother)</span>
   </li>
-  <li className="d-flex align-items-start mb-3">
+{/*   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-{/*     <span>1 consultation (lactation or pediatric)</span> */}
+{/*     <span>1 consultation (lactation or pediatric)</span> */} */}
   </li>
 </ul>
 
@@ -123,7 +123,7 @@ const PricingSection = () => {
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Postnatal recovery support for mother</span>
+    <span>Postnatal recovery support</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
@@ -131,7 +131,7 @@ const PricingSection = () => {
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Light household assistance for baby care (e.g., bottle sterilization, nursery arrangement)</span>
+    <span>Light baby-related chores</span>
   </li>
 	<li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-light me-2 mt-1"></i>
@@ -173,29 +173,28 @@ const PricingSection = () => {
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Continuous 24-hour baby monitoring and comfort care</span>
+    <span>24-hr baby monitoring</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Full-day recovery support for mother</span>
+    <span>Full-day mother recovery</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Managed feeding & sleep cycles for baby</span>
+    <span>Managed feeding & sleep cycles</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Coordinated nurse shift change for uninterrupted service</span>
+    <span>Shift change for continuous care</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Daily wellbeing updates for mother & baby</span>
+    <span>Daily wellbeing updates</span>
   </li>
 	<li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
     <span>2 consultations (lactation or pediatric)</span>
-  </li>
-								
+  </li>							
 </ul>
 
 							<Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
