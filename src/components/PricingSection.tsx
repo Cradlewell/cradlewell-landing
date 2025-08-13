@@ -79,7 +79,7 @@ const PricingSection = () => {
     <span>Basic vitals (mother)</span>
   </li>
   <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
+{/*     <i className="far fa-check-circle text-primary me-2 mt-1"></i> */}
 {/*     <span>1 consultation (lactation or pediatric)</span> */}
   </li>
 </ul>
