@@ -29,18 +29,18 @@ const HeroBelow = () => {
 
 						<Row className="text-center mt-4">
 							<Col xs={4}>
-								<h2 className="display-5 fw-bold">5k+</h2>
-								<p className="small text-muted mb-0">Families Served</p>
+								<h2 className="display-5 fw-bold">100+</h2>
+								<p className="small text-muted mb-0">Families Served (and growing)</p>
 							</Col>
 							<Col xs={4}>
 								<h4 className="display-5 fw-bold">40+</h4>
-								<p className="small text-muted mb-0">Years of Experience</p>
+								<p className="small text-muted mb-0">Years of Combined Healthcare Experience</p>
 							</Col>
 							<Col xs={4}>
 								<h4 className="display-5 fw-bold">
 									4.9 <span style={{ color: "#f1c40f" }}>★</span>
 								</h4>
-								<p className="small text-muted mb-0">12k Real Customer</p>
+								<p className="small text-muted mb-0">Early Customer Satisfaction</p>
 							</Col>
 						</Row>
 					</Col>
