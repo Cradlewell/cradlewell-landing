@@ -84,10 +84,10 @@ const ModalController = () => {
                  title="Please enter a valid 10-digit phone number"
                  maxlength="10"
                />
-               <div class="form-check mt-2">
-                 <input type="checkbox" class="form-check-input" name="LEADCF101" id="whatsappOptin">
-                 <label class="form-check-label" for="whatsappOptin">Opt-in for WhatsApp</label>
-               </div>
+               // <div class="form-check mt-2">
+               //   <input type="checkbox" class="form-check-input" name="LEADCF101" id="whatsappOptin">
+               //   <label class="form-check-label" for="whatsappOptin">Opt-in for WhatsApp</label>
+               // </div>
              </div>
      
              <div class='form-group mb-3'>
@@ -105,8 +105,8 @@ const ModalController = () => {
                <select name='LEADCF2' class='form-select'>
                  <option value='-None-'>-None-</option>
                  <option value='Care Light (4 Hrs)'>Care Light (4 Hrs)</option>
-                 <option value='Care Plus (8 Hrs)'>Care Plus (8 Hrs)</option>
-                 <option value='Night Guardian (12 Hrs)'>Night Guardian (12 Hrs)</option>
+                 <option value='Care Plus (8 Hrs)'>Care Plus (12 Hrs)</option>
+                 <option value='Night Guardian (12 Hrs)'>Care 360 (24 Hrs)</option>
                  <option value='Not Sure / Need Help Choosing'>Not Sure / Need Help Choosing</option>
                </select>
              </div>
@@ -121,7 +121,7 @@ const ModalController = () => {
                <select name='LEADCF3' class='form-select'>
                  <option value='-None-'>-None-</option>
                  <option value='7 Days'>7 Days</option>
-                 <option value='14 Days'>14 Days</option>
+                 <option value='14 Days'>15 Days</option>
                  <option value='30 Days'>30 Days</option>
                  <option value='Custom / Decide On Call'>Custom / Decide On Call</option>
                </select>
