@@ -18,13 +18,13 @@ const teamMembers: any[] = [
     image: '/founders/venu.jpg',
   },
   {
-    name: 'Madhu Sudhan',
+    name: 'Dr.Madhu Sudhan',
     role: 'COO',
     roleColor: '#D5F8DD',
     image: '/founders/madhu.jpg',
   },
   {
-    name: 'Vishnu Vardhan',
+    name: 'Dr.Vishnu Vardhan',
     role: 'CMO',
     roleColor: '#D5F8DD',
     image: '/founders/vishnu.jpg',
