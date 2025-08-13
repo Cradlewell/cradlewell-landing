@@ -93,10 +93,6 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                        title="Please enter a valid 10-digit phone number"
                        maxlength="10"
                      />
-                     // <div class="form-check mt-2">
-                     //   <input type="checkbox" class="form-check-input" name="LEADCF101" id="whatsappOptin">
-                     //   <label class="form-check-label" for="whatsappOptin">Opt-in for WhatsApp</label>
-                     // </div>
                    </div>
            
                    <div class='form-group mb-3'>
