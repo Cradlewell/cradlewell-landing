@@ -372,3 +372,18 @@ html {
 .whatsapp-widget:hover {
   transform: scale(1.1);
 }
+
+.ratio-reel {
+  position: relative;
+  width: 100%;
+  padding-top: 177.78%; /* 16:9 = 56.25%, so 9:16 = 177.78% */
+}
+
+.ratio-reel iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
