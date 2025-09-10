@@ -22,16 +22,19 @@ const WhyNurseSec = () => {
 
         {/* Responsive Video */}
 <div className="text-center">
-  <div className="ratio ratio-reel">
-    <iframe
-      src="https://www.youtube.com/embed/IvN6zQnrG8M"
-      title="YouTube Shorts player"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      referrerPolicy="strict-origin-when-cross-origin"
-      allowFullScreen
-    ></iframe>
+  <div style={{ maxWidth: "350px", margin: "0 auto" }}>
+    <div className="ratio-reel">
+      <iframe
+        src="https://www.youtube.com/embed/IvN6zQnrG8M"
+        title="YouTube Shorts player"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+      ></iframe>
+    </div>
   </div>
 </div>
+
 
 
       </Container>
