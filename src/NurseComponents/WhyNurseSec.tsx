@@ -21,17 +21,18 @@ const WhyNurseSec = () => {
         </div>
 
         {/* Responsive Video */}
-        <div className="text-center">
-          <div className="ratio ratio-16x9">
-            <iframe
-              src="https://www.youtube.com/embed/OwPZIhTHDUk?si=wG1766whV0V_tYKa"
-              title="YouTube video player"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-            ></iframe>
-          </div>
-        </div>
+<div className="text-center">
+  <div className="ratio ratio-9x16">
+    <iframe
+      src="https://www.youtube.com/embed/IvN6zQnrG8M"
+      title="YouTube reel player"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      referrerPolicy="strict-origin-when-cross-origin"
+      allowFullScreen
+    ></iframe>
+  </div>
+</div>
+
       </Container>
     </section>
   );
