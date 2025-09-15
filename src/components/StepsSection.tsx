@@ -13,7 +13,7 @@ const StepsSection = () => {
         {/* Heading */}
         <div className="text-center mb-5">
           <h1 className="fw-bold">
-            From Booked to Cared For—In <span style={{ color: '#5B7CFA' }}> <br /> 3 Easy Steps</span>
+            Nurse-Led Newborn & Postnatal <span style={{ color: '#5B7CFA' }}> <br /> Home Care in Bangalore</span>
           </h1>
         </div>
 

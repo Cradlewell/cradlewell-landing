@@ -1,4 +1,23 @@
 import Head from 'next/head'
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy | Nurse-led Newborn & Postnatal Home Care Bangalore – Cradlewell",
+  description: "Read Cradlewell's Privacy Policy for Nurse-led Newborn and Postnatal Home Care in Bangalore. See How We Protect Your Personal Data, Prioritize Your Privacy, and Provide Professional, Dependable Support for Mothers and Babies in the Comfort of Your Home.",
+  other: {
+    keywords: `
+      Cradlewell Privacy Policy,
+      healthcare Data Privacy,
+      personal Data Protection,
+      nurse-led Care Data Security,
+      patient Information Privacy,
+      postnatal Care Confidentiality,
+      baby Care Privacy Policy,
+      bangalore Healthcare Privacy,
+      secure Patient Data
+    `,
+  },
+};
 
 export default function PrivacyPolicy() {
   return (

@@ -73,7 +73,7 @@ const NurseHeader = () => {
 					<Navbar.Brand href="/">
 						<img
 							src="/images/logo.png"
-							alt="Logo"
+							alt="Cradlewell Logo - Nurse-led Newborn and Postnatal Home Care Services in Bangalore"
 							width="200px"
 							className="img-fluid"
 						/>

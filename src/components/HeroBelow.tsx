@@ -47,7 +47,7 @@ const HeroBelow = () => {
 				</Row>
 
                 <div className="container mt-5">
-                    <img className="img-fluid" src="/images/img1.png" alt="" />
+                    <img className="img-fluid" src="/images/img1.png" alt="Professional Nurse Providing Newborn and Postnatal Home Care Services to Mother and Baby in Bangalore" />
                 </div>
                 
 			</Container>

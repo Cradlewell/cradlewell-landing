@@ -11,8 +11,12 @@ import NurseHeader from '@/components/NursesHeader';
 import LayoutClient from '@/components/LayoutClient';
 
 export const metadata = {
-  title: 'Cradlewell',
-  description: 'Book professional postpartum care from certified nurses—when you need it, where you need it.',
+  title: 'Nurse-led Newborn & Postnatal Home Care – Trusted Support for Mothers & Baby in Bangalore | Cradlewell',
+  description: 'Certified Nurses Deliver Hospital-grade Postnatal and Newborn Care in Bangalore, Right in Your Home. Trusted by New Mothers, Cradlewell Offers Baby Bathing, Feeding Support, Sleep Guidance, and Postpartum Recovery With Compassion and Expertise. Book Your Personalized Care Plan Today for Peace of Mind and Professional Support.',
+  other: {
+    keywords:
+      'Newborn Home Care Bangalore, postnatal Home Care Nurse, nurse-led Maternity Care, baby Care Services Bangalore, postnatal Recovery Support, certified Postpartum Nurse, mother and Baby Care, professional Newborn Care, hospital-grade Home Care, postpartum Health Bangalore',
+  },
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -66,6 +70,61 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             fbq('track', 'PageView');`,
           }}
         />
+
+        {/* ✅ Local Business Schema */}
+        <Script id="local-business-schema" type="application/ld+json" strategy="afterInteractive">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Midwifery",
+            "name": "Cradlewell",
+            "image": "https://www.cradlewell.com/images/logo.png",
+            "@id": "",
+            "url": "https://www.cradlewell.com/",
+            "telephone": "9363893639",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "Site No. 26, Laskar Hosur, Adugodi, Koramangala",
+              "addressLocality": "Bangalore South",
+              "postalCode": "560030",
+              "addressCountry": "IN"
+            },
+            "openingHoursSpecification": {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday"
+              ],
+              "opens": "00:00",
+              "closes": "23:59"
+            },
+            "sameAs": [
+              "https://www.facebook.com/share/1HRDvZY1K3/?mibextid=wwXIfr",
+              "https://x.com/cradle_well?s=11",
+              "https://www.instagram.com/cradlewell_care?igsh=b3pkOHBxMTIyMGF4",
+              "https://www.linkedin.com/company/cradlewell/"
+            ]
+          })}
+        </Script>
+
+        {/* ✅ Website Schema */}
+        <Script id="website-schema" type="application/ld+json" strategy="afterInteractive">
+          {JSON.stringify({
+            "@context": "https://schema.org/",
+            "@type": "WebSite",
+            "name": "Cradlewell",
+            "url": "https://www.cradlewell.com/",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://www.cradlewell.com/{search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          })}
+        </Script>
       </head>
       <body>
         {/* Google Tag Manager (noscript) */}

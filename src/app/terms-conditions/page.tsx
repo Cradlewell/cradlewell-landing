@@ -1,6 +1,25 @@
 // app/terms/page.tsx (App Router) or pages/terms.tsx (Pages Router)
 
 import React from 'react';
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms & Conditions | Nurse-led Newborn & Postnatal Home Care Bangalore - Cradlewell",
+  description: "Explore Cradlewell's Terms & Conditions for Nurse-led Newborn and Postnatal Home Care in Bangalore. Discover How Our Transparent Policies, Secure Data Handling, and Trained Nursing Professionals Ensure Trusted, Safe, and Compassionate Care for Mothers and Babies at Home.",
+  other: {
+    keywords: `
+      Cradlewell Terms of Use,
+      home Care Service Agreement,
+      nurse-led Care Terms,
+      postnatal Care Policies,
+      subscription Terms Cradlewell,
+      maternity Care Terms and Conditions,
+      user Agreement Bangalore,
+      healthcare Service Contract,
+      caregiving Service Terms
+    `,
+  },
+};
 
 const TermsOfUse: React.FC = () => {
   return (
@@ -214,14 +233,14 @@ const TermsOfUse: React.FC = () => {
 
       <h2>12. Limitation of Liability</h2>
       <p>To the fullest extent permitted by law, Cradlewell and its affiliates, officers, employees, agents, and partners shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses, resulting from:
-        <ul>
+      </p>
+              <ul>
           <li>Your use or inability to use the Services.</li>
           <li>Any unauthorized access to or use of our servers and/or any personal information stored therein.</li>
           <li>Any interruption or cessation of transmission to or from the Services.</li>
           <li>Any bugs, viruses, trojan horses, or the like that may be transmitted to or through our Services by any third party.</li>
           <li>Any errors or omissions in any content or for any loss or damage incurred as a result of the use of any content posted, emailed, transmitted, or otherwise made available through the Services.</li>
         </ul>
-      </p>
 
       <h2>13. Indemnification</h2>
       <p>You agree to indemnify, defend, and hold harmless Cradlewell, its affiliates, officers, agents, and employees from any claim, demand, damages, or other losses, including reasonable attorneys fees, arising out of your use of the Services, your violation of these Terms, or your violation of any rights of another.</p>

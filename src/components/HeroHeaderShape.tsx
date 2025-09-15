@@ -60,7 +60,7 @@ const HeroHeader1 = () => {
 					<Col lg={6} className="mt-5 mt-lg-0">
 						<img
 							src="/images/bannerimg.png"
-							alt=""
+							alt="Trusted Nurse-led Newborn and Postnatal Home Care Support Banner for Mothers and Babies by Cradlewell in Bangalore"
 							className="rounded img-fluid mt-3"
 						/>
 					</Col>
