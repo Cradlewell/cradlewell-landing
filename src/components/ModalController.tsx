@@ -102,7 +102,7 @@ const ModalController = () => {
                  <option value='-None-'>-None-</option>
                  <option value='Care Light (4 Hrs)'>Care Light (4 Hrs)</option>
                  <option value='Care Plus (12 Hrs)'>Care Plus (12 Hrs)</option>
-                 <option value='Care 360 (24 Hrs)'>Care 360 (24 Hrs)</option>
+                 <option value='Care Max (24 Hrs)'>Care 360 (24 Hrs)</option>
                  <option value='Not Sure / Need Help Choosing'>Not Sure / Need Help Choosing</option>
                </select>
              </div>
