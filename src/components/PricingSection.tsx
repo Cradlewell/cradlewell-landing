@@ -163,7 +163,7 @@ const PricingSection = () => {
   </div>
 </div>
 
-<h3 className="primary-color text-center mb-3 fw-semibold">Care 360</h3>
+<h3 className="primary-color text-center mb-3 fw-semibold">Care Max</h3>
 							{/* <h1 className="fw-bold">₹3,000/day</h1>
 							<p className="text-muted">12 hrs</p> */}
 							<ul className="list-unstyled mt-4">
