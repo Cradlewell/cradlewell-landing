@@ -24,6 +24,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="en">
       <head>
         <link rel="icon" href="/images/favicon.png" />
+
+          {/* Google Site Verification */}
+  <meta
+    name="google-site-verification"
+    content="8akbxzJkvsESfM46RB53TzV8NkmREJX7Q14wN4EJdhI"
+  />
         
         {/* Font Awesome CDN */}
         <link
@@ -125,6 +131,174 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             }
           })}
         </Script>
+
+{/* 3️⃣ MedicalOrganization Schema */}
+        <Script id="medical-organization-schema" type="application/ld+json" strategy="afterInteractive">
+          {`
+            {
+              "@context": "https://schema.org",
+              "@type": "MedicalOrganization",
+              "name": "Cradlewell",
+              "alternateName": "Nurse-led Newborn & Postnatal Home Care – Trusted Support for Mothers & Baby in Bangalore",
+              "url": "https://www.cradlewell.com/",
+              "logo": "https://www.cradlewell.com/images/logo.png",
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "9363893639",
+                "contactType": "customer service",
+                "areaServed": "IN",
+                "availableLanguage": ["en","Hindi"]
+              },
+              "sameAs": [
+                "https://www.facebook.com/share/1HRDvZY1K3/?mibextid=wwXIfr",
+                "https://x.com/cradle_well?s=11",
+                "https://www.instagram.com/cradlewell_care?igsh=b3pkOHBxMTIyMGF4",
+                "https://www.linkedin.com/company/cradlewell/",
+                "https://www.cradlewell.com/"
+              ]
+            }
+          `}
+        </Script>
+
+        {/* 4️⃣ Person Schema */}
+        <Script id="person-schema" type="application/ld+json" strategy="afterInteractive">
+          {`
+            [
+              {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": "Lokesh",
+                "jobTitle": "CEO",
+                "affiliation": {
+                  "@type": "Organization",
+                  "name": "Cradlewell",
+                  "url": "https://www.cradlewell.com/"
+                },
+                "description": "Chief Executive Officer leading postpartum and newborn healthcare services.",
+                "image": "https://www.cradlewell.com/images/lokesh.jpg",
+                "sameAs": [
+                  "https://www.linkedin.com/in/lokesh",
+                  "https://www.twitter.com/lokesh"
+                ]
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": "Venu Annareddy",
+                "jobTitle": "CFO",
+                "affiliation": {
+                  "@type": "Organization",
+                  "name": "Cradlewell",
+                  "url": "https://www.cradlewell.com/"
+                },
+                "description": "Chief Financial Officer and co-founder.",
+                "image": "https://www.cradlewell.com/images/venu.jpg",
+                "sameAs": ["https://www.linkedin.com/in/venuannareddy"]
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": "Dr. Madhu Sudhan",
+                "jobTitle": "COO",
+                "affiliation": {
+                  "@type": "Organization",
+                  "name": "Cradlewell",
+                  "url": "https://www.cradlewell.com/"
+                },
+                "description": "Chief Operating Officer, overseeing healthcare delivery for mothers and babies.",
+                "image": "https://www.cradlewell.com/images/madhu.jpg",
+                "sameAs": ["https://www.linkedin.com/in/drmadhusudhan"]
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": "Dr. Vishnu Vardhan",
+                "jobTitle": "CMO",
+                "affiliation": {
+                  "@type": "Organization",
+                  "name": "Cradlewell",
+                  "url": "https://www.cradlewell.com/"
+                },
+                "description": "Chief Medical Officer specializing in postnatal and newborn care.",
+                "image": "https://www.cradlewell.com/images/vishnu.jpg",
+                "sameAs": ["https://www.linkedin.com/in/drvishnuvardhan"]
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": "Vijaya",
+                "jobTitle": "Senior Nurse (Level III)",
+                "affiliation": {
+                  "@type": "Organization",
+                  "name": "Cradlewell",
+                  "url": "https://www.cradlewell.com/"
+                },
+                "description": "Senior nurse with 25 years of experience in mother and newborn care.",
+                "image": "https://www.cradlewell.com/images/vijaya.jpg"
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": "Sneha Marcel",
+                "jobTitle": "Senior Nurse (Level I)",
+                "affiliation": {
+                  "@type": "Organization",
+                  "name": "Cradlewell",
+                  "url": "https://www.cradlewell.com/"
+                },
+                "description": "Senior nurse with 3 years of experience.",
+                "image": "https://www.cradlewell.com/images/sneha.jpg"
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": "Phelomit Lepcha",
+                "jobTitle": "Junior Nurse",
+                "affiliation": {
+                  "@type": "Organization",
+                  "name": "Cradlewell",
+                  "url": "https://www.cradlewell.com/"
+                },
+                "description": "Junior nurse with 1 year of experience.",
+                "image": "https://www.cradlewell.com/images/phelomit.jpg"
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": "Pavithra",
+                "jobTitle": "Yoga Consultant",
+                "affiliation": {
+                  "@type": "Organization",
+                  "name": "Cradlewell",
+                  "url": "https://www.cradlewell.com/"
+                },
+                "description": "Yoga consultant with 15 years of experience.",
+                "image": "https://www.cradlewell.com/images/pavithra.jpg"
+              }
+            ]
+          `}
+        </Script>
+
+        {/* 5️⃣ Breadcrumb Schema */}
+        <Script id="breadcrumb-schema" type="application/ld+json" strategy="afterInteractive">
+          {`
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                {"@type":"ListItem","position":1,"name":"Home","item":"https://www.cradlewell.com/"},
+                {"@type":"ListItem","position":2,"name":"Care Plans","item":"https://www.cradlewell.com/care-plans"},
+                {"@type":"ListItem","position":3,"name":"Care Light","item":"https://www.cradlewell.com/care-plans/care-light"},
+                {"@type":"ListItem","position":4,"name":"Care Plus","item":"https://www.cradlewell.com/care-plans/care-plus"},
+                {"@type":"ListItem","position":5,"name":"Care Max","item":"https://www.cradlewell.com/care-plans/care-max"},
+                {"@type":"ListItem","position":6,"name":"Book Your Slot","item":"https://www.cradlewell.com/book-slot"},
+                {"@type":"ListItem","position":7,"name":"Meet Our Team","item":"https://www.cradlewell.com/team"},
+                {"@type":"ListItem","position":8,"name":"Testimonials","item":"https://www.cradlewell.com/testimonials"}
+              ]
+            }
+          `}
+        </Script>
+
       </head>
       <body>
         {/* Google Tag Manager (noscript) */}
