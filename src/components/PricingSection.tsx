@@ -1,214 +1,99 @@
 'use client'
-
-import React, { useEffect, useState } from "react";
-import {
-  Container,
-  Row,
-  Col,
-  Button,
-  Card,
-  Modal,
-  Form,
-} from "react-bootstrap";
-import { useModal } from './ModalContext'; // adjust path if needed
-
+import React, { useEffect } from "react";
+import { Container, Row, Col, Button, Card } from "react-bootstrap";
+import { useModal } from "./ModalContext"; // adjust path if needed
 
 const PricingSection = () => {
-
   useEffect(() => {
-    const dateInput = document.getElementById('start-date-field') as HTMLInputElement;
+    const dateInput = document.getElementById("start-date-field") as HTMLInputElement | null;
     if (dateInput) {
       const today = new Date().toISOString().split("T")[0];
       dateInput.min = today;
     }
   }, []);
 
-    const { openModal } = useModal();
+  const { openModal } = useModal();
 
-	return (
-		<div className="pricing-section bg-light py-5" id="ourplans">
-			<Container className="text-center text-dark">
-<span className="badge rounded-pill bg-light primary-color px-3">Pricing Plans</span>
-				<h1 className="fw-bold mt-2 mb-5">
-					Choose the <span className="text-primary">Care Plan That Fits</span> You Best
-				</h1>
+  return (
+    <div className="pricing-section bg-light py-5" id="ourplans">
+      <Container className="text-center text-dark">
+        <span className="badge rounded-pill bg-light primary-color px-3">Pricing Plan</span>
+        <h1 className="fw-bold mt-2 mb-5">
+          Choose the <span className="text-primary">Care Plan</span>
+        </h1>
 
-				<Row className="g-4 justify-content-center">
-					{/* Care Lite */}
-					<Col md={4}>
-						<Card className="h-100 shadow-sm p-4 price-card">
-                            <div className="d-flex justify-content-center mb-2">
-  <div
-    className="d-flex align-items-center justify-content-center rounded-circle bg-light"
-    style={{
-      width: '50px',
-      height: '50px',
-      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-    }}
-  >
-    <i className="fas fa-bolt text-primary" style={{ fontSize: '20px' }}></i>
-  </div>
-</div>
+        <Row className="g-4 justify-content-center">
+          {/* 8-Hour Care (only card) */}
+          <Col md={6} lg={5}>
+            <Card
+              className="h-100 text-white p-4 price-card"
+              style={{ background: "linear-gradient(135deg, rgba(95,71,255,0.8) 0%, #6388FF 100%)" }}
+            >
+              <div className="d-flex justify-content-center mb-2">
+                <div
+                  className="d-flex align-items-center justify-content-center rounded-circle"
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    boxShadow: "inset 2px 2px 16px rgb(255, 255, 255)",
+                  }}
+                >
+                  <i className="fas fa-layer-group text-light" style={{ fontSize: "20px" }}></i>
+                </div>
+              </div>
 
- {/* <h3 className="primary-color text-center mb-3 fw-semibold">Care Lite</h3> 
-							<h1 className="fw-bold">₹1,500/day</h1>
-							<p className="text-muted">4 hrs</p> 
-                            <ul className="list-unstyled mt-4"> 
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i> 
-    <span>Daily 4 hours care</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Baby massage & bath</span>
-  </li> 
-   <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Mother hygiene + Pad change</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Breastfeeding Support</span>
-  </li> 
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Diapering & baby sleep setup</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Basic vitals (mother)</span>
-  </li>
-   <li className="d-flex align-items-start mb-3"> 
-<i className="far fa-check-circle text-primary me-2 mt-1"></i> 
- <span>1 consultation (lactation or pediatric)</span> 
-  </li>
-</ul> 
+              <h3 className="text-white text-center mb-3 fw-semibold">8-Hour Care</h3>
+              {/* <h1 className="fw-bold">₹X,XXX / day</h1>
+              <p>8 hrs</p> */}
 
+              <ul className="list-unstyled mt-4 text-start mx-auto" style={{ maxWidth: 420 }}>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Daily 8 hours care </span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Baby massage and bath</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Mother hygiene support and pad change</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Breastfeeding support and feeding schedule guidance</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Diapering and baby sleep setup</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Basic vitals check (mother & baby)</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>1 consultation (lactation or pediatric)</span>
+                </li>
+              </ul>
 
-							 <Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
-						</Card>
-					</Col> 
+              <Button variant="light" className="text-primary mt-auto" onClick={openModal}>
+                Get Started
+              </Button>
+            </Card>
+          </Col>
+        </Row>
 
-					Care Plus - highlighted
-					 <Col md={4}>
-						<Card className="h-100 text-white p-4 price-card" style={{ background: "linear-gradient(135deg,rgba(95, 71, 255, 0.8) 0%, #6388FF 100%)" }}>
-                            <div className="d-flex justify-content-center mb-2">  */}
-  <div
-    className="d-flex align-items-center justify-content-center rounded-circle"
-    style={{
-      width: '50px',
-      height: '50px',
-      boxShadow: 'inset 2px 2px 16px rgb(255, 255, 255)'
-    }}
-  >
-    <i className="fas fa-layer-group text-light" style={{ fontSize: '20px' }}></i>
-  </div>
-</div>
-<h3 className="text-white text-center mb-3 fw-semibold">Care Plus</h3>
+        <Button variant="btm btn-primary" className="mt-5" onClick={openModal}>
+          Start Free Trial
+        </Button>
+        <p className="mt-2 text-muted fw-bold">Limited nurse availability — book your preferred time slot now.</p>
+      </Container>
+    </div>
+  );
+};
 
-							{/* <h1 className="fw-bold">₹2,500/day</h1>
-							<p>8 hrs</p> */}
-						<ul className="list-unstyled mt-4">
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Daily 12 hours care</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Extended baby care during day or night shift</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Sleep supervision (night shift)</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Postnatal recovery support</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Feeding schedule guidance</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Light baby-related chores</span>
-  </li>
-	<li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>Basic vitals check (mother & baby)</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-light me-2 mt-1"></i>
-    <span>1 consultation (lactation or pediatric)</span>
-  </li>
-</ul>
-
-							<Button variant="light" className="text-primary mt-auto" onClick={openModal}>Get Started</Button>
-						</Card>
-					</Col>
-
-					{/* Night Guardian */}
-					<Col md={4}>
-						<Card className="h-100 shadow-sm p-4 price-card">
-                            <div className="d-flex justify-content-center mb-2">
-  <div
-    className="d-flex align-items-center justify-content-center rounded-circle bg-light"
-    style={{
-      width: '50px',
-      height: '50px',
-      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-    }}
-  >
-    <i className="fas fa-layer-group text-primary" style={{ fontSize: '20px' }}></i>
-  </div>
-</div>
-
-<h3 className="primary-color text-center mb-3 fw-semibold">Care Max</h3>
-							{/* <h1 className="fw-bold">₹3,000/day</h1>
-							<p className="text-muted">12 hrs</p> */}
-							<ul className="list-unstyled mt-4">
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>All Care Plus services</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>24-hr baby monitoring</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Full-day mother recovery</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Managed feeding & sleep cycles</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Shift change for continuous care</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Daily wellbeing updates</span>
-  </li>
-	<li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>2 consultations (lactation or pediatric)</span>
-  </li>							
-</ul>
-
-							<Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
-						</Card>
-					</Col>
-				</Row>
-
-				<Button variant="btm btn-primary" className="mt-5" onClick={openModal}>
-					Start Free Trial
-				</Button>
-				<p className="mt-2 text-muted fw-bold">
-					Limited nurse availability—book your preferred time slot now.
-				</p>
-			</Container>
+export default PricingSection;
 
 
       {/* Popup Modal */}
