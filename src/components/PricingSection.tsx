@@ -50,8 +50,8 @@ const PricingSection = () => {
   </div>
 </div>
 
- <h3 className="primary-color text-center mb-3 fw-semibold">Care Lite</h3> 
-							{/* <h1 className="fw-bold">₹1,500/day</h1> */}
+ {/* <h3 className="primary-color text-center mb-3 fw-semibold">Care Lite</h3> 
+							<h1 className="fw-bold">₹1,500/day</h1>
 							<p className="text-muted">4 hrs</p> 
                             <ul className="list-unstyled mt-4"> 
   <li className="d-flex align-items-start mb-3">
@@ -92,7 +92,7 @@ const PricingSection = () => {
 					Care Plus - highlighted
 					 <Col md={4}>
 						<Card className="h-100 text-white p-4 price-card" style={{ background: "linear-gradient(135deg,rgba(95, 71, 255, 0.8) 0%, #6388FF 100%)" }}>
-                            <div className="d-flex justify-content-center mb-2"> 
+                            <div className="d-flex justify-content-center mb-2">  */}
   <div
     className="d-flex align-items-center justify-content-center rounded-circle"
     style={{
