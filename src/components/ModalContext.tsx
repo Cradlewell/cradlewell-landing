@@ -108,10 +108,10 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                    <div class='form-group mb-3'>
                      <label for='LEADCF2'>Type of Care Needed</label>
                      <select name='LEADCF2' class='form-select'>
-                       <option value='-None-'>-None-</option>
-                       <option value='Care Light (4 Hrs)'>Care Light (4 Hrs)</option>
-                       <option value='Care Plus (12 Hrs)'>Care Plus (12 Hrs)</option>
-                       <option value='Care Max (24 Hrs)'>Care Max (24 Hrs)</option>
+                       // <option value='-None-'>-None-</option>
+                       // <option value='Care Light (4 Hrs)'>Care Light (4 Hrs)</option>
+                       // <option value='Care Plus (12 Hrs)'>Care Plus (12 Hrs)</option>
+                       <option value='Care Max (8 Hrs)'>Care Max (8 Hrs)</option>
                        <option value='Not Sure / Need Help Choosing'>Not Sure / Need Help Choosing</option>
                      </select>
                    </div>
