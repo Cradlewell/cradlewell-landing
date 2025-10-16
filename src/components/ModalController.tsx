@@ -99,7 +99,9 @@ const ModalController = () => {
              <div class='form-group mb-3'>
                <label for='LEADCF2'>Type of Care Needed</label>
                <select name='LEADCF2' class='form-select'>
+               
                  <option value='Care Max (8 Hrs)'>Care Max (8 Hrs)</option>
+                 
                </select>
              </div>
      
@@ -111,7 +113,7 @@ const ModalController = () => {
              <div class='form-group mb-3'>
                <label for='LEADCF3'>Duration of Service</label>
                <select name='LEADCF3' class='form-select'>
-                 <option value='-None-'>-None-</option>
+               
                  <option value='7 Days'>7 Days</option>
                  <option value='15 Days'>15 Days</option>
                  <option value='30 Days'>30 Days</option>
