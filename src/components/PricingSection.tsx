@@ -206,8 +206,8 @@ export default PricingSection;
         </Modal.Body>
       </Modal> */}
     
-		</div>
-	);
-};
+// 		</div>
+// 	);
+// };
 
-export default PricingSection;
+// export default PricingSection;
