@@ -85,7 +85,7 @@ const PricingSection = () => {
 {/* </ul>  */}
 
 
-							// <Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
+							{/* <Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button> */}
 						{/* </Card> */}
 					{/* </Col> */}
 
