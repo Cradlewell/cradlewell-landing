@@ -50,7 +50,7 @@ const PricingSection = () => {
   </div>
 </div>
 
-<h3 className="primary-color text-center mb-3 fw-semibold">Care Light</h3>
+{/* <h3 className="primary-color text-center mb-3 fw-semibold">Care Light</h3>
 							{/* <h1 className="fw-bold">₹1,500/day</h1>
 							<p className="text-muted">4 hrs</p> */}
                             <ul className="list-unstyled mt-4">
@@ -82,7 +82,7 @@ const PricingSection = () => {
 {/*     <i className="far fa-check-circle text-primary me-2 mt-1"></i> */}
 {/*     <span>1 consultation (lactation or pediatric)</span> */}
   </li>
-</ul>
+</ul> */}
 
 
 							<Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
