@@ -50,49 +50,49 @@ const PricingSection = () => {
   </div>
 </div>
 
-{/* <h3 className="primary-color text-center mb-3 fw-semibold">Care Light</h3>
+{/* <h3 className="primary-color text-center mb-3 fw-semibold">Care Light</h3> */}
 							{/* <h1 className="fw-bold">₹1,500/day</h1>
 							<p className="text-muted">4 hrs</p> */}
-                            <ul className="list-unstyled mt-4">
-  <li className="d-flex align-items-start mb-3">
-    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-    <span>Daily 4 hours care</span>
+                            {/* <ul className="list-unstyled mt-4"> */}
+  {/* <li className="d-flex align-items-start mb-3">
+    <i className="far fa-check-circle text-primary me-2 mt-1"></i> */}
+    {/* <span>Daily 4 hours care</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
     <span>Baby massage & bath</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
+  </li> */}
+  {/* <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
     <span>Mother hygiene + Pad change</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
     <span>Breastfeeding Support</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
+  </li> */}
+  {/* <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
     <span>Diapering & baby sleep setup</span>
   </li>
   <li className="d-flex align-items-start mb-3">
     <i className="far fa-check-circle text-primary me-2 mt-1"></i>
     <span>Basic vitals (mother)</span>
-  </li>
-  <li className="d-flex align-items-start mb-3">
+  </li> */}
+  {/* <li className="d-flex align-items-start mb-3"> */}
 {/*     <i className="far fa-check-circle text-primary me-2 mt-1"></i> */}
 {/*     <span>1 consultation (lactation or pediatric)</span> */}
-  </li>
-</ul> */}
+  {/* </li> */}
+{/* </ul>  */}
 
 
-							<Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
-						</Card>
-					</Col>
+							// <Button variant="primary" className="mt-auto" onClick={openModal}>Get Started</Button>
+						{/* </Card> */}
+					{/* </Col> */}
 
 					{/* Care Plus - highlighted */}
-					<Col md={4}>
+					{/* <Col md={4}>
 						<Card className="h-100 text-white p-4 price-card" style={{ background: "linear-gradient(135deg,rgba(95, 71, 255, 0.8) 0%, #6388FF 100%)" }}>
-                            <div className="d-flex justify-content-center mb-2">
+                            <div className="d-flex justify-content-center mb-2"> */}
   <div
     className="d-flex align-items-center justify-content-center rounded-circle"
     style={{
