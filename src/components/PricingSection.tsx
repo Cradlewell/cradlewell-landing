@@ -72,7 +72,7 @@ const PricingSection = () => {
                 </li>
                 <li className="d-flex align-items-start mb-1">
                   <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-                  <span>Ideal for healthy full-term babies</span>
+                  <span>Trained & certified nurse with professional uniform and hygiene protocols</span>
                 </li>
               </ul>
 
