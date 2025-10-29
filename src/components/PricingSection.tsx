@@ -27,7 +27,8 @@ const PricingSection = () => {
           <Col md={6} lg={5}>
             <Card
               className="h-100 text-white p-4 price-card"
-              style={{ background: "linear-gradient(135deg, rgba(95,71,255,0.85) 0%, #6388FF 100%)" }}
+               style={{ backgroundColor: "#ffffff" }} 
+              
             >
               <div className="d-flex justify-content-center mb-2">
                 <div
@@ -86,7 +87,7 @@ const PricingSection = () => {
           <Col md={6} lg={5}>
             <Card
               className="h-100 text-white p-4 price-card"
-              style={{ background: "linear-gradient(135deg, rgba(20,20,20,0.9) 0%, #5F47FF 100%)" }}
+              style={{ background: "linear-gradient(135deg, rgba(95,71,255,0.85) 0%, #6388FF 100%)" }}
             >
               <div className="d-flex justify-content-center mb-2">
                 <div
