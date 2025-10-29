@@ -52,11 +52,11 @@ const PricingSection = () => {
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-                  <span>Baby massage and bath</span>
+                  <span>Baby feeding, diapering, bathing & sleep support</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-                  <span>Mother hygiene support and pad change</span>
+                  <span>Breastfeeding guidance + feeding schedule setup</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-primary me-2 mt-1"></i>
@@ -64,15 +64,15 @@ const PricingSection = () => {
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-                  <span>Diapering and baby sleep setup</span>
+                  <span>Basic vitals check & health tracking</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-                  <span>Basic vitals check (mother & baby)</span>
+                  <span>Postpartum hygiene & baby handling guidance</span>
                 </li>
                 <li className="d-flex align-items-start mb-1">
                   <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-                  <span>1 consultation (lactation or pediatric)</span>
+                  <span>Ideal for healthy full-term babies</span>
                 </li>
               </ul>
 
@@ -107,31 +107,31 @@ const PricingSection = () => {
               <ul className="list-unstyled mt-3 text-start mx-auto" style={{ maxWidth: 420 }}>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Overnight 12 hours of dedicated newborn care</span>
+                  <span>Includes everything in Essential Care</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Night feeds, burping, and settling routine</span>
+                  <span>Weekly pediatrician + lactation specialist consults</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Sleep tracking and soothing support</span>
+                  <span>Growth & development monitoring + milestone tracking</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Mother rest protection — calls nurse when needed</span>
+                  <span>Mother’s recovery support (nutrition + emotional care)</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Hygiene, diapering, and nighttime logs</span>
+                  <span>Vaccination reminders + health documentation</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Basic vitals check (mother & baby)</span>
+                  <span>WhatsApp support for urgent guidance</span>
                 </li>
                 <li className="d-flex align-items-start mb-1">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>1 pediatrician consult if needed</span>
+                  <span>postpartum yoga & breathing exercises</span>
                 </li>
               </ul>
 
