@@ -23,12 +23,11 @@ const PricingSection = () => {
         </h1>
 
         <Row className="g-4 justify-content-center">
-          {/* Care Lite (8-Hour) */}
+          {/* Care Lite (White Card - 8 Hour Plan) */}
           <Col md={6} lg={5}>
             <Card
               className="h-100 text-dark p-4 price-card shadow-sm"
-               style={{ backgroundColor: "#ffffff" }} 
-              
+              style={{ backgroundColor: "#ffffff" }}
             >
               <div className="d-flex justify-content-center mb-2">
                 <div
@@ -36,58 +35,58 @@ const PricingSection = () => {
                   style={{
                     width: "50px",
                     height: "50px",
-                    boxShadow: "inset 2px 2px 16px rgb(255, 255, 255)",
+                    boxShadow: "inset 2px 2px 16px rgb(200, 200, 200)",
                   }}
                 >
-                  <i className="fas fa-sun text-light" style={{ fontSize: "20px" }}></i>
+                  <i className="fas fa-sun text-primary" style={{ fontSize: "20px" }}></i>
                 </div>
               </div>
 
-              <h3 className="text-white text-center mb-1 fw-semibold">Care Lite</h3>
-              <p className="opacity-75 mb-3">8-hour day care</p>
+              <h3 className="text-dark text-center mb-1 fw-semibold">Care Lite</h3>
+              <p className="text-muted mb-3">8-hour day care</p>
 
               <ul className="list-unstyled mt-3 text-start mx-auto" style={{ maxWidth: 420 }}>
                 <li className="d-flex align-items-start mb-3">
-                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <i className="far fa-check-circle text-primary me-2 mt-1"></i>
                   <span>Daily 8 hours of newborn & mother care</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
-                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <i className="far fa-check-circle text-primary me-2 mt-1"></i>
                   <span>Baby massage and bath</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
-                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <i className="far fa-check-circle text-primary me-2 mt-1"></i>
                   <span>Mother hygiene support and pad change</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
-                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <i className="far fa-check-circle text-primary me-2 mt-1"></i>
                   <span>Breastfeeding support and feeding schedule guidance</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
-                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <i className="far fa-check-circle text-primary me-2 mt-1"></i>
                   <span>Diapering and baby sleep setup</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
-                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <i className="far fa-check-circle text-primary me-2 mt-1"></i>
                   <span>Basic vitals check (mother & baby)</span>
                 </li>
                 <li className="d-flex align-items-start mb-1">
-                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <i className="far fa-check-circle text-primary me-2 mt-1"></i>
                   <span>1 consultation (lactation or pediatric)</span>
                 </li>
               </ul>
 
-              <Button variant="light" className="text-primary mt-auto" onClick={openModal}>
+              <Button variant="primary" className="mt-auto" onClick={openModal}>
                 Get Started
               </Button>
             </Card>
           </Col>
 
-          {/* Care Max (12-Hour / Night Guardian) */}
+          {/* Care Max (Blue Gradient - 12 Hour Night Guardian) */}
           <Col md={6} lg={5}>
             <Card
               className="h-100 text-white p-4 price-card"
-              style={{ background: "linear-gradient(135deg, rgba(95,71,255,0.85) 0%, #6388FF 100%)" }}
+              style={{ background: "linear-gradient(135deg, rgba(20,20,20,0.9) 0%, #5F47FF 100%)" }}
             >
               <div className="d-flex justify-content-center mb-2">
                 <div
@@ -153,6 +152,7 @@ const PricingSection = () => {
 };
 
 export default PricingSection;
+
 
 
 
