@@ -26,7 +26,7 @@ const PricingSection = () => {
           {/* Care Lite (8-Hour) */}
           <Col md={6} lg={5}>
             <Card
-              className="h-100 text-dark p-4 price-card"
+              className="h-100 text-dark p-4 price-card shadow-sm"
                style={{ backgroundColor: "#ffffff" }} 
               
             >
