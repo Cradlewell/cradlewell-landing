@@ -23,11 +23,11 @@ const PricingSection = () => {
         </h1>
 
         <Row className="g-4 justify-content-center">
-          {/* 8-Hour Care (only card) */}
+          {/* Care Lite (8-Hour) */}
           <Col md={6} lg={5}>
             <Card
               className="h-100 text-white p-4 price-card"
-              style={{ background: "linear-gradient(135deg, rgba(95,71,255,0.8) 0%, #6388FF 100%)" }}
+              style={{ background: "linear-gradient(135deg, rgba(95,71,255,0.85) 0%, #6388FF 100%)" }}
             >
               <div className="d-flex justify-content-center mb-2">
                 <div
@@ -38,18 +38,17 @@ const PricingSection = () => {
                     boxShadow: "inset 2px 2px 16px rgb(255, 255, 255)",
                   }}
                 >
-                  <i className="fas fa-layer-group text-light" style={{ fontSize: "20px" }}></i>
+                  <i className="fas fa-sun text-light" style={{ fontSize: "20px" }}></i>
                 </div>
               </div>
 
-              <h3 className="text-white text-center mb-3 fw-semibold">8-Hour Care</h3>
-              {/* <h1 className="fw-bold">₹X,XXX / day</h1>
-              <p>8 hrs</p> */}
+              <h3 className="text-white text-center mb-1 fw-semibold">Care Lite</h3>
+              <p className="opacity-75 mb-3">8-hour day care</p>
 
-              <ul className="list-unstyled mt-4 text-start mx-auto" style={{ maxWidth: 420 }}>
+              <ul className="list-unstyled mt-3 text-start mx-auto" style={{ maxWidth: 420 }}>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Daily 8 hours care </span>
+                  <span>Daily 8 hours of newborn & mother care</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
@@ -71,7 +70,7 @@ const PricingSection = () => {
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
                   <span>Basic vitals check (mother & baby)</span>
                 </li>
-                <li className="d-flex align-items-start mb-3">
+                <li className="d-flex align-items-start mb-1">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
                   <span>1 consultation (lactation or pediatric)</span>
                 </li>
@@ -82,9 +81,68 @@ const PricingSection = () => {
               </Button>
             </Card>
           </Col>
+
+          {/* Care Max (12-Hour / Night Guardian) */}
+          <Col md={6} lg={5}>
+            <Card
+              className="h-100 text-white p-4 price-card"
+              style={{ background: "linear-gradient(135deg, rgba(20,20,20,0.9) 0%, #5F47FF 100%)" }}
+            >
+              <div className="d-flex justify-content-center mb-2">
+                <div
+                  className="d-flex align-items-center justify-content-center rounded-circle"
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    boxShadow: "inset 2px 2px 16px rgb(255, 255, 255)",
+                  }}
+                >
+                  <i className="fas fa-moon text-light" style={{ fontSize: "20px" }}></i>
+                </div>
+              </div>
+
+              <h3 className="text-white text-center mb-1 fw-semibold">Care Max</h3>
+              <p className="opacity-75 mb-3">12-hour Night Guardian</p>
+
+              <ul className="list-unstyled mt-3 text-start mx-auto" style={{ maxWidth: 420 }}>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Overnight 12 hours of dedicated newborn care</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Night feeds, burping, and settling routine</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Sleep tracking and soothing support</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Mother rest protection — calls nurse when needed</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Hygiene, diapering, and nighttime logs</span>
+                </li>
+                <li className="d-flex align-items-start mb-3">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>Basic vitals check (mother & baby)</span>
+                </li>
+                <li className="d-flex align-items-start mb-1">
+                  <i className="far fa-check-circle text-light me-2 mt-1"></i>
+                  <span>1 pediatrician consult if needed</span>
+                </li>
+              </ul>
+
+              <Button variant="light" className="text-primary mt-auto" onClick={openModal}>
+                Get Started
+              </Button>
+            </Card>
+          </Col>
         </Row>
 
-        <Button variant="btm btn-primary" className="mt-5" onClick={openModal}>
+        <Button variant="primary" className="mt-5" onClick={openModal}>
           Start Free Trial
         </Button>
         <p className="mt-2 text-muted fw-bold">Limited nurse availability — book your preferred time slot now.</p>
@@ -94,6 +152,7 @@ const PricingSection = () => {
 };
 
 export default PricingSection;
+
 
 
       {/* Popup Modal */}
