@@ -86,7 +86,7 @@ const PricingSection = () => {
           <Col md={6} lg={5}>
             <Card
               className="h-100 text-white p-4 price-card"
-              style={{ background: "linear-gradient(135deg, rgba(20,20,20,0.9) 0%, #5F47FF 100%)" }}
+               style={{ background: "linear-gradient(135deg, rgba(95,71,255,0.85) 0%, #6388FF 100%)" }}
             >
               <div className="d-flex justify-content-center mb-2">
                 <div
@@ -97,12 +97,12 @@ const PricingSection = () => {
                     boxShadow: "inset 2px 2px 16px rgb(255, 255, 255)",
                   }}
                 >
-                  <i className="fas fa-moon text-light" style={{ fontSize: "20px" }}></i>
+                  <i className="fas fa-shield-heart text-light" style={{ fontSize: "20px" }}></i>
                 </div>
               </div>
 
               <h3 className="text-white text-center mb-1 fw-semibold">Care Max</h3>
-              <p className="opacity-75 mb-3">12-hour Night Guardian</p>
+              <p className="opacity-75 mb-3">8-hour day care</p>
 
               <ul className="list-unstyled mt-3 text-start mx-auto" style={{ maxWidth: 420 }}>
                 <li className="d-flex align-items-start mb-3">
