@@ -34,7 +34,7 @@ const NavMenu = () => (
 const NavActions = () => (
 	<Nav className="flex-row mb-2 mb-lg-0">
 		<Nav.Item className="nav-item mx-2">
-			<a className="btn btn-primary" target="_blank" href="https://forms.gle/hdU6nT2sV2yh5XwJ7">
+			<a className="btn btn-primary" target="_blank" href="https://tally.so/forms/3NGjb0">
 				Apply Now To Join
 			</a>
 		</Nav.Item>
