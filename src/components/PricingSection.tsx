@@ -42,7 +42,7 @@ const PricingSection = () => {
                 </div>
               </div>
 
-              <h3 className="text-dark text-center mb-1 fw-semibold">Care Lite</h3>
+              <h3 className="text-dark text-center mb-1 fw-semibold">Day Care</h3>
               <p className="text-muted mb-3">8-hour day care</p>
 
               <ul className="list-unstyled mt-3 text-start mx-auto" style={{ maxWidth: 420 }}>
@@ -97,41 +97,41 @@ const PricingSection = () => {
                     boxShadow: "inset 2px 2px 16px rgb(255, 255, 255)",
                   }}
                 >
-                  <i className="fas fa-shield-heart text-light" style={{ fontSize: "20px" }}></i>
+                  <i className="fas fa-moon text-light" style={{ fontSize: "20px" }}></i>
                 </div>
               </div>
 
-              <h3 className="text-white text-center mb-1 fw-semibold">Care Max</h3>
-              <p className="opacity-75 mb-3">8-hour day care</p>
+              <h3 className="text-white text-center mb-1 fw-semibold">Night Care</h3>
+              <p className="opacity-75 mb-3">10-hour Night care</p>
 
               <ul className="list-unstyled mt-3 text-start mx-auto" style={{ maxWidth: 420 }}>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Includes everything in Essential Care</span>
+                  <span>feeding, burping & diaper changes</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Weekly pediatrician + lactation specialist consults</span>
+                  <span>Baby soothing & sleep support through the night</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Growth & development monitoring + milestone tracking</span>
+                  <span>Monitoring baby comfort, cues & safety during sleep</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Mother’s recovery support (nutrition + emotional care)</span>
+                  <span>Mother rest support (reduced night disturbances)</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>Vaccination reminders + health documentation</span>
+                  <span>Hygiene maintenance during night hours</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>WhatsApp support for urgent guidance</span>
+                  <span>Escalation support if something feels off</span>
                 </li>
                 <li className="d-flex align-items-start mb-1">
                   <i className="far fa-check-circle text-light me-2 mt-1"></i>
-                  <span>postpartum yoga & breathing exercises</span>
+                  <span>Morning handover with night observations</span>
                 </li>
               </ul>
 
@@ -143,7 +143,7 @@ const PricingSection = () => {
         </Row>
 
         <Button variant="primary" className="mt-5" onClick={openModal}>
-          Start Free Trial
+          Book Free Consultation Call
         </Button>
         <p className="mt-2 text-muted fw-bold">Limited nurse availability — book your preferred time slot now.</p>
       </Container>
