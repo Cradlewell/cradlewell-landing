@@ -44,7 +44,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                    </Modal.Header>
                    <Modal.Body>
                      <p className="text-muted">
-                       Get expert mother & baby care at home, starting from 7 days.
+                       Get expert mother & baby care at home, starting from 10 days.
                      </p>
                      <div
              id="crmWebToEntityForm"
@@ -109,8 +109,8 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                      <label for='LEADCF2'>Type of Care Needed</label>
                      <select name='LEADCF2' class='form-select'>
                   
-                       <option value='Care Lite (8 Hrs)'>Care Lite (8 Hrs)</option>
-                       <option value='Care Max (8 Hrs)'>Care Max (8 Hrs)</option>
+                       <option value='Day Care (8 Hrs)'>Day Care (8 Hrs)</option>
+                       <option value='Night Care (10 Hrs)'>Night Care (10 Hrs)</option>
                   
                      </select>
                    </div>
@@ -123,8 +123,8 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                    <div class='form-group mb-3'>
                      <label for='LEADCF3'>Duration of Service</label>
                      <select name='LEADCF3' class='form-select'>
-                       <option value='7 Days'>7 Days</option>
-                       <option value='15 Days'>15 Days</option>
+                       <option value='10 Days'>10 Days</option>
+                       <option value='20 Days'>20 Days</option>
                        <option value='30 Days'>30 Days</option>
                        <option value='Custom / Decide On Call'>Custom / Decide On Call</option>
                      </select>
