@@ -12,10 +12,11 @@ const teamMembers: any[] = [
     image: '/founders/lokesh.jpg',
   },
   {
-    name: 'Venu Annareddy',
-    role: 'CFO',
-    roleColor: '#D9E7FF',
-    image: '/founders/venu.jpg',
+    name: 'Dr.Vishnu Vardhan',
+    role: 'CMO',
+    roleColor: '#D5F8DD',
+    image: '/founders/vishnu.jpg'
+   ,
   },
   {
     name: 'Dr.Madhu Sudhan',
@@ -24,10 +25,10 @@ const teamMembers: any[] = [
     image: '/founders/madhu.jpg',
   },
   {
-    name: 'Dr.Vishnu Vardhan',
-    role: 'CMO',
-    roleColor: '#D5F8DD',
-    image: '/founders/vishnu.jpg',
+    name: 'Venu Annareddy',
+    role: 'CFO',
+    roleColor: '#D9E7FF',
+    image: '/founders/venu.jpg',
   },
      {
     name: 'Vijaya',
