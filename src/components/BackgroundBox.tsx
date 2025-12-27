@@ -14,7 +14,7 @@ const BackgroundBox = () => {
 					<p>Book professional postpartum care from certified <br /> nurses—when you need it, where you need it.</p>
                         <Button onClick={openModal}
                             className="btn btn-primary fs-5 ">
-                            Start Free Trial
+                            Book Free Consultation Call
                         </Button>				
                     </div>
 			</Container>
