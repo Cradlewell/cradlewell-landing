@@ -49,7 +49,7 @@ const HeroHeader1 = () => {
                             Newborn & Mother Care 
 						</h2>
 						<p className="ezy__header1-sub-heading">
-							Certified postpartum nurses visit your home to support mother and baby with feeding, sleep, hygiene, and recovery
+							Certified postpartum nurses visit your home to support mother and baby with feeding, sleep, hygiene, and recovery.
 						</p>
 						<a onClick={openModal}
 							className="btn btn-primary fs-5 mt-4 mt-md-5"
