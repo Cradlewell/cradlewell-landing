@@ -9,13 +9,13 @@ const TestimonialsSection = () => {
 
   const testimonials = [
     {
-      name: 'Emily Carter',
-      text: `“This care app has changed the game for me. I’m a full-time working mom and this makes me feel so supported and confident.”`,
+      name: 'Santosh Malpatra',
+      text: `“Very professional and excellent home nursing service.Nurses are well-trained and knowledgeable.Excellent quality of medical and personal care for our baby.Nurses follow all instructions carefully and maintain proper hygiene..”`,
       image: '/images/testimonial1.png',
     },
     {
-      name: 'Emily Carter',
-      text: `“This care app has changed the game for me. I’m a full-time working mom and this makes me feel so supported and confident.”`,
+      name: 'Yashul Srivastava',
+      text: `“This Company has provided genuine nurse for our baby care. we took thier service package and we are quite satisfied with the services.Looking forward in future as well if need arises.”`,
       image: '/images/testimonial1.png',
     },
   ];
