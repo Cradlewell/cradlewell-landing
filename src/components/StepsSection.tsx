@@ -31,9 +31,9 @@ const StepsSection = () => {
               >
                 <img src="/images/icon1.png" alt="Choose a Care Plan" width="24" height="24" />
               </div>
-              <h6 className="fw-bold mb-2">Choose a Care Plan</h6>
+              <h6 className="fw-bold mb-2">Choose Day or Night Care</h6>
               <p className="text-muted mb-0 px-5" style={{ fontSize: '0.95rem' }}>
-                Pick from Lite, Plus, or Care 360—no contracts.
+                Select daytime or overnight care based on what you need.
               </p>
             </div>
           </Col>
