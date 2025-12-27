@@ -11,7 +11,7 @@ const TestimonialsSection = () => {
     {
       name: 'Santosh Malpatra',
       text: `“Very professional and excellent home nursing service.Nurses are well-trained and knowledgeable.Excellent quality of medical and personal care for our baby.Nurses follow all instructions carefully and maintain proper hygiene..”`,
-      image: '/images/testimonial1.png',
+      image: '/images/testimonial2.png',
     },
     {
       name: 'Yashul Srivastava',
