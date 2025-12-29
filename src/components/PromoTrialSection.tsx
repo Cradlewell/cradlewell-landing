@@ -36,7 +36,7 @@ const PromoTrialSection = () => {
           className="rounded-3 px-4 mx-2 fw-semibold mb-4"
           style={{ fontSize: '1rem' }}
         >
-          Active Trial
+          Book Call
         </Button>
 
           <Button
