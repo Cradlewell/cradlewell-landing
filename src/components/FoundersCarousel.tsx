@@ -101,7 +101,7 @@ const FoundersCarousel = () => {
           </h1>
         </div>
 
-        <Carousel controls={false} indicators interval={null}>
+        <Carousel controls={false} indicators={false} interval={null}>
           {groupedMembers.map((group, idx) => (
             <Carousel.Item key={idx}>
               <Row className="g-3 mb-5">
