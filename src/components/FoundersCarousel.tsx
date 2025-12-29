@@ -30,34 +30,34 @@ const teamMembers: any[] = [
     roleColor: '#D9E7FF',
     image: '/founders/venu.jpg',
   },
-     {
-    name: 'Vijaya',
-    experience: '25 years experience',
-    role: 'Senior Nurse (Level III)',
-    roleColor: '#E0D8FF',
-    image: '/team/vijaya.png',
-  },
-  {
-    name: 'Sneha Marcel',
-    experience: '3 years experience',
-    role: 'Senior Nurse (Level I)',
-    roleColor: '#D9E7FF',
-    image: '/team/sneha.png',
-  },
-  {
-    name: 'Phelomit Lepcha',
-    experience: '1 year experience',
-    role: 'Junior Nurse',
-    roleColor: '#D5F8DD',
-    image: '/team/phelomit.png',
-  },
-  {
-    name: 'Pavithra',
-    experience: '15 years experience',
-    role: 'Yoga Consultant',
-    roleColor: '#D5F8DD',
-    image: '/team/pavithra.jpg',
-  },
+  //    {
+  //   name: 'Vijaya',
+  //   experience: '25 years experience',
+  //   role: 'Senior Nurse (Level III)',
+  //   roleColor: '#E0D8FF',
+  //   image: '/team/vijaya.png',
+  // },
+  // {
+  //   name: 'Sneha Marcel',
+  //   experience: '3 years experience',
+  //   role: 'Senior Nurse (Level I)',
+  //   roleColor: '#D9E7FF',
+  //   image: '/team/sneha.png',
+  // },
+  // {
+  //   name: 'Phelomit Lepcha',
+  //   experience: '1 year experience',
+  //   role: 'Junior Nurse',
+  //   roleColor: '#D5F8DD',
+  //   image: '/team/phelomit.png',
+  // },
+  // {
+  //   name: 'Pavithra',
+  //   experience: '15 years experience',
+  //   role: 'Yoga Consultant',
+  //   roleColor: '#D5F8DD',
+  //   image: '/team/pavithra.jpg',
+  // },
 ];
 
 // Utility function to chunk array
