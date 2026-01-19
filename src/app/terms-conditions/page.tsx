@@ -188,7 +188,7 @@ const TermsOfUse: React.FC = () => {
 
       {/* 14–22 FINAL CLAUSES */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">14–22. Legal Provisions</h2>
+        <h2 className="text-xl font-semibold mb-2">14. Legal Provisions</h2>
         <p>
           These include Limitation of Liability, Indemnification, Dispute Resolution, Governing Law,
           Force Majeure, Severability, and Contact Information as per applicable Indian laws.
