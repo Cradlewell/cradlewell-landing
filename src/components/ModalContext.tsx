@@ -110,7 +110,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                      <select name='LEADCF2' class='form-select'>
                   
                        <option value='Day Care (8 Hrs)'>Day Care (8 Hrs)</option>
-                       <option value='Night Care (10 Hrs)'>Night Care (10 Hrs)</option>
+                       <option value='Night Care (9 Hrs)'>Night Care (9 Hrs)</option>
                   
                      </select>
                    </div>
