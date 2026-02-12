@@ -29,7 +29,8 @@ const routes: Route[] = [
 	{ name: "See Plan", href: "#ourplans" },
 	{ name: "Testimonials", href: "#testimonials" },
 	{ name: "Our Team", href: "#ourteam" },
-	{ name: "FAQs", href: "#faq" },
+	// { name: "FAQs", href: "#faq" },
+	{ name: "Blogs", href: "/blog" },
 ];
 
 const NavMenu: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
