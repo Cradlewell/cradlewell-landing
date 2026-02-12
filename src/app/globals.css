@@ -387,3 +387,55 @@ html {
   height: 100%;
 }
 
+/* blogs css */
+.blog-content p {
+  line-height: 1.8;
+  margin-bottom: 1.25rem;
+}
+
+.blog-content h2,
+.blog-content h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.blog-content img {
+  max-width: 100%;
+  border-radius: 16px;
+  margin: 1.5rem 0;
+}
+
+
+.blog-content h2 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.blog-content h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.8rem;
+  font-weight: 600;
+}
+
+.blog-content p {
+  line-height: 1.8;
+  margin-bottom: 1.2rem;
+  color: #444;
+}
+
+.blog-content ul {
+  padding-left: 1.2rem;
+  margin-bottom: 1.2rem;
+}
+
+.blog-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+}
+
+
+/* blogs css */

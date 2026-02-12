@@ -9,14 +9,18 @@ import Script from 'next/script';
 import { headers } from 'next/headers';
 import NurseHeader from '@/components/NursesHeader';
 import LayoutClient from '@/components/LayoutClient';
+import { Metadata } from 'next';
 
-export const metadata = {
-  title: 'Nurse-led Newborn & Postnatal Home Care – Trusted Support for Mothers & Baby in Bangalore | Cradlewell',
-  description: 'Certified Nurses Deliver Hospital-grade Postnatal and Newborn Care in Bangalore, Right in Your Home. Trusted by New Mothers, Cradlewell Offers Baby Bathing, Feeding Support, Sleep Guidance, and Postpartum Recovery With Compassion and Expertise. Book Your Personalized Care Plan Today for Peace of Mind and Professional Support.',
-  other: {
-    keywords:
-      'Newborn Home Care Bangalore, postnatal Home Care Nurse, nurse-led Maternity Care, baby Care Services Bangalore, postnatal Recovery Support, certified Postpartum Nurse, mother and Baby Care, professional Newborn Care, hospital-grade Home Care, postpartum Health Bangalore',
+
+export const metadata: Metadata = {
+  title: {
+    default: "Nurse-led Newborn & Postnatal Home Care – Trusted Support for Mothers & Baby in Bangalore",
+    template: "%s | Cradlewell",
   },
+  description:
+    "Certified Nurses Deliver Hospital-grade Postnatal and Newborn Care in Bangalore, Right in Your Home. Trusted by New Mothers, Cradlewell Offers Baby Bathing, Feeding Support, Sleep Guidance, and Postpartum Recovery With Compassion and Expertise.",
+  keywords:
+    "Newborn Home Care Bangalore, postnatal Home Care Nurse, nurse-led Maternity Care, baby Care Services Bangalore, postnatal Recovery Support, certified Postpartum Nurse, mother and Baby Care, professional Newborn Care, hospital-grade Home Care, postpartum Health Bangalore",
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
