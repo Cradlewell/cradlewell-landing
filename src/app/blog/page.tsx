@@ -22,7 +22,7 @@ export default async function BlogPage() {
   const posts = await getPosts();
 
   return (
-    <section className="py-5 bg-light">
+    <section className="py-4 bg-light">
       <div className="container">
         <div className="text-center mb-5">
           <h1 className="fw-semibold">Our Blogs</h1>
