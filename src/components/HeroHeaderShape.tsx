@@ -1,4 +1,5 @@
 'use client'
+
 import React from "react";
 import { Col, Container, Row } from "react-bootstrap";
 import { useModal } from './ModalContext';
@@ -37,31 +38,36 @@ const HeroHeader1 = () => {
   const { openModal } = useModal();
 
   return (
-    <section className="ezy__header1 light dark">
+    <section className="ezy__header1 light dark position-relative overflow-hidden">
       <HeroHeaderShape />
+
       <Container className="position-relative">
         <Row className="align-items-center">
+
           <Col lg={6} className="pe-xl-5 text-center text-lg-start">
 
             {/* Award Badge */}
             <div className="mb-3">
-              <span style={{
-                backgroundColor: "#FFF8E7",
-                border: "1px solid #F5C518",
-                borderRadius: "20px",
-                padding: "6px 16px",
-                fontSize: "13px",
-                fontWeight: "600",
-                color: "#B8860B",
-                display: "inline-block"
-              }}>
+              <span
+                style={{
+                  backgroundColor: "#FFF8E7",
+                  border: "1px solid #F5C518",
+                  borderRadius: "20px",
+                  padding: "6px 16px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#B8860B",
+                  display: "inline-block"
+                }}
+              >
                 🏆 Healthtech Startup of the Year 2026 — Entrepreneur India
               </span>
             </div>
 
-            {/* Main Headline */}
+            {/* Headline */}
             <h2 className="ezy__header1-heading mb-3">
-              <span className="primary-color">Professional Postnatal</span> <br />
+              <span className="primary-color">Professional Postnatal</span>
+              <br />
               Care, At Your Doorstep
             </h2>
 
@@ -74,15 +80,17 @@ const HeroHeader1 = () => {
 
             {/* CTA Buttons */}
             <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start">
-              
+
+              <button
+                type="button"
                 onClick={openModal}
                 className="btn btn-primary fs-5"
-                role="button"
                 style={{ cursor: "pointer" }}
               >
                 Book Free Consultation
-              </a>
-              
+              </button>
+
+              <a
                 href="https://wa.me/919363893639"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -91,13 +99,17 @@ const HeroHeader1 = () => {
               >
                 💬 Chat on WhatsApp
               </a>
+
             </div>
 
-            {/* Trust Micro Line */}
-            <p className="mt-3 mb-0" style={{
-              fontSize: "13px",
-              color: "#6c757d"
-            }}>
+            {/* Trust Indicators */}
+            <p
+              className="mt-3 mb-0"
+              style={{
+                fontSize: "13px",
+                color: "#6c757d"
+              }}
+            >
               ✅ No hidden charges &nbsp;|&nbsp;
               ✅ Background verified nurses &nbsp;|&nbsp;
               ✅ DPIIT Recognized
@@ -106,79 +118,105 @@ const HeroHeader1 = () => {
           </Col>
 
           <Col lg={6} className="mt-5 mt-lg-0">
+
+            {/* Hero Image */}
             <img
               src="/images/bannerimg.png"
               alt="Trusted Nurse-led Newborn and Postnatal Home Care Support Banner for Mothers and Babies by Cradlewell in Bangalore"
               className="rounded img-fluid mt-3"
             />
 
-            {/* Floating Stats Cards */}
+            {/* Stats */}
             <div className="d-flex justify-content-center gap-4 mt-4 flex-wrap">
-              <div className="text-center p-3" style={{
-                backgroundColor: "#fff",
-                borderRadius: "12px",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-                minWidth: "100px"
-              }}>
-                <div style={{
-                  fontSize: "22px",
-                  fontWeight: "700",
-                  color: "#0d6efd"
-                }}>
+
+              <div
+                className="text-center p-3"
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                  minWidth: "100px"
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "700",
+                    color: "#0d6efd"
+                  }}
+                >
                   100+
                 </div>
-                <div style={{
-                  fontSize: "12px",
-                  color: "#6c757d"
-                }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#6c757d"
+                  }}
+                >
                   Families Served
                 </div>
               </div>
 
-              <div className="text-center p-3" style={{
-                backgroundColor: "#fff",
-                borderRadius: "12px",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-                minWidth: "100px"
-              }}>
-                <div style={{
-                  fontSize: "22px",
-                  fontWeight: "700",
-                  color: "#0d6efd"
-                }}>
+              <div
+                className="text-center p-3"
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                  minWidth: "100px"
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "700",
+                    color: "#0d6efd"
+                  }}
+                >
                   40+
                 </div>
-                <div style={{
-                  fontSize: "12px",
-                  color: "#6c757d"
-                }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#6c757d"
+                  }}
+                >
                   Years Combined Experience
                 </div>
               </div>
 
-              <div className="text-center p-3" style={{
-                backgroundColor: "#fff",
-                borderRadius: "12px",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-                minWidth: "100px"
-              }}>
-                <div style={{
-                  fontSize: "22px",
-                  fontWeight: "700",
-                  color: "#0d6efd"
-                }}>
+              <div
+                className="text-center p-3"
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                  minWidth: "100px"
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "700",
+                    color: "#0d6efd"
+                  }}
+                >
                   4.9 ★
                 </div>
-                <div style={{
-                  fontSize: "12px",
-                  color: "#6c757d"
-                }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#6c757d"
+                  }}
+                >
                   Google Rating
                 </div>
               </div>
+
             </div>
 
           </Col>
+
         </Row>
       </Container>
     </section>
