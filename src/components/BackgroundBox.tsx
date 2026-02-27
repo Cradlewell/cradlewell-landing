@@ -7,9 +7,7 @@ const BackgroundBox = () => {
 
   return (
     <>
-      <div className="background-box text-white d-flex align-items-end"
-        style={{ background: "transparent" }}
-      >
+      <div className="background-box text-white d-flex align-items-end">
         <div className="background-box-content">
           <p className="background-box-text">
             Book professional postnatal care from certified
@@ -25,25 +23,12 @@ const BackgroundBox = () => {
       </div>
 
       <style jsx>{`
-        .background-box {
-          border-radius: 20px;
-          overflow: hidden;
-          margin: 0 16px 32px 16px;
-          min-height: 260px;
-          position: relative;
-        }
-
         .background-box-content {
           position: relative;
           z-index: 2;
           padding: 24px 20px;
           width: 100%;
-          background: linear-gradient(
-            to top,
-            rgba(95, 71, 255, 0.96) 0%,
-            rgba(99, 136, 255, 0.3) 50%,
-            transparent 100%
-          );
+          background: transparent;
         }
 
         .background-box-text {
@@ -68,11 +53,6 @@ const BackgroundBox = () => {
         }
 
         @media (min-width: 768px) {
-          .background-box {
-            margin: 0 24px 40px 24px;
-            min-height: 380px;
-          }
-
           .background-box-content {
             padding: 48px;
             max-width: 560px;
