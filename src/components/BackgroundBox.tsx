@@ -7,74 +7,47 @@ const BackgroundBox = () => {
 
   return (
     <>
-      <div className="background-box-wrapper">
-        <div className="background-box-inner">
-
-          {/* Gradient Overlay */}
-          <div className="background-box-overlay" />
-
-          {/* Content */}
-          <div className="background-box-content">
-
-            <p className="background-box-text">
-              Book professional postnatal care from certified
-              nurses — when you need it, where you need it.
-            </p>
-
-            <button
-              onClick={openModal}
-              className="background-box-btn"
-            >
-              Book Free Consultation
-            </button>
-
-          </div>
+      <div className="background-box text-white d-flex align-items-end">
+        <div className="background-box-content">
+          <p className="background-box-text">
+            Book professional postnatal care from certified
+            nurses — when you need it, where you need it.
+          </p>
+          <button
+            onClick={openModal}
+            className="background-box-btn"
+          >
+            Book Free Consultation
+          </button>
         </div>
       </div>
 
       <style jsx>{`
-
-        .background-box-wrapper {
-          padding: 0 16px;
-          margin-bottom: 0;
-        }
-
-        .background-box-inner {
-          background-image: url('/images/img1.png');
-          background-size: cover;
-          background-position: center top;
+        .background-box {
           border-radius: 20px;
           overflow: hidden;
-          position: relative;
+          margin: 0 16px 32px 16px;
           min-height: 260px;
-          display: flex;
-          align-items: flex-end;
-        }
-
-        .background-box-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            to top,
-            rgba(95, 71, 255, 0.95) 0%,
-            rgba(99, 136, 255, 0.65) 55%,
-            transparent 100%
-          );
-          border-radius: 20px;
-          z-index: 1;
+          position: relative;
         }
 
         .background-box-content {
           position: relative;
           z-index: 2;
-          padding: 28px 20px;
+          padding: 24px 20px;
           width: 100%;
+          background: linear-gradient(
+            to top,
+            rgba(95, 71, 255, 0.96) 0%,
+            rgba(99, 136, 255, 0.5) 60%,
+            transparent 100%
+          );
         }
 
         .background-box-text {
           font-size: 15px;
           font-weight: 500;
-          color: rgba(255, 255, 255, 0.90);
+          color: rgba(255, 255, 255, 0.92);
           line-height: 1.6;
           margin-bottom: 16px;
         }
@@ -89,17 +62,13 @@ const BackgroundBox = () => {
           font-weight: 700;
           cursor: pointer;
           width: 100%;
+          display: block;
         }
 
-        /* Desktop */
         @media (min-width: 768px) {
-          .background-box-wrapper {
-            padding: 0 24px;
-          }
-
-          .background-box-inner {
-            min-height: 360px;
-            background-position: center center;
+          .background-box {
+            margin: 0 24px 40px 24px;
+            min-height: 380px;
           }
 
           .background-box-content {
@@ -113,8 +82,7 @@ const BackgroundBox = () => {
 
           .background-box-btn {
             width: auto;
-            padding: 14px 36px;
-            font-size: 16px;
+            display: inline-block;
           }
         }
       `}</style>
