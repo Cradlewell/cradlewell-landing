@@ -130,7 +130,7 @@ const FaqSection = () => {
               What does night care include and how does it help new parents sleep?
             </Accordion.Header>
             <Accordion.Body>
-              Our Night Care package covers 10 hours of overnight nursing support. The nurse handles 
+              Our Night Care package covers 9 hours of overnight nursing support. The nurse handles 
               all nighttime baby needs including feeding, burping, diaper changes, soothing, and sleep 
               monitoring — so parents can rest and recover. In the morning, you receive a full handover 
               report covering the baby's night observations, feeding times, and any concerns. This is 
