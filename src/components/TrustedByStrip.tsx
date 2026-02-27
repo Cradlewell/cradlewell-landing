@@ -34,69 +34,29 @@ const TrustedByStrip = () => {
           gap: "48px",
           marginBottom: "40px",
         }}>
-
-          {/* DPIIT */}
           <img
             src="/images/DPIIT_logo.png"
             alt="DPIIT Startup India Recognized"
-            style={{
-              height: "55px",
-              width: "auto",
-              objectFit: "contain"
-            }}
+            style={{ height: "55px", width: "auto", objectFit: "contain" }}
           />
-
-          <div style={{
-            width: "1px",
-            height: "50px",
-            backgroundColor: "#E9ECEF"
-          }} />
-
-          {/* MCA */}
+          <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
           <img
             src="/images/mca.png"
             alt="MCA Ministry of Corporate Affairs"
-            style={{
-              height: "55px",
-              width: "auto",
-              objectFit: "contain"
-            }}
+            style={{ height: "55px", width: "auto", objectFit: "contain" }}
           />
-
-          <div style={{
-            width: "1px",
-            height: "50px",
-            backgroundColor: "#E9ECEF"
-          }} />
-
-          {/* ISO 9001 */}
+          <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
           <img
             src="/images/iso_9001.png"
             alt="ISO 9001 Certified"
-            style={{
-              height: "65px",
-              width: "auto",
-              objectFit: "contain"
-            }}
+            style={{ height: "65px", width: "auto", objectFit: "contain" }}
           />
-
-          <div style={{
-            width: "1px",
-            height: "50px",
-            backgroundColor: "#E9ECEF"
-          }} />
-
-          {/* ISO 27001 */}
+          <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
           <img
             src="/images/iso_27001.png"
             alt="ISO 27001 Certified"
-            style={{
-              height: "85px",
-              width: "auto",
-              objectFit: "contain"
-            }}
+            style={{ height: "85px", width: "auto", objectFit: "contain" }}
           />
-
         </div>
 
         {/* Brand Color Accent Divider */}
@@ -120,6 +80,7 @@ const TrustedByStrip = () => {
           flexWrap: "wrap",
           gap: "32px",
           boxShadow: "0 4px 24px rgba(99,136,255,0.12)",
+          marginBottom: "32px",
         }}>
 
           {/* Left — EP India Logo */}
@@ -251,6 +212,101 @@ const TrustedByStrip = () => {
               </div>
             </div>
 
+          </div>
+        </div>
+
+        {/* Award Photo Section */}
+        <div style={{
+          borderRadius: "20px",
+          overflow: "hidden",
+          position: "relative",
+          boxShadow: "0 8px 32px rgba(99,136,255,0.15)",
+        }}>
+          {/* Photo */}
+          <img
+            src="/images/img_9770.jpg"
+            alt="Cradlewell CEO Lokesh receiving Healthtech Startup of the Year 2026 award at Entrepreneur India Startup Awards"
+            style={{
+              width: "100%",
+              height: "auto",
+              display: "block",
+              objectFit: "cover",
+            }}
+          />
+
+          {/* Overlay Caption */}
+          <div style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: "linear-gradient(to top, rgba(95,71,255,0.85) 0%, transparent 100%)",
+            padding: "40px 32px 24px 32px",
+          }}>
+            <div style={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}>
+              {/* Left — Quote */}
+              <div>
+                <p style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "#ffffff",
+                  margin: "0 0 6px 0",
+                  lineHeight: "1.4",
+                }}>
+                  "Proud to bring professional postnatal care
+                  <br />to every family in India"
+                </p>
+                <p style={{
+                  fontSize: "13px",
+                  color: "rgba(255,255,255,0.8)",
+                  margin: 0,
+                }}>
+                  — Lokesh, CEO & Co-Founder, Cradlewell
+                </p>
+              </div>
+
+              {/* Right — Event Badge */}
+              <div style={{
+                backgroundColor: "rgba(255,255,255,0.15)",
+                backdropFilter: "blur(8px)",
+                borderRadius: "12px",
+                padding: "10px 18px",
+                border: "1px solid rgba(255,255,255,0.3)",
+                textAlign: "center",
+                flexShrink: 0,
+              }}>
+                <div style={{
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  color: "#ffffff",
+                  letterSpacing: "1px",
+                  textTransform: "uppercase",
+                }}>
+                  Entrepreneur India
+                </div>
+                <div style={{
+                  fontSize: "11px",
+                  color: "rgba(255,255,255,0.8)",
+                  marginTop: "2px",
+                }}>
+                  Startup Awards 2026
+                </div>
+                <div style={{
+                  fontSize: "11px",
+                  color: "rgba(255,255,255,0.7)",
+                  marginTop: "2px",
+                }}>
+                  Tabulators: EY
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
 
