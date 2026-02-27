@@ -183,7 +183,7 @@ const TrustedByStrip = () => {
               flex: "1",
               minWidth: "220px",
             }}>
-              <span style={{ fontSize: "40px", flexShrink: 0 }}>🥇</span>
+              <span style={{ fontSize: "40px", flexShrink: 0 }}>🌟</span>
               <div>
                 <div style={{
                   fontSize: "14px",
@@ -222,9 +222,10 @@ const TrustedByStrip = () => {
           position: "relative",
           boxShadow: "0 8px 32px rgba(99,136,255,0.15)",
         }}>
+
           {/* Photo */}
           <img
-            src="/images/award_photo.jpg"
+            src="/images/award_photo.png"
             alt="Cradlewell CEO Lokesh receiving Healthtech Startup of the Year 2026 award at Entrepreneur India Startup Awards"
             style={{
               width: "100%",
@@ -234,14 +235,14 @@ const TrustedByStrip = () => {
             }}
           />
 
-          {/* Overlay Caption */}
+          {/* Gradient Overlay */}
           <div style={{
             position: "absolute",
             bottom: 0,
             left: 0,
             right: 0,
-            background: "linear-gradient(to top, rgba(95,71,255,0.85) 0%, transparent 100%)",
-            padding: "40px 32px 24px 32px",
+            background: "linear-gradient(to top, rgba(95,71,255,0.88) 0%, rgba(99,136,255,0.4) 60%, transparent 100%)",
+            padding: "60px 32px 28px 32px",
           }}>
             <div style={{
               display: "flex",
@@ -250,24 +251,25 @@ const TrustedByStrip = () => {
               flexWrap: "wrap",
               gap: "16px",
             }}>
+
               {/* Left — Quote */}
-              <div>
+              <div style={{ flex: "1", minWidth: "200px" }}>
                 <p style={{
-                  fontSize: "18px",
+                  fontSize: "20px",
                   fontWeight: "600",
                   color: "#ffffff",
-                  margin: "0 0 6px 0",
-                  lineHeight: "1.4",
+                  margin: "0 0 8px 0",
+                  lineHeight: "1.5",
                 }}>
-                  "Proud to bring professional postnatal care
-                  <br />to every family in India"
+                  "Proud to bring professional postnatal
+                  <br />care to every family in India"
                 </p>
                 <p style={{
                   fontSize: "13px",
                   color: "rgba(255,255,255,0.8)",
                   margin: 0,
                 }}>
-                  — Lokesh, CEO & Co-Founder, Cradlewell
+                  — Lokesh, CEO &amp; Co-Founder, Cradlewell
                 </p>
               </div>
 
@@ -276,13 +278,13 @@ const TrustedByStrip = () => {
                 backgroundColor: "rgba(255,255,255,0.15)",
                 backdropFilter: "blur(8px)",
                 borderRadius: "12px",
-                padding: "10px 18px",
+                padding: "12px 20px",
                 border: "1px solid rgba(255,255,255,0.3)",
                 textAlign: "center",
                 flexShrink: 0,
               }}>
                 <div style={{
-                  fontSize: "12px",
+                  fontSize: "13px",
                   fontWeight: "700",
                   color: "#ffffff",
                   letterSpacing: "1px",
@@ -291,18 +293,18 @@ const TrustedByStrip = () => {
                   Entrepreneur India
                 </div>
                 <div style={{
-                  fontSize: "11px",
-                  color: "rgba(255,255,255,0.8)",
-                  marginTop: "2px",
+                  fontSize: "12px",
+                  color: "rgba(255,255,255,0.85)",
+                  marginTop: "3px",
                 }}>
                   Startup Awards 2026
                 </div>
                 <div style={{
                   fontSize: "11px",
                   color: "rgba(255,255,255,0.7)",
-                  marginTop: "2px",
+                  marginTop: "3px",
                 }}>
-                  Tabulators: EY
+                  Official Tabulators: EY
                 </div>
               </div>
 
