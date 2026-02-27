@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Container, Row, Col } from "react-bootstrap";
+import { Container } from "react-bootstrap";
 
 const TrustedByStrip = () => {
   return (
@@ -39,58 +39,39 @@ const TrustedByStrip = () => {
           <img
             src="/images/DPIIT_logo.png"
             alt="DPIIT Startup India Recognized"
-            style={{
-              height: "55px",
-              width: "auto",
-              objectFit: "contain",
-            }}
+            style={{ height: "55px", width: "auto", objectFit: "contain" }}
           />
 
-          {/* Divider */}
           <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
 
           {/* MCA */}
           <img
             src="/images/mca.png"
             alt="MCA Ministry of Corporate Affairs"
-            style={{
-              height: "55px",
-              width: "auto",
-              objectFit: "contain",
-            }}
+            style={{ height: "55px", width: "auto", objectFit: "contain" }}
           />
 
-          {/* Divider */}
           <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
 
           {/* ISO 9001 */}
           <img
             src="/images/iso_9001.png"
-            alt="ISO 9001 Certified Company"
-            style={{
-              height: "65px",
-              width: "auto",
-              objectFit: "contain",
-            }}
+            alt="ISO 9001 Certified"
+            style={{ height: "65px", width: "auto", objectFit: "contain" }}
           />
 
-          {/* Divider */}
           <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
 
-          {/* ISO 27001 — bigger */}
+          {/* ISO 27001 */}
           <img
             src="/images/iso_27001.png"
             alt="ISO 27001 Certified"
-            style={{
-              height: "85px",
-              width: "auto",
-              objectFit: "contain",
-            }}
+            style={{ height: "85px", width: "auto", objectFit: "contain" }}
           />
 
         </div>
 
-        {/* Thin Divider */}
+        {/* Gold Accent Divider */}
         <div style={{
           width: "60px",
           height: "2px",
@@ -99,77 +80,148 @@ const TrustedByStrip = () => {
           borderRadius: "2px",
         }} />
 
-        {/* Award Badges Row */}
+        {/* Premium Award Banner */}
         <div style={{
+          background: "linear-gradient(135deg, #fff8f8 0%, #fff3e0 100%)",
+          border: "1px solid #FFE0E0",
+          borderRadius: "20px",
+          padding: "36px 40px",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: "24px",
+          gap: "32px",
+          boxShadow: "0 4px 24px rgba(220,53,69,0.08)",
         }}>
 
-          {/* Award 1 */}
+          {/* Left — EP India Logo */}
           <div style={{
-            backgroundColor: "#FFF8E7",
-            border: "1px solid #F5C518",
-            borderRadius: "14px",
-            padding: "16px 28px",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            gap: "14px",
-            boxShadow: "0 2px 12px rgba(245,197,24,0.15)",
+            gap: "8px",
+            flex: "0 0 auto",
           }}>
-            <span style={{ fontSize: "36px" }}>🏆</span>
-            <div>
-              <div style={{
-                fontSize: "15px",
-                fontWeight: "700",
-                color: "#B8860B",
-                lineHeight: "1.3",
-              }}>
-                Health &amp; Wellness Startup of the Year
-              </div>
-              <div style={{
-                fontSize: "12px",
-                color: "#6c757d",
-                marginTop: "2px",
-              }}>
-                Entrepreneur India 2026
-              </div>
-            </div>
+            <img
+              src="/images/ep_india.png"
+              alt="Entrepreneur India"
+              style={{
+                height: "60px",
+                width: "auto",
+                objectFit: "contain",
+              }}
+            />
+            <span style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              letterSpacing: "1.5px",
+              color: "#9CA3AF",
+              textTransform: "uppercase",
+            }}>
+              Award Winner 2026
+            </span>
           </div>
 
-          {/* Award 2 */}
+          {/* Vertical Divider */}
           <div style={{
-            backgroundColor: "#FFF3E0",
-            border: "1px solid #FFCC80",
-            borderRadius: "14px",
-            padding: "16px 28px",
+            width: "1px",
+            height: "80px",
+            backgroundColor: "#FFD0D0",
+            flexShrink: 0,
+          }} />
+
+          {/* Right — Two Awards */}
+          <div style={{
             display: "flex",
-            alignItems: "center",
-            gap: "14px",
-            boxShadow: "0 2px 12px rgba(255,152,0,0.15)",
+            gap: "24px",
+            flexWrap: "wrap",
+            flex: "1",
+            justifyContent: "center",
           }}>
-            <span style={{ fontSize: "36px" }}>🥇</span>
-            <div>
-              <div style={{
-                fontSize: "15px",
-                fontWeight: "700",
-                color: "#E65100",
-                lineHeight: "1.3",
-              }}>
-                Healthtech Startup of the Year
-              </div>
-              <div style={{
-                fontSize: "12px",
-                color: "#6c757d",
-                marginTop: "2px",
-              }}>
-                Entrepreneur India 2026
+
+            {/* Award 1 */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              backgroundColor: "#ffffff",
+              borderRadius: "14px",
+              padding: "16px 24px",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+              flex: "1",
+              minWidth: "220px",
+            }}>
+              <span style={{ fontSize: "40px", flexShrink: 0 }}>🏆</span>
+              <div>
+                <div style={{
+                  fontSize: "14px",
+                  fontWeight: "800",
+                  color: "#B8860B",
+                  lineHeight: "1.3",
+                  marginBottom: "4px",
+                }}>
+                  Health &amp; Wellness
+                </div>
+                <div style={{
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#374151",
+                  lineHeight: "1.3",
+                }}>
+                  Startup of the Year 2026
+                </div>
+                <div style={{
+                  fontSize: "11px",
+                  color: "#9CA3AF",
+                  marginTop: "4px",
+                }}>
+                  Entrepreneur India
+                </div>
               </div>
             </div>
-          </div>
 
+            {/* Award 2 */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              backgroundColor: "#ffffff",
+              borderRadius: "14px",
+              padding: "16px 24px",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+              flex: "1",
+              minWidth: "220px",
+            }}>
+              <span style={{ fontSize: "40px", flexShrink: 0 }}>🥇</span>
+              <div>
+                <div style={{
+                  fontSize: "14px",
+                  fontWeight: "800",
+                  color: "#E65100",
+                  lineHeight: "1.3",
+                  marginBottom: "4px",
+                }}>
+                  Healthtech Startup
+                </div>
+                <div style={{
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#374151",
+                  lineHeight: "1.3",
+                }}>
+                  of the Year 2026
+                </div>
+                <div style={{
+                  fontSize: "11px",
+                  color: "#9CA3AF",
+                  marginTop: "4px",
+                }}>
+                  Entrepreneur India
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
       </Container>
