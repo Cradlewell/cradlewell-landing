@@ -224,7 +224,7 @@ const TrustedByStrip = () => {
         }}>
           {/* Photo */}
           <img
-            src="/images/img_9770.jpg"
+            src="/images/award_photo.jpg"
             alt="Cradlewell CEO Lokesh receiving Healthtech Startup of the Year 2026 award at Entrepreneur India Startup Awards"
             style={{
               width: "100%",
