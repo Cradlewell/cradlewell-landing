@@ -102,7 +102,7 @@ const PricingSection = () => {
               </div>
 
               <h3 className="text-white text-center mb-1 fw-semibold">Night Care</h3>
-              <p className="opacity-75 mb-3">10-hour Night care</p>
+              <p className="opacity-75 mb-3">9-hour Night care</p>
 
               <ul className="list-unstyled mt-3 text-start mx-auto" style={{ maxWidth: 420 }}>
                 <li className="d-flex align-items-start mb-3">
