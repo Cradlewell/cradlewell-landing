@@ -25,37 +25,36 @@ const TrustedByStrip = () => {
           Trusted By &amp; Recognized By
         </p>
 
-        {/* Logos Row */}
+        {/* Logos Row — 2x2 grid on mobile, single row on desktop */}
         <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexWrap: "wrap",
-          gap: "48px",
+          display: "grid",
+          gridTemplateColumns: "repeat(2, 1fr)",
+          gap: "24px",
           marginBottom: "40px",
-        }}>
+          alignItems: "center",
+          justifyItems: "center",
+        }}
+          className="trusted-logos-grid"
+        >
           <img
             src="/images/DPIIT_logo.png"
             alt="DPIIT Startup India Recognized"
-            style={{ height: "55px", width: "auto", objectFit: "contain" }}
+            style={{ height: "45px", width: "auto", objectFit: "contain", maxWidth: "100%" }}
           />
-          <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
           <img
             src="/images/mca.png"
             alt="MCA Ministry of Corporate Affairs"
-            style={{ height: "55px", width: "auto", objectFit: "contain" }}
+            style={{ height: "45px", width: "auto", objectFit: "contain", maxWidth: "100%" }}
           />
-          <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
           <img
             src="/images/iso_9001.png"
             alt="ISO 9001 Certified"
-            style={{ height: "65px", width: "auto", objectFit: "contain" }}
+            style={{ height: "55px", width: "auto", objectFit: "contain", maxWidth: "100%" }}
           />
-          <div style={{ width: "1px", height: "50px", backgroundColor: "#E9ECEF" }} />
           <img
             src="/images/iso_27001.png"
             alt="ISO 27001 Certified"
-            style={{ height: "85px", width: "auto", objectFit: "contain" }}
+            style={{ height: "70px", width: "auto", objectFit: "contain", maxWidth: "100%" }}
           />
         </div>
 
@@ -73,29 +72,23 @@ const TrustedByStrip = () => {
           background: "linear-gradient(135deg, #EEF1FF 0%, #E8E4FF 100%)",
           border: "1px solid #C5CEFF",
           borderRadius: "20px",
-          padding: "36px 40px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "32px",
+          padding: "24px 20px",
           boxShadow: "0 4px 24px rgba(99,136,255,0.12)",
           marginBottom: "32px",
         }}>
 
-          {/* Left — EP India Logo */}
+          {/* EP India Logo — centered on mobile */}
           <div style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "8px",
-            flex: "0 0 auto",
+            marginBottom: "20px",
           }}>
             <img
               src="/images/ep_india.png"
               alt="Entrepreneur India"
               style={{
-                height: "60px",
+                height: "50px",
                 width: "auto",
                 objectFit: "contain",
               }}
@@ -106,27 +99,28 @@ const TrustedByStrip = () => {
               letterSpacing: "1.5px",
               color: "#6388FF",
               textTransform: "uppercase",
+              marginTop: "8px",
             }}>
               Award Winner 2026
             </span>
           </div>
 
-          {/* Vertical Divider */}
+          {/* Horizontal Divider */}
           <div style={{
-            width: "1px",
-            height: "80px",
+            width: "100%",
+            height: "1px",
             backgroundColor: "#C5CEFF",
-            flexShrink: 0,
+            marginBottom: "20px",
           }} />
 
-          {/* Right — Two Awards */}
+          {/* Two Award Cards — stack on mobile */}
           <div style={{
             display: "flex",
-            gap: "24px",
-            flexWrap: "wrap",
-            flex: "1",
-            justifyContent: "center",
-          }}>
+            flexDirection: "column",
+            gap: "16px",
+          }}
+            className="award-cards-container"
+          >
 
             {/* Award 1 */}
             <div style={{
@@ -135,13 +129,11 @@ const TrustedByStrip = () => {
               gap: "14px",
               backgroundColor: "#ffffff",
               borderRadius: "14px",
-              padding: "16px 24px",
+              padding: "16px 20px",
               boxShadow: "0 2px 12px rgba(99,136,255,0.10)",
               border: "1px solid #EEF1FF",
-              flex: "1",
-              minWidth: "220px",
             }}>
-              <span style={{ fontSize: "40px", flexShrink: 0 }}>🏆</span>
+              <span style={{ fontSize: "36px", flexShrink: 0 }}>🏆</span>
               <div>
                 <div style={{
                   fontSize: "14px",
@@ -177,13 +169,11 @@ const TrustedByStrip = () => {
               gap: "14px",
               backgroundColor: "#ffffff",
               borderRadius: "14px",
-              padding: "16px 24px",
+              padding: "16px 20px",
               boxShadow: "0 2px 12px rgba(99,136,255,0.10)",
               border: "1px solid #EEF1FF",
-              flex: "1",
-              minWidth: "220px",
             }}>
-              <span style={{ fontSize: "40px", flexShrink: 0 }}>🌟</span>
+              <span style={{ fontSize: "36px", flexShrink: 0 }}>🌟</span>
               <div>
                 <div style={{
                   fontSize: "14px",
@@ -241,78 +231,83 @@ const TrustedByStrip = () => {
             bottom: 0,
             left: 0,
             right: 0,
-            background: "linear-gradient(to top, rgba(95,71,255,0.88) 0%, rgba(99,136,255,0.4) 60%, transparent 100%)",
-            padding: "60px 32px 28px 32px",
+            background: "linear-gradient(to top, rgba(95,71,255,0.92) 0%, rgba(99,136,255,0.5) 60%, transparent 100%)",
+            padding: "40px 20px 20px 20px",
           }}>
-            <div style={{
-              display: "flex",
-              alignItems: "flex-end",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "16px",
+
+            {/* Quote */}
+            <p style={{
+              fontSize: "15px",
+              fontWeight: "600",
+              color: "#ffffff",
+              margin: "0 0 6px 0",
+              lineHeight: "1.5",
             }}>
+              "Proud to bring professional postnatal care to every family in India"
+            </p>
+            <p style={{
+              fontSize: "12px",
+              color: "rgba(255,255,255,0.8)",
+              margin: "0 0 12px 0",
+            }}>
+              — Lokesh, CEO &amp; Co-Founder, Cradlewell
+            </p>
 
-              {/* Left — Quote */}
-              <div style={{ flex: "1", minWidth: "200px" }}>
-                <p style={{
-                  fontSize: "20px",
-                  fontWeight: "600",
-                  color: "#ffffff",
-                  margin: "0 0 8px 0",
-                  lineHeight: "1.5",
-                }}>
-                  "Proud to bring professional postnatal
-                  <br />care to every family in India"
-                </p>
-                <p style={{
-                  fontSize: "13px",
-                  color: "rgba(255,255,255,0.8)",
-                  margin: 0,
-                }}>
-                  — Lokesh, CEO &amp; Co-Founder, Cradlewell
-                </p>
-              </div>
-
-              {/* Right — Event Badge */}
+            {/* Event Badge — full width on mobile */}
+            <div style={{
+              backgroundColor: "rgba(255,255,255,0.15)",
+              backdropFilter: "blur(8px)",
+              borderRadius: "10px",
+              padding: "10px 16px",
+              border: "1px solid rgba(255,255,255,0.3)",
+              display: "inline-flex",
+              gap: "16px",
+              alignItems: "center",
+            }}>
               <div style={{
-                backgroundColor: "rgba(255,255,255,0.15)",
-                backdropFilter: "blur(8px)",
-                borderRadius: "12px",
-                padding: "12px 20px",
-                border: "1px solid rgba(255,255,255,0.3)",
-                textAlign: "center",
-                flexShrink: 0,
+                fontSize: "12px",
+                fontWeight: "700",
+                color: "#ffffff",
+                letterSpacing: "0.5px",
               }}>
-                <div style={{
-                  fontSize: "13px",
-                  fontWeight: "700",
-                  color: "#ffffff",
-                  letterSpacing: "1px",
-                  textTransform: "uppercase",
-                }}>
-                  Entrepreneur India
-                </div>
-                <div style={{
-                  fontSize: "12px",
-                  color: "rgba(255,255,255,0.85)",
-                  marginTop: "3px",
-                }}>
-                  Startup Awards 2026
-                </div>
-                <div style={{
-                  fontSize: "11px",
-                  color: "rgba(255,255,255,0.7)",
-                  marginTop: "3px",
-                }}>
-                  Official Tabulators: EY
-                </div>
+                Entrepreneur India Startup Awards 2026
               </div>
-
+              <div style={{
+                fontSize: "11px",
+                color: "rgba(255,255,255,0.75)",
+                borderLeft: "1px solid rgba(255,255,255,0.3)",
+                paddingLeft: "16px",
+              }}>
+                Tabulators: EY
+              </div>
             </div>
+
           </div>
         </div>
 
       </Container>
+
+      {/* Responsive CSS */}
+      <style jsx>{`
+        .trusted-logos-grid {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+
+        .award-cards-container {
+          flex-direction: column !important;
+        }
+
+        @media (min-width: 768px) {
+          .trusted-logos-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+          }
+
+          .award-cards-container {
+            flex-direction: row !important;
+          }
+        }
+      `}</style>
+
     </div>
   );
 };
