@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { Container } from "react-bootstrap";
 import { useModal } from './ModalContext';
 
 const BackgroundBox = () => {
@@ -11,109 +10,33 @@ const BackgroundBox = () => {
       <div className="background-box-wrapper">
         <div className="background-box-inner">
 
+          {/* Gradient Overlay */}
+          <div className="background-box-overlay" />
+
           {/* Content */}
           <div className="background-box-content">
 
-            {/* Badge */}
-            <div style={{
-              display: "inline-block",
-              backgroundColor: "rgba(255,255,255,0.15)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.3)",
-              borderRadius: "20px",
-              padding: "5px 14px",
-              fontSize: "12px",
-              fontWeight: "600",
-              color: "#ffffff",
-              marginBottom: "16px",
-            }}>
-              ✅ Free First Day of Care
-            </div>
-
-            {/* Headline */}
-            <h2 style={{
-              fontSize: "clamp(20px, 4vw, 28px)",
-              fontWeight: "700",
-              color: "#ffffff",
-              lineHeight: "1.4",
-              marginBottom: "12px",
-            }}>
-              Professional Postnatal Care,<br />
-              At Your Doorstep
-            </h2>
-
-            {/* Subtext */}
-            <p style={{
-              fontSize: "clamp(13px, 2.5vw, 15px)",
-              color: "rgba(255,255,255,0.85)",
-              lineHeight: "1.6",
-              marginBottom: "24px",
-              maxWidth: "480px",
-            }}>
-              Certified nurses visit your home — when you need it,
-              where you need it.
+            <p className="background-box-text">
+              Book professional postnatal care from certified
+              nurses — when you need it, where you need it.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="background-box-ctas">
-              <button
-                onClick={openModal}
-                style={{
-                  backgroundColor: "#ffffff",
-                  color: "#5F47FF",
-                  border: "none",
-                  borderRadius: "10px",
-                  padding: "12px 24px",
-                  fontSize: "15px",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Book Free Consultation
-              </button>
-              
-                href="https://wa.me/919363893639"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  backgroundColor: "#25D366",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "10px",
-                  padding: "12px 24px",
-                  fontSize: "15px",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                  display: "inline-block",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                💬 Chat on WhatsApp
-              </a>
-            </div>
-
-            {/* Trust Line */}
-            <p style={{
-              fontSize: "12px",
-              color: "rgba(255,255,255,0.65)",
-              marginTop: "16px",
-              marginBottom: 0,
-            }}>
-              ✅ No hidden charges &nbsp;·&nbsp;
-              ✅ Verified nurses &nbsp;·&nbsp;
-              ✅ DPIIT Recognized
-            </p>
+            <button
+              onClick={openModal}
+              className="background-box-btn"
+            >
+              Book Free Consultation
+            </button>
 
           </div>
         </div>
       </div>
 
       <style jsx>{`
+
         .background-box-wrapper {
-          margin-bottom: 0;
           padding: 0 16px;
+          margin-bottom: 0;
         }
 
         .background-box-inner {
@@ -123,21 +46,19 @@ const BackgroundBox = () => {
           border-radius: 20px;
           overflow: hidden;
           position: relative;
-          min-height: 280px;
+          min-height: 260px;
           display: flex;
           align-items: flex-end;
         }
 
-        /* Dark gradient overlay */
-        .background-box-inner::before {
-          content: '';
+        .background-box-overlay {
           position: absolute;
           inset: 0;
           background: linear-gradient(
             to top,
-            rgba(95,71,255,0.95) 0%,
-            rgba(99,136,255,0.7) 50%,
-            rgba(0,0,0,0.1) 100%
+            rgba(95, 71, 255, 0.95) 0%,
+            rgba(99, 136, 255, 0.65) 55%,
+            transparent 100%
           );
           border-radius: 20px;
           z-index: 1;
@@ -146,21 +67,28 @@ const BackgroundBox = () => {
         .background-box-content {
           position: relative;
           z-index: 2;
-          padding: 32px 24px;
+          padding: 28px 20px;
           width: 100%;
         }
 
-        .background-box-ctas {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          width: 100%;
+        .background-box-text {
+          font-size: 15px;
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.90);
+          line-height: 1.6;
+          margin-bottom: 16px;
         }
 
-        .background-box-ctas a,
-        .background-box-ctas button {
+        .background-box-btn {
+          background-color: #ffffff;
+          color: #5F47FF;
+          border: none;
+          border-radius: 10px;
+          padding: 12px 28px;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
           width: 100%;
-          text-align: center;
         }
 
         /* Desktop */
@@ -170,23 +98,23 @@ const BackgroundBox = () => {
           }
 
           .background-box-inner {
-            min-height: 380px;
+            min-height: 360px;
             background-position: center center;
           }
 
           .background-box-content {
-            padding: 48px 48px;
-            max-width: 600px;
+            padding: 48px;
+            max-width: 560px;
           }
 
-          .background-box-ctas {
-            flex-direction: row;
-            width: auto;
+          .background-box-text {
+            font-size: 18px;
           }
 
-          .background-box-ctas a,
-          .background-box-ctas button {
+          .background-box-btn {
             width: auto;
+            padding: 14px 36px;
+            font-size: 16px;
           }
         }
       `}</style>
