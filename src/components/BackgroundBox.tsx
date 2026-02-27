@@ -7,7 +7,9 @@ const BackgroundBox = () => {
 
   return (
     <>
-      <div className="background-box text-white d-flex align-items-end">
+      <div className="background-box text-white d-flex align-items-end"
+        style={{ background: "transparent" }}
+      >
         <div className="background-box-content">
           <p className="background-box-text">
             Book professional postnatal care from certified
@@ -39,7 +41,7 @@ const BackgroundBox = () => {
           background: linear-gradient(
             to top,
             rgba(95, 71, 255, 0.96) 0%,
-            rgba(99, 136, 255, 0.5) 60%,
+            rgba(99, 136, 255, 0.3) 50%,
             transparent 100%
           );
         }
