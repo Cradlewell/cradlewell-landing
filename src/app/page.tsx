@@ -12,29 +12,29 @@ import PromoTrialSection from "@/components/PromoTrialSection";
 import StepsSection from "@/components/StepsSection";
 import TeamCarousel from "@/components/TeamCarousel";
 import TestimonialsSection from "@/components/TestimonialsSection";
+import TrustedByStrip from "@/components/TrustedByStrip";
 import WhatsAppWidget from "@/components/WhatsAppWidget";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
-
 export default function Home() {
   return (
-   <>
-   {/* <NavMenu/> */}
-  <ModalProvider>
-    <HeroHeader1/>
-    <HeroBelow/>
-    <BackgroundBox/>
-    <PricingSection/>
-    <StepsSection/>
-    <TestimonialsSection/>
-    <FoundersCarousel/>
-    {/* <TeamCarousel/> */} 
-    <FAQSection/>
-    <PromoTrialSection/>
-    <WhatsAppWidget/>
-    {/* <Footer/> */}
-  </ModalProvider>
+    <>
+      {/* <NavMenu/> */}
+      <ModalProvider>
+        <HeroHeader1/>
+        <HeroBelow/>
+        <BackgroundBox/>
+        <TrustedByStrip/>
+        <PricingSection/>
+        <StepsSection/>
+        <TestimonialsSection/>
+        <FoundersCarousel/>
+        {/* <TeamCarousel/> */}
+        <FAQSection/>
+        <PromoTrialSection/>
+        <WhatsAppWidget/>
+        {/* <Footer/> */}
+      </ModalProvider>
     </>
-
   );
 }
