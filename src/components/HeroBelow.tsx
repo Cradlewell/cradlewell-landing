@@ -38,7 +38,7 @@ const HeroBelow = () => {
 							</Col>
 							<Col xs={4}>
 								<h4 className="display-5 fw-bold">
-									4.9 <span style={{ color: "#f1c40f" }}>★</span>
+									4.7 <span style={{ color: "#f1c40f" }}>★</span>
 								</h4>
 								<p className="small text-muted mb-0">Early Customer Satisfaction</p>
 							</Col>
