@@ -170,28 +170,6 @@ const FaqSection = () => {
 
         </Accordion>
 
-        {/* Bottom CTA */}
-        <div className="text-center mt-5">
-          <p className="text-muted mb-3">Still have questions? We're here to help.</p>
-          <div className="d-flex gap-3 justify-content-center flex-wrap">
-            
-              href="https://wa.me/919363893639"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-success px-4 py-2"
-              role="button"
-            >
-              💬 Chat on WhatsApp
-            </a>
-            
-              href="tel:9363893639"
-              className="btn btn-outline-primary px-4 py-2"
-              role="button"
-            >
-              📞 Call Us Directly
-            </a>
-          </div>
-        </div>
 
       </Container>
     </section>
