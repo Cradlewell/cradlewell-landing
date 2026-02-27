@@ -8,7 +8,7 @@ const TrustedByStrip = () => {
       backgroundColor: "#ffffff",
       borderTop: "1px solid #F0F0F0",
       borderBottom: "1px solid #F0F0F0",
-      padding: "40px 0",
+      padding: "48px 0",
     }}>
       <Container>
 
@@ -20,184 +20,204 @@ const TrustedByStrip = () => {
           letterSpacing: "2.5px",
           color: "#B0B0B0",
           textTransform: "uppercase",
-          marginBottom: "36px",
+          marginBottom: "40px",
         }}>
           Trusted By &amp; Recognized By
         </p>
 
-        {/* Logos Row — 2x2 grid on mobile, single row on desktop */}
+        {/* ── Logos Row ── */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
-          gap: "24px",
-          marginBottom: "40px",
+          display: "flex",
           alignItems: "center",
-          justifyItems: "center",
-        }}
-          className="trusted-logos-grid"
-        >
+          justifyContent: "center",
+          flexWrap: "wrap",
+          gap: "40px",
+          marginBottom: "48px",
+        }}>
           <img
             src="/images/DPIIT_logo.png"
-            alt="DPIIT Startup India Recognized"
-            style={{ height: "45px", width: "auto", objectFit: "contain", maxWidth: "100%" }}
+            alt="DPIIT Startup India"
+            style={{ height: "50px", width: "auto", objectFit: "contain" }}
           />
+          <div style={{ width: "1px", height: "40px", backgroundColor: "#E0E0E0" }} />
           <img
             src="/images/mca.png"
             alt="MCA Ministry of Corporate Affairs"
-            style={{ height: "45px", width: "auto", objectFit: "contain", maxWidth: "100%" }}
+            style={{ height: "50px", width: "auto", objectFit: "contain" }}
           />
+          <div style={{ width: "1px", height: "40px", backgroundColor: "#E0E0E0" }} />
           <img
             src="/images/iso_9001.png"
             alt="ISO 9001 Certified"
-            style={{ height: "55px", width: "auto", objectFit: "contain", maxWidth: "100%" }}
+            style={{ height: "60px", width: "auto", objectFit: "contain" }}
           />
+          <div style={{ width: "1px", height: "40px", backgroundColor: "#E0E0E0" }} />
           <img
             src="/images/iso_27001.png"
             alt="ISO 27001 Certified"
-            style={{ height: "70px", width: "auto", objectFit: "contain", maxWidth: "100%" }}
+            style={{ height: "80px", width: "auto", objectFit: "contain" }}
           />
         </div>
 
-        {/* Brand Color Accent Divider */}
+        {/* ── Brand Divider ── */}
         <div style={{
           width: "60px",
-          height: "2px",
+          height: "3px",
           background: "linear-gradient(-45deg, #6388FF 25%, #5F47FF 100%)",
-          margin: "0 auto 36px auto",
-          borderRadius: "2px",
+          margin: "0 auto 48px auto",
+          borderRadius: "4px",
         }} />
 
-        {/* Premium Award Banner */}
+        {/* ── Award Section ── */}
         <div style={{
           background: "linear-gradient(135deg, #EEF1FF 0%, #E8E4FF 100%)",
           border: "1px solid #C5CEFF",
-          borderRadius: "20px",
-          padding: "24px 20px",
-          boxShadow: "0 4px 24px rgba(99,136,255,0.12)",
+          borderRadius: "24px",
+          padding: "40px",
+          boxShadow: "0 4px 32px rgba(99,136,255,0.10)",
           marginBottom: "32px",
         }}>
 
-          {/* EP India Logo — centered on mobile */}
+          {/* Top Row — Logo + Label */}
           <div style={{
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
-            marginBottom: "20px",
+            justifyContent: "center",
+            gap: "16px",
+            marginBottom: "32px",
           }}>
             <img
               src="/images/ep_india.png"
               alt="Entrepreneur India"
               style={{
-                height: "50px",
+                height: "44px",
                 width: "auto",
                 objectFit: "contain",
               }}
             />
-            <span style={{
-              fontSize: "11px",
-              fontWeight: "700",
-              letterSpacing: "1.5px",
-              color: "#6388FF",
-              textTransform: "uppercase",
-              marginTop: "8px",
-            }}>
-              Award Winner 2026
-            </span>
+            <div style={{
+              width: "1px",
+              height: "36px",
+              backgroundColor: "#C5CEFF",
+            }} />
+            <div>
+              <div style={{
+                fontSize: "13px",
+                fontWeight: "800",
+                color: "#5F47FF",
+                letterSpacing: "0.5px",
+              }}>
+                Startup Awards 2026
+              </div>
+              <div style={{
+                fontSize: "11px",
+                color: "#9CA3AF",
+                marginTop: "2px",
+              }}>
+                Official Tabulators: EY
+              </div>
+            </div>
           </div>
 
-          {/* Horizontal Divider */}
+          {/* Award Cards Row */}
           <div style={{
-            width: "100%",
-            height: "1px",
-            backgroundColor: "#C5CEFF",
-            marginBottom: "20px",
-          }} />
-
-          {/* Two Award Cards — stack on mobile */}
-          <div style={{
-            display: "flex",
-            flexDirection: "column",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
             gap: "16px",
           }}
-            className="award-cards-container"
+            className="award-grid"
           >
 
             {/* Award 1 */}
             <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
               backgroundColor: "#ffffff",
-              borderRadius: "14px",
-              padding: "16px 20px",
-              boxShadow: "0 2px 12px rgba(99,136,255,0.10)",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 2px 16px rgba(99,136,255,0.08)",
               border: "1px solid #EEF1FF",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              gap: "12px",
             }}>
-              <span style={{ fontSize: "36px", flexShrink: 0 }}>🏆</span>
+              <div style={{ fontSize: "44px" }}>🏆</div>
               <div>
                 <div style={{
-                  fontSize: "14px",
+                  fontSize: "15px",
                   fontWeight: "800",
                   color: "#5F47FF",
                   lineHeight: "1.3",
-                  marginBottom: "4px",
+                  marginBottom: "6px",
                 }}>
                   Health &amp; Wellness
                 </div>
                 <div style={{
-                  fontSize: "13px",
+                  fontSize: "14px",
                   fontWeight: "600",
                   color: "#374151",
                   lineHeight: "1.3",
+                  marginBottom: "6px",
                 }}>
-                  Startup of the Year 2026
+                  Startup of the Year
                 </div>
                 <div style={{
+                  display: "inline-block",
+                  backgroundColor: "#EEF1FF",
+                  color: "#5F47FF",
                   fontSize: "11px",
-                  color: "#9CA3AF",
-                  marginTop: "4px",
+                  fontWeight: "700",
+                  padding: "3px 10px",
+                  borderRadius: "20px",
                 }}>
-                  Entrepreneur India
+                  2026
                 </div>
               </div>
             </div>
 
             {/* Award 2 */}
             <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
               backgroundColor: "#ffffff",
-              borderRadius: "14px",
-              padding: "16px 20px",
-              boxShadow: "0 2px 12px rgba(99,136,255,0.10)",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 2px 16px rgba(99,136,255,0.08)",
               border: "1px solid #EEF1FF",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              gap: "12px",
             }}>
-              <span style={{ fontSize: "36px", flexShrink: 0 }}>🌟</span>
+              <div style={{ fontSize: "44px" }}>🌟</div>
               <div>
                 <div style={{
-                  fontSize: "14px",
+                  fontSize: "15px",
                   fontWeight: "800",
                   color: "#5F47FF",
                   lineHeight: "1.3",
-                  marginBottom: "4px",
+                  marginBottom: "6px",
                 }}>
                   Healthtech Startup
                 </div>
                 <div style={{
-                  fontSize: "13px",
+                  fontSize: "14px",
                   fontWeight: "600",
                   color: "#374151",
                   lineHeight: "1.3",
+                  marginBottom: "6px",
                 }}>
-                  of the Year 2026
+                  of the Year
                 </div>
                 <div style={{
+                  display: "inline-block",
+                  backgroundColor: "#EEF1FF",
+                  color: "#5F47FF",
                   fontSize: "11px",
-                  color: "#9CA3AF",
-                  marginTop: "4px",
+                  fontWeight: "700",
+                  padding: "3px 10px",
+                  borderRadius: "20px",
                 }}>
-                  Entrepreneur India
+                  2026
                 </div>
               </div>
             </div>
@@ -205,18 +225,16 @@ const TrustedByStrip = () => {
           </div>
         </div>
 
-        {/* Award Photo Section */}
+        {/* ── Award Photo ── */}
         <div style={{
-          borderRadius: "20px",
+          borderRadius: "24px",
           overflow: "hidden",
           position: "relative",
-          boxShadow: "0 8px 32px rgba(99,136,255,0.15)",
+          boxShadow: "0 8px 40px rgba(99,136,255,0.15)",
         }}>
-
-          {/* Photo */}
           <img
             src="/images/award_photo.png"
-            alt="Cradlewell CEO Lokesh receiving Healthtech Startup of the Year 2026 award at Entrepreneur India Startup Awards"
+            alt="Cradlewell CEO Lokesh receiving Healthtech Startup of the Year 2026 at Entrepreneur India Startup Awards"
             style={{
               width: "100%",
               height: "auto",
@@ -231,57 +249,66 @@ const TrustedByStrip = () => {
             bottom: 0,
             left: 0,
             right: 0,
-            background: "linear-gradient(to top, rgba(95,71,255,0.92) 0%, rgba(99,136,255,0.5) 60%, transparent 100%)",
-            padding: "40px 20px 20px 20px",
+            background: "linear-gradient(to top, rgba(95,71,255,0.92) 0%, rgba(99,136,255,0.4) 55%, transparent 100%)",
+            padding: "48px 28px 28px 28px",
           }}>
+            <div className="award-photo-overlay">
 
-            {/* Quote */}
-            <p style={{
-              fontSize: "15px",
-              fontWeight: "600",
-              color: "#ffffff",
-              margin: "0 0 6px 0",
-              lineHeight: "1.5",
-            }}>
-              "Proud to bring professional postnatal care to every family in India"
-            </p>
-            <p style={{
-              fontSize: "12px",
-              color: "rgba(255,255,255,0.8)",
-              margin: "0 0 12px 0",
-            }}>
-              — Lokesh, CEO &amp; Co-Founder, Cradlewell
-            </p>
+              {/* Quote */}
+              <div>
+                <p style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "#ffffff",
+                  margin: "0 0 6px 0",
+                  lineHeight: "1.5",
+                }}>
+                  "Proud to bring professional postnatal care to every family in India"
+                </p>
+                <p style={{
+                  fontSize: "13px",
+                  color: "rgba(255,255,255,0.75)",
+                  margin: 0,
+                }}>
+                  — Lokesh, CEO &amp; Co-Founder, Cradlewell
+                </p>
+              </div>
 
-            {/* Event Badge — full width on mobile */}
-            <div style={{
-              backgroundColor: "rgba(255,255,255,0.15)",
-              backdropFilter: "blur(8px)",
-              borderRadius: "10px",
-              padding: "10px 16px",
-              border: "1px solid rgba(255,255,255,0.3)",
-              display: "inline-flex",
-              gap: "16px",
-              alignItems: "center",
-            }}>
+              {/* Badge */}
               <div style={{
-                fontSize: "12px",
-                fontWeight: "700",
-                color: "#ffffff",
-                letterSpacing: "0.5px",
+                backgroundColor: "rgba(255,255,255,0.12)",
+                backdropFilter: "blur(10px)",
+                borderRadius: "12px",
+                padding: "12px 20px",
+                border: "1px solid rgba(255,255,255,0.25)",
+                textAlign: "center",
+                flexShrink: 0,
               }}>
-                Entrepreneur India Startup Awards 2026
+                <div style={{
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  color: "#ffffff",
+                  letterSpacing: "0.5px",
+                }}>
+                  Entrepreneur India
+                </div>
+                <div style={{
+                  fontSize: "12px",
+                  color: "rgba(255,255,255,0.8)",
+                  marginTop: "3px",
+                }}>
+                  Startup Awards 2026
+                </div>
+                <div style={{
+                  fontSize: "11px",
+                  color: "rgba(255,255,255,0.6)",
+                  marginTop: "3px",
+                }}>
+                  Official Tabulators: EY
+                </div>
               </div>
-              <div style={{
-                fontSize: "11px",
-                color: "rgba(255,255,255,0.75)",
-                borderLeft: "1px solid rgba(255,255,255,0.3)",
-                paddingLeft: "16px",
-              }}>
-                Tabulators: EY
-              </div>
+
             </div>
-
           </div>
         </div>
 
@@ -289,21 +316,25 @@ const TrustedByStrip = () => {
 
       {/* Responsive CSS */}
       <style jsx>{`
-        .trusted-logos-grid {
-          grid-template-columns: repeat(2, 1fr) !important;
+        .award-grid {
+          grid-template-columns: 1fr 1fr;
         }
 
-        .award-cards-container {
-          flex-direction: column !important;
+        .award-photo-overlay {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
         }
 
-        @media (min-width: 768px) {
-          .trusted-logos-grid {
-            grid-template-columns: repeat(4, 1fr) !important;
+        @media (max-width: 576px) {
+          .award-grid {
+            grid-template-columns: 1fr !important;
           }
-
-          .award-cards-container {
-            flex-direction: row !important;
+          .award-photo-overlay {
+            flex-direction: column;
+            align-items: flex-start;
           }
         }
       `}</style>
