@@ -2,7 +2,7 @@ import Blogbutton from "@/components/Blogbutton";
 import { ModalProvider } from "@/components/ModalContext";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic"; // 👈 ADD THIS
+export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -11,10 +11,7 @@ type Props = {
 /* ===========================
    🔹 Generate SEO Metadata
 =========================== */
-export async function generateMetadata(
-  { params }: Props
-): Promise<Metadata> {
-
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
 
   const wpUrl = `https://blog.cradlewell.com/${slug}`;
@@ -29,13 +26,11 @@ export async function generateMetadata(
   const seo = await res.json();
   if (!seo?.title) return {};
 
-  // ✅ Clean title (remove blog branding if exists)
   const cleanTitle = seo.title
     .replace(" - blog.cradlewell.com", "")
     .replace("| blog.cradlewell.com", "")
     .trim();
 
-  // ✅ Handle OG image (array or string)
   const ogImage =
     Array.isArray(seo?.og_image)
       ? seo.og_image[0]
@@ -44,11 +39,9 @@ export async function generateMetadata(
   return {
     title: cleanTitle,
     description: seo.description,
-
     alternates: {
       canonical: `https://www.cradlewell.com/blog/${slug}`,
     },
-
     openGraph: {
       title: cleanTitle,
       description: seo.description,
@@ -56,7 +49,6 @@ export async function generateMetadata(
       images: ogImage ? [{ url: ogImage }] : [],
       type: "article",
     },
-
     twitter: {
       card: "summary_large_image",
       title: cleanTitle,
@@ -70,7 +62,6 @@ export async function generateMetadata(
    🔹 Blog Page Component
 =========================== */
 export default async function BlogPost({ params }: Props) {
-
   const { slug } = await params;
 
   const res = await fetch(
@@ -95,22 +86,37 @@ export default async function BlogPost({ params }: Props) {
       {/* HERO SECTION */}
       <section className="bg-white py-5 border-bottom">
         <div className="container text-center">
+
+          {/* Title */}
           <h1
             className="display-5 fw-bold"
             dangerouslySetInnerHTML={{ __html: blog.title.rendered }}
           />
-          <p className="text-muted mt-3">
+
+          {/* Date */}
+          <p className="text-muted mt-3 mb-1">
             {new Date(blog.date).toLocaleDateString("en-IN", {
               year: "numeric",
               month: "long",
               day: "numeric",
             })}
           </p>
+
+          {/* Byline */}
+          <p style={{
+            fontSize: "14px",
+            color: "#6388FF",
+            fontWeight: "600",
+            marginBottom: "0",
+          }}>
+            By Cradlewell Care Team | Postnatal &amp; Neonatal Care Specialists, Bangalore
+          </p>
+
         </div>
       </section>
 
       {/* FEATURED IMAGE */}
-      {/* {featuredImage && (
+      {featuredImage && (
         <div className="container my-4">
           <img
             src={featuredImage}
@@ -119,7 +125,7 @@ export default async function BlogPost({ params }: Props) {
             style={{ maxHeight: "500px", objectFit: "cover" }}
           />
         </div>
-      )} */}
+      )}
 
       {/* CONTENT SECTION */}
       <section className="container my-5">
@@ -142,12 +148,11 @@ export default async function BlogPost({ params }: Props) {
               style={{ top: "100px" }}
             >
               <h5 className="fw-bold mb-3">
-                Need Expert Newborn & Mother Care?
+                Need Expert Newborn &amp; Mother Care?
               </h5>
               <p className="text-muted small">
                 Get professional at-home care services for mother and baby.
               </p>
-
               <ModalProvider>
                 <Blogbutton />
               </ModalProvider>
