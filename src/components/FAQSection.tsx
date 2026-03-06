@@ -55,8 +55,7 @@ const FaqSection = () => {
               How much does postnatal home nursing care cost in Bangalore?
             </Accordion.Header>
             <Accordion.Body>
-              Cradlewell offers both Day Care (8 hours) and Night Care (9 hours) packages starting 
-              from 7 days minimum. Our pricing is transparent with no hidden charges. The cost varies 
+              Cradlewell offers both Day Care (8 hours) and Night Care (9 hours) packages. Our pricing is transparent with no hidden charges. The cost varies 
               based on duration and care type — longer packages of 30, 60, or 90 days are more 
               cost-effective. We also offer a completely free first day of care so you can experience 
               our service quality before committing. Contact us via WhatsApp or book a free consultation 
