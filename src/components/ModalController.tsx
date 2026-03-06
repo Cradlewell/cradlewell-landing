@@ -115,9 +115,8 @@ const ModalController = () => {
                <label for='LEADCF3'>Duration of Service</label>
                <select name='LEADCF3' class='form-select'>
                
-                 <option value='10 Days'>10 Days</option>
-                 <option value='20 Days'>20 Days</option>
                  <option value='30 Days'>30 Days</option>
+                 <option value='60 Days'>60 Days</option>
                  <option value='Custom / Decide On Call'>Custom / Decide On Call</option>
                </select>
              </div>
