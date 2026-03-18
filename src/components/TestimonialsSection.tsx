@@ -20,6 +20,12 @@ const TestimonialsSection = () => {
         'They provided a genuine and well-trained caregiver for our baby. We opted for a care package and were very satisfied with the service. Would definitely consider them again if needed.',
       image: '/images/testimonial1.png',
     },
+      {
+      name: 'snehashis & Anita',
+      text:
+        'We chose Cradlewell after our baby girl’s birth, and as first-time parents, we were initially unsure. The experience turned out to be very reassuring.The caregivers were supportive and knowledgeable, guiding us through feeding and early baby care with patience.Their calm approach made those early days much smoother. Truly appreciate the care and professionalism.',
+      image: '/images/testimonial3.png',
+    },
   ];
 
   return (
