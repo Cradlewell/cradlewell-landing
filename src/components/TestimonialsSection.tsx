@@ -20,18 +20,21 @@ const TestimonialsSection = () => {
         'They provided a genuine and well-trained caregiver for our baby. We opted for a care package and were very satisfied with the service. Would definitely consider them again if needed.',
       image: '/images/testimonial1.png',
     },
-      {
-      name: 'snehashis & Anita',
+    {
+      name: 'Snehashis & Anita',
       text:
-        'We chose Cradlewell after our baby girl’s birth, and as first-time parents, we were initially unsure. The experience turned out to be very reassuring.The caregivers were supportive and knowledgeable, guiding us through feeding and early baby care with patience.Their calm approach made those early days much smoother. Truly appreciate the care and professionalism.',
+        'We chose Cradlewell after our baby girl’s birth, and as first-time parents, we were initially unsure. The experience turned out to be very reassuring. The caregivers were supportive and knowledgeable, guiding us through feeding and early baby care with patience. Their calm approach made those early days much smoother. Truly appreciate the care and professionalism.',
       image: '/images/testimonial3.jpg',
     },
   ];
 
   return (
-    <section className="py-5" id="testimonials" style={{ backgroundColor: '#EDF3FF' }}>
+    <section
+      className="py-5"
+      id="testimonials"
+      style={{ backgroundColor: '#EDF3FF' }}
+    >
       <Container>
-        {/* Title */}
         <div className="text-center mb-5">
           <h1 className="fw-bold">
             <span style={{ color: '#5B7CFA' }}>Real words</span> from real parents
@@ -39,7 +42,6 @@ const TestimonialsSection = () => {
         </div>
 
         <div className="row align-items-center justify-content-center position-relative">
-          {/* Left Arrow */}
           <button
             type="button"
             className="position-absolute start-0 d-none d-md-flex align-items-center justify-content-center rounded-circle"
@@ -58,7 +60,6 @@ const TestimonialsSection = () => {
             ←
           </button>
 
-          {/* Carousel */}
           <div className="col-md-10">
             <Carousel
               ref={carouselRef}
@@ -69,10 +70,8 @@ const TestimonialsSection = () => {
               {testimonials.map((testimonial, idx) => (
                 <Carousel.Item key={idx}>
                   <div className="d-flex flex-column flex-md-row align-items-center bg-white p-4 p-md-5 rounded-4 shadow-sm">
-                    
-                    {/* Image */}
                     <div
-                      className="position-relative me-md-4 mb-3 mb-md-0 flex-shrink-0"
+                      className="me-md-4 mb-3 mb-md-0 flex-shrink-0"
                       style={{
                         width: 240,
                         height: 240,
@@ -83,16 +82,18 @@ const TestimonialsSection = () => {
                       <Image
                         src={testimonial.image}
                         alt={testimonial.name}
-                        fill
-                        sizes="240px"
+                        width={240}
+                        height={240}
+                        quality={100}
                         style={{
+                          width: '100%',
+                          height: '100%',
                           objectFit: 'cover',
-                          objectPosition: 'center top', // 👈 keeps face visible
+                          objectPosition: 'center top',
                         }}
                       />
                     </div>
 
-                    {/* Text */}
                     <div>
                       <p
                         className="mb-3 text-dark"
@@ -107,7 +108,10 @@ const TestimonialsSection = () => {
                         {'★★★★★'.split('').map((star, i) => (
                           <span key={i}>{star}</span>
                         ))}
-                        <span className="text-muted ms-2" style={{ fontSize: '0.85rem' }}>
+                        <span
+                          className="text-muted ms-2"
+                          style={{ fontSize: '0.85rem' }}
+                        >
                           Google Review
                         </span>
                       </div>
@@ -118,7 +122,6 @@ const TestimonialsSection = () => {
             </Carousel>
           </div>
 
-          {/* Right Arrow */}
           <button
             type="button"
             className="position-absolute end-0 d-none d-md-flex align-items-center justify-content-center rounded-circle"
