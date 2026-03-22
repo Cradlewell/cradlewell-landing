@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { CRADLEWELL_KNOWLEDGE } from "@/lib/cradlewell-knowledge";
 import { buildConversationSummary, detectLeadIntent } from "@/lib/chat-utils";
@@ -42,9 +42,9 @@ function getPageContext(pagePath: string, pageTitle: string) {
 
 export async function POST(req: NextRequest) {
     try {
-        if (!process.env.OPENAI_API_KEY) {
+        if (!process.env.ANTHROPIC_API_KEY) {
             return NextResponse.json(
-                { reply: "Server configuration error: OPENAI_API_KEY is missing." },
+                { reply: "Server configuration error: ANTHROPIC_API_KEY is missing." },
                 { status: 500 }
             );
         }
@@ -61,9 +61,9 @@ export async function POST(req: NextRequest) {
         const conversationSummary = buildConversationSummary(messages);
         const pageContext = getPageContext(pagePath, pageTitle);
 
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-        // ── MODE 1: Conversational (baby stage not confirmed, non-greeting message) ──
+        // ── MODE 1: Conversational (baby stage not confirmed) ──
         const greetingPrompt = `
 You are Aria from Cradlewell — a warm, caring friend to new and expecting mothers.
 
@@ -136,23 +136,21 @@ Lead capture hint:
 ${shouldCollectLead ? "High probability — move to Step 6 now." : "Only move to Step 6 when the shift has been confirmed."}
         `.trim();
 
-        const completion = await client.chat.completions.create({
-            model: "gpt-4.1",
+        const systemPrompt = babyStageConfirmed ? serviceFlowPrompt : greetingPrompt;
+
+        const completion = await client.messages.create({
+            model: "claude-sonnet-4-5",
+            max_tokens: 1024,
             temperature: 0.4,
-            messages: [
-                {
-                    role: "system",
-                    content: babyStageConfirmed ? serviceFlowPrompt : greetingPrompt,
-                },
-                ...messages.map((m) => ({
-                    role: m.role,
-                    content: m.content,
-                })),
-            ],
+            system: systemPrompt,
+            messages: messages.map((m) => ({
+                role: m.role,
+                content: m.content,
+            })),
         });
 
         const reply =
-            completion.choices[0]?.message?.content?.trim() ||
+            (completion.content[0]?.type === "text" ? completion.content[0].text : "")?.trim() ||
             "I'm here to help. Is your little one already home, or are you expecting soon?\n[[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]";
 
         return NextResponse.json({ reply });
