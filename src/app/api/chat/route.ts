@@ -74,9 +74,9 @@ function detectDuration(text: string): Duration {
 
 function detectTimeSlot(text: string): string | null {
     const t = text.toLowerCase();
-    if (/10\s*am|10am/.test(t)) return "10 AM–6 PM";
-    if (/9\s*am|9am/.test(t)) return "9 AM–5 PM";
-    if (/8\s*am|8am/.test(t)) return "8 AM–4 PM";
+    if (/10\s*am|10am|10\s*(to|-)\s*6/.test(t)) return "10 AM–6 PM";
+    if (/9\s*am|9am|9\s*(to|-)\s*5/.test(t)) return "9 AM–5 PM";
+    if (/8\s*am|8am|8\s*(to|-)\s*4/.test(t)) return "8 AM–4 PM";
     return null;
 }
 
