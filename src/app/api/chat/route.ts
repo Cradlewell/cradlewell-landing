@@ -32,19 +32,11 @@ function isBabyStageConfirmed(messages: Array<{ role: string; content: string }>
     // Expecting
     if (/\b(expecting|pregnant|due date|due in|due next|weeks pregnant|months pregnant|trimester)\b/i.test(userText)) return true;
 
-    // Short answers to the baby-stage question ("home" / "already home" / "expecting")
-    // Only treat these as confirmed if a previous assistant message asked the baby-stage question
-    const prevAssistantAskedStage = messages.some(
-        (m) => m.role === "assistant" && /already home.*expecting|expecting.*already home/i.test(m.content)
-    );
-    if (prevAssistantAskedStage) {
-        if (/^\s*(home|already home|baby is home|she('?s)? home|he('?s)? home|yes home|baby home)\s*$/i.test(userText.trim())) return true;
-        if (/^\s*(expecting|still expecting|yes expecting|pregnant|yes pregnant)\s*$/i.test(userText.trim())) return true;
-        // Any user message containing just "home" or "expecting" as a reply
-        const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content.trim().toLowerCase() ?? "";
-        if (/^(home|already home|yes home|baby home)$/.test(lastUserMsg)) return true;
-        if (/^(expecting|still expecting|yes expecting|pregnant)$/.test(lastUserMsg)) return true;
-    }
+    // Single-word / short replies that clearly indicate baby stage
+    // e.g. user says "home", "already home", "expecting", "pregnant" at any point
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content.trim().toLowerCase() ?? "";
+    if (/^(home|already home|yes home|baby home|baby is home|she'?s? home|he'?s? home)$/.test(lastUserMsg)) return true;
+    if (/^(expecting|still expecting|yes expecting|pregnant|yes pregnant|due soon)$/.test(lastUserMsg)) return true;
 
     return false;
 }
