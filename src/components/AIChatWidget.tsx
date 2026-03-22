@@ -73,7 +73,6 @@ export default function AIChatWidget() {
     const inputRef = useRef<HTMLInputElement | null>(null);
 
     const [isMobile, setIsMobile] = useState(false);
-    const [kbHeight, setKbHeight] = useState(0);
 
     // Detect mobile
     useEffect(() => {
@@ -81,24 +80,6 @@ export default function AIChatWidget() {
         check();
         window.addEventListener("resize", check);
         return () => window.removeEventListener("resize", check);
-    }, []);
-
-    // iOS keyboard height tracking
-    useEffect(() => {
-        if (typeof window === "undefined" || !window.visualViewport) return;
-        const vv = window.visualViewport!;
-        const update = () => {
-            if (window.innerWidth > 480) { setKbHeight(0); return; }
-            const kb = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
-            setKbHeight(kb);
-        };
-        vv.addEventListener("resize", update);
-        vv.addEventListener("scroll", update);
-        update();
-        return () => {
-            vv.removeEventListener("resize", update);
-            vv.removeEventListener("scroll", update);
-        };
     }, []);
 
     // Lock background scroll when mobile chat is open
@@ -154,7 +135,11 @@ export default function AIChatWidget() {
 
     useEffect(() => {
         if (isOpen) {
-            setTimeout(() => inputRef.current?.focus(), 300);
+            setTimeout(() => {
+                inputRef.current?.focus();
+                // iOS: scroll input into view so keyboard doesn't cover it
+                inputRef.current?.scrollIntoView({ block: "end" });
+            }, 300);
         }
     }, [isOpen]);
 
@@ -336,6 +321,12 @@ export default function AIChatWidget() {
                     }
                     .aria-input-bar {
                         padding: 10px 12px !important;
+                        box-sizing: border-box !important;
+                        width: 100% !important;
+                    }
+                    .aria-msg-input {
+                        min-width: 0 !important;
+                        font-size: 16px !important; /* prevents iOS zoom on focus */
                     }
                 }
             `}</style>
@@ -346,7 +337,7 @@ export default function AIChatWidget() {
                     position: "fixed",
                     zIndex: 9999,
                     ...(isMobile && isOpen
-                        ? { top: 0, left: 0, right: 0, bottom: kbHeight }
+                        ? { top: 0, left: 0, right: 0, bottom: 0 }
                         : { right: 20, bottom: 20 }
                     ),
                 }}
@@ -384,7 +375,8 @@ export default function AIChatWidget() {
                         className="aria-widget-open aria-chat-window"
                         style={{
                             width: isMobile ? "100%" : 370,
-                            height: isMobile ? "100%" : 580,
+                            height: isMobile ? "100dvh" : 580,
+                            maxHeight: isMobile ? "100%" : "none",
                             background: "#fff",
                             borderRadius: isMobile ? 0 : 24,
                             boxShadow: isMobile ? "none" : "0 24px 64px rgba(79,70,229,0.18), 0 4px 16px rgba(0,0,0,0.08)",
@@ -712,6 +704,8 @@ export default function AIChatWidget() {
                                 gap: 8,
                                 alignItems: "center",
                                 flexShrink: 0,
+                                boxSizing: "border-box",
+                                width: "100%",
                             }}
                         >
                             <input
@@ -721,8 +715,13 @@ export default function AIChatWidget() {
                                 placeholder="Type a message..."
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === "Enter") sendMessage(input); }}
+                                onFocus={() => {
+                                    // iOS: scroll to ensure input is visible above keyboard
+                                    setTimeout(() => inputRef.current?.scrollIntoView({ block: "nearest" }), 100);
+                                }}
                                 style={{
                                     flex: 1,
+                                    minWidth: 0,
                                     padding: "10px 14px",
                                     fontSize: 14,
                                     border: "1.5px solid #e8e8f0",
