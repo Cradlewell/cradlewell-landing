@@ -11,11 +11,15 @@ type WPPost = {
 };
 
 async function getPosts(): Promise<WPPost[]> {
-  const res = await fetch(
-    `${process.env.WORDPRESS_API}/posts?_embed&per_page=9`,
-    { next: { revalidate: 60 } }
-  );
-  return res.json();
+  const api = process.env.WORDPRESS_API;
+  if (!api) return [];
+  try {
+    const res = await fetch(`${api}/posts?_embed&per_page=9`, { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
 }
 
 export default async function BlogPage() {

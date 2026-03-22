@@ -193,10 +193,14 @@ export default function AIChatWidget() {
 
             // Time slot — scan ALL messages, take the LAST match (most likely the confirmed slot)
             // Handles cases where user clicks "Yes, that works" and slot only appears in assistant message
-            const slotPattern = /(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-|–)\s*\d{1,2}\s*(?:am|pm))/gi;
-            const allSlotMatches = [...allText.matchAll(slotPattern)];
-            const slot = allSlotMatches.length > 0
-                ? allSlotMatches[allSlotMatches.length - 1][1].replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase())
+            const slotPattern = /(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-)\s*\d{1,2}\s*(?:am|pm))/gi;
+            let lastSlotMatch: RegExpExecArray | null = null;
+            let slotExec: RegExpExecArray | null;
+            while ((slotExec = slotPattern.exec(allText)) !== null) {
+                lastSlotMatch = slotExec;
+            }
+            const slot = lastSlotMatch
+                ? lastSlotMatch[1].replace(/\b(am|pm)\b/gi, (m: string) => m.toUpperCase())
                 : "";
 
             const summary = `Looking for ${serviceType} – ${shiftType} support${hours ? `, ${hours} hrs` : ""}${slot ? `, ${slot}` : ""}.`;
