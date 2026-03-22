@@ -31,6 +31,21 @@ function isBabyStageConfirmed(messages: Array<{ role: string; content: string }>
     if (/\b(arrived|delivered|born|came home)\b/i.test(userText)) return true;
     // Expecting
     if (/\b(expecting|pregnant|due date|due in|due next|weeks pregnant|months pregnant|trimester)\b/i.test(userText)) return true;
+
+    // Short answers to the baby-stage question ("home" / "already home" / "expecting")
+    // Only treat these as confirmed if a previous assistant message asked the baby-stage question
+    const prevAssistantAskedStage = messages.some(
+        (m) => m.role === "assistant" && /already home.*expecting|expecting.*already home/i.test(m.content)
+    );
+    if (prevAssistantAskedStage) {
+        if (/^\s*(home|already home|baby is home|she('?s)? home|he('?s)? home|yes home|baby home)\s*$/i.test(userText.trim())) return true;
+        if (/^\s*(expecting|still expecting|yes expecting|pregnant|yes pregnant)\s*$/i.test(userText.trim())) return true;
+        // Any user message containing just "home" or "expecting" as a reply
+        const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content.trim().toLowerCase() ?? "";
+        if (/^(home|already home|yes home|baby home)$/.test(lastUserMsg)) return true;
+        if (/^(expecting|still expecting|yes expecting|pregnant)$/.test(lastUserMsg)) return true;
+    }
+
     return false;
 }
 
@@ -72,7 +87,9 @@ You are Aria from Cradlewell — warm and caring.
 RULES:
 - Reply in 1 sentence only. Maximum 15 words.
 - Never mention services, nurses, caregivers, pricing, or shifts.
-- Always end with: "Is your little one already home, or are you still expecting?"
+- Ask ONCE: "Is your little one already home, or are you still expecting?"
+- If the user already answered this question, DO NOT ask it again. Move on warmly.
+- Never repeat a question that was already asked and answered.
 
 Recent conversation:
 ${conversationSummary}
