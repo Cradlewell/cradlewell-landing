@@ -15,23 +15,24 @@ const RequestSchema = z.object({
     pageTitle: z.string().optional().default("Unknown Page"),
 });
 
-/** Returns true once the user has confirmed their baby stage */
+/** True once the user has told us their baby stage */
 function isBabyStageConfirmed(messages: Array<{ role: string; content: string }>): boolean {
     const userText = messages
         .filter((m) => m.role === "user")
         .map((m) => m.content.toLowerCase())
         .join(" ");
 
-    // Quick-reply button values
     if (/baby is home|expecting soon/i.test(userText)) return true;
-
-    // Natural language patterns
-    if (/\b(baby|newborn|little one|lo)\b.{0,25}\b(home|arrived|here|born|with us|came)\b/i.test(userText)) return true;
+    if (/\b(baby|newborn|little one)\b.{0,25}\b(home|arrived|here|born|with us|came)\b/i.test(userText)) return true;
     if (/\b(just had|just delivered|gave birth|delivered|baby born|she was born|he was born)\b/i.test(userText)) return true;
-    if (/\b(expecting|pregnant|due date|due in|due next|weeks pregnant|months pregnant|trimester|delivery date)\b/i.test(userText)) return true;
+    if (/\b(expecting|pregnant|due date|due in|due next|weeks pregnant|months pregnant|trimester)\b/i.test(userText)) return true;
     if (/\b(baby came|baby arrived|arrived home|home with baby|brought baby home)\b/i.test(userText)) return true;
-
     return false;
+}
+
+/** True if the message is purely a greeting with no meaningful content */
+function isPureGreeting(text: string): boolean {
+    return /^(hi+|hello+|hey+|hii+|helo+|namaste|hola|hai|sup|yo|good (morning|evening|afternoon)|greetings?)[\s!.,]*$/i.test(text.trim());
 }
 
 function getPageContext(pagePath: string, pageTitle: string) {
@@ -42,6 +43,13 @@ function getPageContext(pagePath: string, pageTitle: string) {
     if (lower.includes("day")) return "The user is likely interested in daytime newborn and mother support.";
     return "The user is browsing the website and may need help understanding Cradlewell services.";
 }
+
+// Pool of warm greeting responses (rotated randomly)
+const GREETING_RESPONSES = [
+    "Hi there! 🌸 So happy you're here. I'm Aria and I'd love to support you. Is your little one already home, or are you expecting soon?\n[[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]",
+    "Hello! 🌸 Welcome — you've come to the right place. I'm here to help you every step of the way. Is your baby already home, or are you getting ready for delivery?\n[[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]",
+    "Hey there! 🌸 So glad you reached out. This is a beautiful (and busy!) time — I'm here to make things a little easier. Is your little one home yet, or are you still expecting?\n[[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]",
+];
 
 export async function POST(req: NextRequest) {
     try {
@@ -59,35 +67,37 @@ export async function POST(req: NextRequest) {
             [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
         const babyStageConfirmed = isBabyStageConfirmed(messages);
+
+        // ── SHORTCUT: pure greeting + baby stage not yet known → fixed warm reply ──
+        if (!babyStageConfirmed && isPureGreeting(lastUserMessage)) {
+            const reply = GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
+            return NextResponse.json({ reply });
+        }
+
         const shouldCollectLead = detectLeadIntent(lastUserMessage);
         const conversationSummary = buildConversationSummary(messages);
         const pageContext = getPageContext(pagePath, pageTitle);
 
         const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-        // ── MODE 1: Free conversational greeting (before baby stage is known) ──
+        // ── MODE 1: Conversational (baby stage not confirmed, non-greeting message) ──
         const greetingPrompt = `
-You are Aria, Cradlewell's AI care advisor. You speak exactly like a warm, caring friend — never like a bot or a sales agent.
+You are Aria from Cradlewell — a warm, caring friend to new and expecting mothers.
 
-RIGHT NOW you are in GREETING MODE. Your only goal is to make the mother feel welcomed and gently find out whether her baby has arrived or she is still expecting.
+YOUR ONLY GOAL right now: respond empathetically to what the user said, then ask whether their baby has arrived or they are still expecting.
 
-RULES FOR GREETING MODE:
-- If the user says hi/hello/hey or just a short greeting: respond with genuine warmth. Acknowledge them, say something supportive about this special phase of life, and then softly ask about their baby stage.
-- If the user shares feelings (excitement, stress, exhaustion, worry): first empathise fully in 1-2 sentences, THEN gently ask about their baby stage.
-- If the user asks about services, pricing, or nurses: acknowledge briefly but say "I'd love to help — let me first understand where you are in your journey 🌸" and then ask the baby stage question.
-- Keep every reply to 2–3 sentences maximum.
-- Always end your reply by showing: [[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]
-- NEVER ask about service type, shift, hours, or pricing in this mode.
-- NEVER sound salesy or robotic.
-
-Cradlewell context (for your awareness only, do not pitch yet):
-${CRADLEWELL_KNOWLEDGE}
+STRICT RULES — do not break these:
+1. If the user shares feelings or worries: acknowledge in 1 warm sentence, then ask the baby stage question.
+2. Never mention nurses, caregivers, services, pricing, shifts, or hours.
+3. Keep your entire reply to 2 sentences maximum.
+4. ALWAYS end with exactly this on a new line: [[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]
+5. Do not ask any other question.
 
 Recent conversation:
 ${conversationSummary}
         `.trim();
 
-        // ── MODE 2: Strict service flow (after baby stage confirmed) ──
+        // ── MODE 2: Strict service flow (baby stage confirmed) ──
         const serviceFlowPrompt = `
 You are Aria, Cradlewell's AI care advisor — warm, caring, and conversational.
 
@@ -145,7 +155,7 @@ ${shouldCollectLead ? "High probability — move to Step 6 now." : "Only move to
 
         const completion = await client.chat.completions.create({
             model: "gpt-4.1-mini",
-            temperature: 0.5,
+            temperature: 0.4,
             messages: [
                 {
                     role: "system",
@@ -160,7 +170,7 @@ ${shouldCollectLead ? "High probability — move to Step 6 now." : "Only move to
 
         const reply =
             completion.choices[0]?.message?.content?.trim() ||
-            "I'm here to help you. Could you tell me a little more?";
+            "I'm here to help. Is your little one already home, or are you expecting soon?\n[[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]";
 
         return NextResponse.json({ reply });
     } catch (error) {
