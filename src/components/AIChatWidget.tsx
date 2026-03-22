@@ -72,31 +72,58 @@ export default function AIChatWidget() {
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
 
-    // iOS keyboard handling via visualViewport
-    const [chatPos, setChatPos] = useState({ bottom: 20, height: 580 });
+    const [isMobile, setIsMobile] = useState(false);
+    const [kbHeight, setKbHeight] = useState(0);
 
+    // Detect mobile
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth <= 480);
+        check();
+        window.addEventListener("resize", check);
+        return () => window.removeEventListener("resize", check);
+    }, []);
+
+    // iOS keyboard height tracking
     useEffect(() => {
         if (typeof window === "undefined" || !window.visualViewport) return;
-        const vv = window.visualViewport;
+        const vv = window.visualViewport!;
         const update = () => {
-            const isMobile = window.innerWidth <= 480;
-            if (!isMobile) {
-                setChatPos({ bottom: 20, height: 580 });
-                return;
-            }
-            const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-            setChatPos({ bottom: kb + 8, height: Math.floor(vv.height) - 76 });
+            if (window.innerWidth > 480) { setKbHeight(0); return; }
+            const kb = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
+            setKbHeight(kb);
         };
         vv.addEventListener("resize", update);
         vv.addEventListener("scroll", update);
-        window.addEventListener("resize", update);
         update();
         return () => {
             vv.removeEventListener("resize", update);
             vv.removeEventListener("scroll", update);
-            window.removeEventListener("resize", update);
         };
     }, []);
+
+    // Lock background scroll when mobile chat is open
+    useEffect(() => {
+        if (isMobile && isOpen) {
+            const scrollY = window.scrollY;
+            document.body.style.overflow = "hidden";
+            document.body.style.position = "fixed";
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = "100%";
+        } else {
+            const top = parseFloat(document.body.style.top || "0") * -1;
+            document.body.style.overflow = "";
+            document.body.style.position = "";
+            document.body.style.top = "";
+            document.body.style.width = "";
+            if (isMobile && top) window.scrollTo(0, top);
+        }
+        return () => {
+            document.body.style.overflow = "";
+            document.body.style.position = "";
+            document.body.style.top = "";
+            document.body.style.width = "";
+        };
+    }, [isMobile, isOpen]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -298,29 +325,32 @@ export default function AIChatWidget() {
 
                 /* Mobile responsive */
                 @media (max-width: 480px) {
-                    .aria-widget-container {
-                        right: 8px !important;
-                    }
-                    .aria-chat-window {
-                        width: calc(100vw - 16px) !important;
-                        border-radius: 20px !important;
-                    }
                     .aria-options-row {
                         padding-left: 8px !important;
                     }
                     .aria-header {
-                        padding: 12px 14px !important;
+                        padding: 14px 16px !important;
                     }
                     .aria-messages {
-                        padding: 12px 10px !important;
+                        padding: 14px 12px !important;
                     }
                     .aria-input-bar {
-                        padding: 10px 10px !important;
+                        padding: 10px 12px !important;
                     }
                 }
             `}</style>
 
-            <div className="aria-widget-container" style={{ position: "fixed", right: 20, bottom: chatPos.bottom, zIndex: 9999 }}>
+            <div
+                className="aria-widget-container"
+                style={{
+                    position: "fixed",
+                    zIndex: 9999,
+                    ...(isMobile && isOpen
+                        ? { top: 0, left: 0, right: 0, bottom: kbHeight }
+                        : { right: 20, bottom: 20 }
+                    ),
+                }}
+            >
 
                 {/* Floating button */}
                 {!isOpen && (
@@ -353,16 +383,15 @@ export default function AIChatWidget() {
                     <div
                         className="aria-widget-open aria-chat-window"
                         style={{
-                            width: 370,
-                            maxWidth: "calc(100vw - 24px)",
-                            height: chatPos.height,
+                            width: isMobile ? "100%" : 370,
+                            height: isMobile ? "100%" : 580,
                             background: "#fff",
-                            borderRadius: 24,
-                            boxShadow: "0 24px 64px rgba(79,70,229,0.18), 0 4px 16px rgba(0,0,0,0.08)",
+                            borderRadius: isMobile ? 0 : 24,
+                            boxShadow: isMobile ? "none" : "0 24px 64px rgba(79,70,229,0.18), 0 4px 16px rgba(0,0,0,0.08)",
                             overflow: "hidden",
                             display: "flex",
                             flexDirection: "column",
-                            border: "1px solid rgba(99,136,255,0.12)",
+                            border: isMobile ? "none" : "1px solid rgba(99,136,255,0.12)",
                         }}
                     >
                         {/* Header */}
