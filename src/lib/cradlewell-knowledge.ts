@@ -3,11 +3,14 @@ Cradlewell provides professional postnatal and newborn home care in Bangalore.
 
 SERVICE TYPES:
 
-1. Nurse (Clinical Care)
-Trained and certified postnatal nurses. They provide medical-grade care including newborn health monitoring, vital checks, clinical postnatal recovery support, feeding assessments, and early warning detection. These are healthcare professionals — not caregivers.
+1. Certified Nurse
+A qualified healthcare professional with medical knowledge. They can do everything a Japa/MOBA does (bathing, feeding, massaging) PLUS: lactation support, correct positioning techniques, parent education, newborn health monitoring, vital checks, and clinical postnatal recovery support. They can identify early warning signs and provide medical-grade guidance. These are healthcare professionals — not caregivers.
 
 2. Japa / MOBA (Trained Postnatal Caregiver)
-Experienced, trained postnatal caregivers specialising in mother and newborn care. They provide dedicated newborn care (bathing, feeding support, soothing, sleep routines), postnatal recovery support for the mother, and continuous baby monitoring. These are skilled, trained professionals — never refer to them as maids, helpers, or domestic workers.
+A trained postnatal caregiver focused on hands-on support for the baby and mother. They help with bathing, feeding, massaging, soothing, and establishing baby routines. They do not have medical knowledge or clinical training. These are skilled, trained professionals — never refer to them as maids, helpers, or domestic workers.
+
+KEY DIFFERENCE (use this when asked):
+Both nurses and Japa/MOBA caregivers help with bathing, feeding, and massaging. The difference is that a nurse also brings medical knowledge — lactation guidance, positioning techniques, parent education, and the ability to monitor health and flag concerns. A Japa/MOBA focuses purely on baby routine and mother support without medical expertise.
 
 NURSE SERVICE TIMINGS:
 Day Shift — 8 hours:
