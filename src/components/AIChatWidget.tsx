@@ -345,28 +345,43 @@ export default function AIChatWidget() {
 
                 {/* Floating button */}
                 {!isOpen && (
-                    <button
-                        onClick={() => setIsOpen(true)}
-                        aria-label="Chat with Aria"
-                        style={{
-                            width: 60,
-                            height: 60,
-                            borderRadius: "50%",
-                            border: "none",
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                        <div style={{
                             background: "linear-gradient(135deg, #7B61FF, #4F46E5)",
                             color: "#fff",
-                            cursor: "pointer",
-                            boxShadow: "0 8px 32px rgba(99,136,255,0.45)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            animation: "ariaPulse 2.5s infinite",
-                        }}
-                    >
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white"/>
-                        </svg>
-                    </button>
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: "0.04em",
+                            padding: "4px 10px",
+                            borderRadius: 20,
+                            boxShadow: "0 2px 8px rgba(99,136,255,0.35)",
+                            whiteSpace: "nowrap",
+                        }}>
+                            Need help?
+                        </div>
+                        <button
+                            onClick={() => setIsOpen(true)}
+                            aria-label="Chat with Aria"
+                            style={{
+                                width: 60,
+                                height: 60,
+                                borderRadius: "50%",
+                                border: "none",
+                                background: "linear-gradient(135deg, #7B61FF, #4F46E5)",
+                                color: "#fff",
+                                cursor: "pointer",
+                                boxShadow: "0 8px 32px rgba(99,136,255,0.45)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                animation: "ariaPulse 2.5s infinite",
+                            }}
+                        >
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white"/>
+                            </svg>
+                        </button>
+                    </div>
                 )}
 
                 {/* Chat window */}
