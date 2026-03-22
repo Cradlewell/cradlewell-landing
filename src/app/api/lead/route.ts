@@ -36,15 +36,18 @@ export async function POST(req: NextRequest) {
             summary: lead.summary,
             submittedAt: (() => {
                 const now = new Date();
-                const dd = String(now.getDate()).padStart(2, "0");
-                const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-                const mon = months[now.getMonth()];
-                const yyyy = now.getFullYear();
-                let h = now.getHours();
-                const min = String(now.getMinutes()).padStart(2, "0");
-                const ampm = h >= 12 ? "PM" : "AM";
-                h = h % 12 || 12;
-                return `${dd} ${mon} ${yyyy}, ${h}:${min} ${ampm}`;
+                const parts = new Intl.DateTimeFormat("en-IN", {
+                    timeZone: "Asia/Kolkata",
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                }).formatToParts(now);
+                const p: Record<string, string> = {};
+                for (const part of parts) p[part.type] = part.value;
+                return `${p.day} ${p.month} ${p.year}, ${p.hour}:${p.minute} ${(p.dayPeriod || "").toUpperCase()}`;
             })(),
         };
 

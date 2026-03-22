@@ -163,13 +163,19 @@ export default function AIChatWidget() {
 
         try {
             setLeadSubmitting(true);
-            // Build a short one-line summary — use only USER messages for intent detection
+            // Build a short one-line summary
+            // Service type — user messages only (avoid assistant explanations skewing it)
             const userText = messages
                 .filter((m) => m.role === "user")
                 .map((m) => m.content.toLowerCase())
                 .join(" ");
 
-            // Service type — only from what the user said/selected
+            // All messages — used for slot/hours fallback (user sometimes says "yes" instead of the time)
+            const allText = messages
+                .map((m) => m.content.toLowerCase())
+                .join(" ");
+
+            // Service type
             let serviceType = "Not specified";
             if (/caregiver|japa|moba|postnatal caregiver/.test(userText)) {
                 serviceType = "Postnatal Caregiver (Japa/MOBA)";
@@ -180,13 +186,18 @@ export default function AIChatWidget() {
             // Shift type
             const shiftType = /night/.test(userText) ? "Night" : /day/.test(userText) ? "Day" : "Not specified";
 
-            // Duration — e.g. "8 hours", "10 hour", "12 hrs"
-            const hoursMatch = userText.match(/\b(8|9|10|12)\s*(?:hour|hrs?)/);
+            // Duration — check user text first, then all text
+            const hoursMatch = userText.match(/\b(8|9|10|12)\s*(?:hour|hrs?)/) ||
+                               allText.match(/\b(8|9|10|12)\s*(?:hour|hrs?)/);
             const hours = hoursMatch?.[1] || "";
 
-            // Time slot — e.g. "8 AM – 4 PM", "9 PM to 6 AM", "9 PM – 6 AM"
-            const slotMatch = userText.match(/(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-)\s*\d{1,2}\s*(?:am|pm))/i);
-            const slot = slotMatch?.[1]?.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase()) || "";
+            // Time slot — scan ALL messages, take the LAST match (most likely the confirmed slot)
+            // Handles cases where user clicks "Yes, that works" and slot only appears in assistant message
+            const slotPattern = /(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-|–)\s*\d{1,2}\s*(?:am|pm))/gi;
+            const allSlotMatches = [...allText.matchAll(slotPattern)];
+            const slot = allSlotMatches.length > 0
+                ? allSlotMatches[allSlotMatches.length - 1][1].replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase())
+                : "";
 
             const summary = `Looking for ${serviceType} – ${shiftType} support${hours ? `, ${hours} hrs` : ""}${slot ? `, ${slot}` : ""}.`;
 
