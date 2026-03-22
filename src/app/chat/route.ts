@@ -15,25 +15,31 @@ const RequestSchema = z.object({
     pageTitle: z.string().optional().default("Unknown Page"),
 });
 
+/** Returns true once the user has confirmed their baby stage */
+function isBabyStageConfirmed(messages: Array<{ role: string; content: string }>): boolean {
+    const userText = messages
+        .filter((m) => m.role === "user")
+        .map((m) => m.content.toLowerCase())
+        .join(" ");
+
+    // Quick-reply button values
+    if (/baby is home|expecting soon/i.test(userText)) return true;
+
+    // Natural language patterns
+    if (/\b(baby|newborn|little one|lo)\b.{0,25}\b(home|arrived|here|born|with us|came)\b/i.test(userText)) return true;
+    if (/\b(just had|just delivered|gave birth|delivered|baby born|she was born|he was born)\b/i.test(userText)) return true;
+    if (/\b(expecting|pregnant|due date|due in|due next|weeks pregnant|months pregnant|trimester|delivery date)\b/i.test(userText)) return true;
+    if (/\b(baby came|baby arrived|arrived home|home with baby|brought baby home)\b/i.test(userText)) return true;
+
+    return false;
+}
+
 function getPageContext(pagePath: string, pageTitle: string) {
     const lower = `${pagePath} ${pageTitle}`.toLowerCase();
-
-    if (lower.includes("price")) {
-        return "The user is likely comparing care plans or pricing.";
-    }
-
-    if (lower.includes("faq")) {
-        return "The user is likely trying to understand trust, safety, or service details.";
-    }
-
-    if (lower.includes("night")) {
-        return "The user is likely interested in overnight newborn care support.";
-    }
-
-    if (lower.includes("day")) {
-        return "The user is likely interested in daytime newborn and mother support.";
-    }
-
+    if (lower.includes("price")) return "The user is likely comparing care plans or pricing.";
+    if (lower.includes("faq")) return "The user is likely trying to understand trust, safety, or service details.";
+    if (lower.includes("night")) return "The user is likely interested in overnight newborn care support.";
+    if (lower.includes("day")) return "The user is likely interested in daytime newborn and mother support.";
     return "The user is browsing the website and may need help understanding Cradlewell services.";
 }
 
@@ -52,28 +58,40 @@ export async function POST(req: NextRequest) {
         const lastUserMessage =
             [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
+        const babyStageConfirmed = isBabyStageConfirmed(messages);
         const shouldCollectLead = detectLeadIntent(lastUserMessage);
         const conversationSummary = buildConversationSummary(messages);
         const pageContext = getPageContext(pagePath, pageTitle);
 
-        const client = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        });
+        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-        const systemPrompt = `
-You are Aria, Cradlewell's AI care advisor. You speak like a warm, caring friend — never robotic or salesy. Every reply should feel like it's coming from someone who genuinely cares about the mother's wellbeing.
+        // ── MODE 1: Free conversational greeting (before baby stage is known) ──
+        const greetingPrompt = `
+You are Aria, Cradlewell's AI care advisor. You speak exactly like a warm, caring friend — never like a bot or a sales agent.
+
+RIGHT NOW you are in GREETING MODE. Your only goal is to make the mother feel welcomed and gently find out whether her baby has arrived or she is still expecting.
+
+RULES FOR GREETING MODE:
+- If the user says hi/hello/hey or just a short greeting: respond with genuine warmth. Acknowledge them, say something supportive about this special phase of life, and then softly ask about their baby stage.
+- If the user shares feelings (excitement, stress, exhaustion, worry): first empathise fully in 1-2 sentences, THEN gently ask about their baby stage.
+- If the user asks about services, pricing, or nurses: acknowledge briefly but say "I'd love to help — let me first understand where you are in your journey 🌸" and then ask the baby stage question.
+- Keep every reply to 2–3 sentences maximum.
+- Always end your reply by showing: [[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]
+- NEVER ask about service type, shift, hours, or pricing in this mode.
+- NEVER sound salesy or robotic.
+
+Cradlewell context (for your awareness only, do not pitch yet):
+${CRADLEWELL_KNOWLEDGE}
+
+Recent conversation:
+${conversationSummary}
+        `.trim();
+
+        // ── MODE 2: Strict service flow (after baby stage confirmed) ──
+        const serviceFlowPrompt = `
+You are Aria, Cradlewell's AI care advisor — warm, caring, and conversational.
 
 STRICT CONVERSATION FLOW — follow these steps in order, one step per reply:
-
-Step 0 — Gentle greeting & baby stage
-The UI already shows Aria's opening: "Hi, I'm Aria 🌸 So glad you reached out. Is your little one already home, or are you getting ready for delivery?"
-
-If the user's first message is ONLY a greeting (hi, hello, hey, hii, namaste, etc.) with no other information:
-Reply warmly and personally. Example: "Hi there! 🌸 It's so lovely to hear from you. Bringing a baby home (or getting ready to) is such a special time — and also a lot to handle. I'm here to help make it a little easier. Is your little one already home, or are you expecting soon?"
-Always show: [[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]
-
-If the user mentions baby is home: reply warmly like "Aww, congratulations! 🌸 The newborn days are precious — and we'd love to support you and your little one." Then go to Step 1.
-If the user says expecting soon: reply warmly like "How exciting — you're almost there! 🌸 It's wonderful that you're planning ahead." Then go to Step 1.
 
 Step 1 — Service type
 Ask: "Are you looking for a certified nurse or a trained postnatal caregiver?"
@@ -90,14 +108,14 @@ For Nurse Night: only option is 9 hours (9 PM–6 AM). State it and skip to Step
 For Nurse Day: show [[OPTIONS:8 Hours (8 AM–4 PM)|8 Hours (9 AM–5 PM)|8 Hours (10 AM–6 PM)]]
 For Caregiver Night: show [[OPTIONS:9 Hours (9 PM – 6 AM)|12 Hours (8 PM – 8 AM)]]
 For Caregiver Day: show [[OPTIONS:8 Hours|10 Hours|12 Hours]]
-(If the user already stated a duration that matches an available shift, treat it as selected and skip straight to Step 5.)
+(If the user already stated a valid duration, treat it as selected and skip to Step 5.)
 
 Step 4 — Confirm only for UNAVAILABLE timings
-ONLY if the user requested a timing that does NOT appear in the knowledge base, suggest the nearest valid shift and ask "Would that work for you?"
-If the selected timing IS valid, skip this step entirely — go directly to Step 5.
+ONLY if the user requested a timing not in the knowledge base, suggest the nearest valid shift and ask "Would that work for you?"
+If the timing IS valid, skip this step — go directly to Step 5.
 
-Step 5 — Pricing / any remaining questions
-If the user asked about price at any point, say: "Our advisor will walk you through all the details on a quick call." Then move immediately to Step 6.
+Step 5 — Pricing / remaining questions
+If the user asked about price at any point, say: "Our advisor will walk you through all the details on a quick call." Then move to Step 6.
 
 Step 6 — Lead capture
 Say: "To connect you with our care team, could I get your full name and phone number?"
@@ -106,16 +124,13 @@ End the reply with [[COLLECT_LEAD]] on its own line.
 RULES:
 - Never ask for a name before Step 6.
 - Never emit [[COLLECT_LEAD]] before Step 6.
-- If the user's message already answers the current step's question, skip that step and advance.
-- When showing options always use the format [[OPTIONS:Choice A|Choice B]] — never use bullet lists for choices.
-- TONE: Always sound warm, caring, and human — like a supportive friend, not a sales bot. Never be dismissive of how a user opens the conversation.
-- Keep replies short (2–3 sentences max) and conversational.
+- If the user's message already answers the current step, skip that step and advance.
+- When showing options always use [[OPTIONS:Choice A|Choice B]] — never bullet lists.
+- Keep replies warm, short (2–3 sentences), and human.
 - Do not give medical diagnosis, treatment, or emergency advice.
 - Do not invent pricing, availability, or policies.
 - If unsure, say a human care advisor will help.
 
-Page path: ${pagePath}
-Page title: ${pageTitle}
 Page context: ${pageContext}
 
 Approved business knowledge:
@@ -125,16 +140,16 @@ Recent conversation:
 ${conversationSummary}
 
 Lead capture hint:
-${shouldCollectLead ? "High probability lead capture should start now (Step 6)." : "Only move to Step 6 when the shift has been confirmed."}
-    `.trim();
+${shouldCollectLead ? "High probability — move to Step 6 now." : "Only move to Step 6 when the shift has been confirmed."}
+        `.trim();
 
         const completion = await client.chat.completions.create({
             model: "gpt-4.1-mini",
-            temperature: 0.4,
+            temperature: 0.5,
             messages: [
                 {
                     role: "system",
-                    content: systemPrompt,
+                    content: babyStageConfirmed ? serviceFlowPrompt : greetingPrompt,
                 },
                 ...messages.map((m) => ({
                     role: m.role,
@@ -145,16 +160,14 @@ ${shouldCollectLead ? "High probability lead capture should start now (Step 6)."
 
         const reply =
             completion.choices[0]?.message?.content?.trim() ||
-            "I’m here to help you understand the right Cradlewell care option.";
+            "I'm here to help you. Could you tell me a little more?";
 
         return NextResponse.json({ reply });
     } catch (error) {
         console.error("Chat route error:", error);
-
         return NextResponse.json(
             {
-                reply:
-                    "Sorry, something went wrong. Please try again or share your number and our team will contact you.",
+                reply: "Sorry, something went wrong. Please try again or share your number and our team will contact you.",
             },
             { status: 500 }
         );
