@@ -207,6 +207,8 @@ export default function AIChatWidget() {
         if (!leadForm.name.trim()) errors.name = "Name is required";
         if (!leadForm.phone.trim()) errors.phone = "Phone number is required";
         else if (leadForm.phone.replace(/\D/g, "").length !== 10) errors.phone = "Enter a valid 10-digit number";
+        if (!leadForm.email.trim()) errors.email = "Email is required";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadForm.email)) errors.email = "Enter a valid email address";
         if (!leadForm.city) errors.city = "Please select your area";
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors);
@@ -710,17 +712,18 @@ export default function AIChatWidget() {
 
                                         {/* Email */}
                                         <div>
-                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Email</div>
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Email *</div>
                                             <input
                                                 className="aria-lead-input"
                                                 type="email"
-                                                placeholder="Optional"
+                                                placeholder="e.g. priya@gmail.com"
                                                 value={leadForm.email}
                                                 onFocus={() => setFocusedField("email")}
                                                 onBlur={() => setFocusedField(null)}
-                                                onChange={(e) => setLeadForm((p) => ({ ...p, email: e.target.value }))}
-                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: focusedField === "email" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
+                                                onChange={(e) => { setLeadForm((p) => ({ ...p, email: e.target.value })); setFormErrors((p) => ({ ...p, email: "" })); }}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.email ? "1.5px solid #ef4444" : focusedField === "email" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
                                             />
+                                            {formErrors.email && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>{formErrors.email}</div>}
                                         </div>
 
                                         {/* City dropdown */}
