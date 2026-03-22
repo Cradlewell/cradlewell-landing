@@ -345,19 +345,34 @@ export default function AIChatWidget() {
 
                 {/* Floating button */}
                 {!isOpen && (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {/* Speech bubble label */}
                         <div style={{
-                            background: "linear-gradient(135deg, #7B61FF, #4F46E5)",
-                            color: "#fff",
-                            fontSize: 11,
+                            position: "relative",
+                            background: "#fff",
+                            color: "#4F46E5",
+                            fontSize: 13,
                             fontWeight: 700,
-                            letterSpacing: "0.04em",
-                            padding: "4px 10px",
+                            padding: "8px 14px",
                             borderRadius: 20,
-                            boxShadow: "0 2px 8px rgba(99,136,255,0.35)",
+                            boxShadow: "0 4px 16px rgba(99,136,255,0.25)",
                             whiteSpace: "nowrap",
-                        }}>
+                            border: "1.5px solid rgba(99,136,255,0.2)",
+                            cursor: "pointer",
+                        }} onClick={() => setIsOpen(true)}>
                             Need help?
+                            {/* Arrow pointing right */}
+                            <span style={{
+                                position: "absolute",
+                                right: -8,
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                width: 0,
+                                height: 0,
+                                borderTop: "6px solid transparent",
+                                borderBottom: "6px solid transparent",
+                                borderLeft: "8px solid #fff",
+                            }} />
                         </div>
                         <button
                             onClick={() => setIsOpen(true)}
@@ -375,6 +390,7 @@ export default function AIChatWidget() {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 animation: "ariaPulse 2.5s infinite",
+                                flexShrink: 0,
                             }}
                         >
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
