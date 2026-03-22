@@ -38,10 +38,12 @@ function isBabyStageConfirmed(messages: Array<{ role: string; content: string }>
     if (/\b(arrived|delivered|born|came home)\b/i.test(userText)) return true;
     if (/\b(expecting|pregnant|due date|due in|due next|weeks pregnant|months pregnant|trimester)\b/i.test(userText)) return true;
 
-    // Single-word replies that clearly indicate baby stage
-    const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content.trim().toLowerCase() ?? "";
-    if (/^(home|already home|yes home|baby home|baby is home|she'?s? home|he'?s? home)$/.test(lastUser)) return true;
-    if (/^(expecting|still expecting|yes expecting|pregnant|yes pregnant|due soon)$/.test(lastUser)) return true;
+    // Single-word replies — check ALL user messages (not just the last one)
+    for (const m of messages.filter((m) => m.role === "user")) {
+        const t = m.content.trim().toLowerCase();
+        if (/^(home|already home|yes home|baby home|baby is home|she'?s? home|he'?s? home)$/.test(t)) return true;
+        if (/^(expecting|still expecting|yes expecting|pregnant|yes pregnant|due soon)$/.test(t)) return true;
+    }
 
     return false;
 }
@@ -119,63 +121,65 @@ function parseFlowState(messages: Array<{ role: string; content: string }>): Flo
     return { serviceType, careType, duration, timeSlot };
 }
 
-function getFlowReply(state: FlowState): string {
+function getFlowReply(state: FlowState, isFirstServiceQuestion: boolean): string {
     const { serviceType, careType, duration, timeSlot } = state;
 
     // Step 1: Ask service type
     if (!serviceType) {
-        return "Certified Nurse or Postnatal Caregiver (Japa/MOBA)?";
+        const welcome = isFirstServiceQuestion
+            ? "Lovely, we're here to help! 🌸 "
+            : "";
+        return `${welcome}Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?`;
     }
 
     // Step 2: Ask care type
     if (!careType) {
-        return "Day care or night care?";
+        const label = serviceType === "nurse" ? "Certified Nurse" : "Japa/MOBA caregiver";
+        return `Great, a ${label} it is! Day care or night care?`;
     }
 
     // Step 3+: Branch by service + care type
     if (serviceType === "nurse") {
         if (careType === "night") {
-            // Fixed shift — go straight to lead form
-            return "Our nurse night shift is 9 PM–6 AM (9 hrs). Let me connect you with our care team.\n[[COLLECT_LEAD]]";
+            return "Our nurse night shift is 9 PM–6 AM (9 hrs). Let me get you connected!\n[[COLLECT_LEAD]]";
         }
         if (careType === "day") {
-            // Nurse day: all slots are 8 hrs, just ask which time
             if (!timeSlot) {
-                return "Which slot works for you? 8 AM–4 PM, 9 AM–5 PM, or 10 AM–6 PM?";
+                return "Which time slot works for you? 8 AM–4 PM, 9 AM–5 PM, or 10 AM–6 PM?";
             }
-            return `${timeSlot} it is. Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
+            return `${timeSlot} — noted! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
         }
     }
 
     if (serviceType === "japa") {
         if (careType === "night") {
             if (!duration) {
-                return "We offer 9 hrs (9 PM–6 AM) or 12 hrs (8 PM–8 AM). Which works for you?";
+                return "We have two night options — 9 hrs (9 PM–6 AM) or 12 hrs (8 PM–8 AM). Which works for you?";
             }
             const shift = duration === "12" ? "8 PM–8 AM" : "9 PM–6 AM";
-            return `${shift} it is. Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
+            return `${shift} — great choice! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
         }
         if (careType === "day") {
             if (!duration) {
-                return "We have 8, 10, or 12-hour day shifts. Which suits you?";
+                return "We have 8, 10, or 12-hour day shifts. Which suits you best?";
             }
             if (duration === "8") {
                 if (!timeSlot) {
-                    return "Which slot works? 8 AM–4 PM, 9 AM–5 PM, or 10 AM–6 PM?";
+                    return "Which slot works best for you? 8 AM–4 PM, 9 AM–5 PM, or 10 AM–6 PM?";
                 }
-                return `${timeSlot} it is. Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
+                return `${timeSlot} — perfect! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
             }
             if (duration === "10") {
-                return "That's 9 AM–7 PM. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
+                return "That's our 9 AM–7 PM shift. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
             }
             if (duration === "12") {
-                return "That's 8 AM–8 PM. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
+                return "That's our 8 AM–8 PM shift. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
             }
         }
     }
 
-    // Fallback: re-ask service type
-    return "Certified Nurse or Postnatal Caregiver (Japa/MOBA)?";
+    // Fallback
+    return "Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?";
 }
 
 // ── Is this an informational question? ───────────────────────────────────────
@@ -204,7 +208,12 @@ export async function POST(req: NextRequest) {
         // ── SERVICE FLOW: pure state machine ──────────────────────────────────
         if (babyStageConfirmed) {
             const state = parseFlowState(messages);
-            const flowReply = getFlowReply(state);
+
+            // isFirstServiceQuestion: true when no prior assistant message asked a service flow question
+            const lastAssistantMsg = [...messages].reverse().find((m) => m.role === "assistant")?.content ?? "";
+            const isFirstServiceQuestion = !/nurse.*japa|japa.*nurse|certified nurse|postnatal caregiver|day.*night|night.*day|8.*10.*12|which slot|which start time/i.test(lastAssistantMsg);
+
+            const flowReply = getFlowReply(state, isFirstServiceQuestion);
 
             // If user asked an informational question, let Claude answer it,
             // then append the next flow step at the end
