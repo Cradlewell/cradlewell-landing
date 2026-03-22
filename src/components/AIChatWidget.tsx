@@ -269,9 +269,34 @@ export default function AIChatWidget() {
                 .aria-close-btn:hover { opacity: 0.7; }
                 .aria-msg-input:focus { outline: none; border-color: #6388FF !important; }
                 .aria-lead-input:focus { outline: none; border-color: #6388FF !important; box-shadow: 0 0 0 3px rgba(99,136,255,0.12); }
+
+                /* Mobile responsive */
+                @media (max-width: 480px) {
+                    .aria-widget-container {
+                        right: 8px !important;
+                        bottom: 8px !important;
+                    }
+                    .aria-chat-window {
+                        width: calc(100vw - 16px) !important;
+                        height: calc(100dvh - 76px) !important;
+                        border-radius: 20px !important;
+                    }
+                    .aria-options-row {
+                        padding-left: 8px !important;
+                    }
+                    .aria-header {
+                        padding: 12px 14px !important;
+                    }
+                    .aria-messages {
+                        padding: 12px 10px !important;
+                    }
+                    .aria-input-bar {
+                        padding: 10px 10px !important;
+                    }
+                }
             `}</style>
 
-            <div style={{ position: "fixed", right: 20, bottom: 20, zIndex: 9999 }}>
+            <div className="aria-widget-container" style={{ position: "fixed", right: 20, bottom: 20, zIndex: 9999 }}>
 
                 {/* Floating button */}
                 {!isOpen && (
@@ -302,7 +327,7 @@ export default function AIChatWidget() {
                 {/* Chat window */}
                 {isOpen && (
                     <div
-                        className="aria-widget-open"
+                        className="aria-widget-open aria-chat-window"
                         style={{
                             width: 370,
                             maxWidth: "calc(100vw - 24px)",
@@ -318,12 +343,14 @@ export default function AIChatWidget() {
                     >
                         {/* Header */}
                         <div
+                            className="aria-header"
                             style={{
                                 padding: "16px 18px",
                                 background: "linear-gradient(135deg, #7B61FF 0%, #4F46E5 100%)",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 12,
+                                flexShrink: 0,
                             }}
                         >
                             {/* Avatar */}
@@ -399,6 +426,7 @@ export default function AIChatWidget() {
                         {/* Messages */}
                         <div
                             ref={scrollRef}
+                            className="aria-messages"
                             style={{
                                 flex: 1,
                                 overflowY: "auto",
@@ -407,6 +435,7 @@ export default function AIChatWidget() {
                                 display: "flex",
                                 flexDirection: "column",
                                 gap: 12,
+                                minHeight: 0,
                             }}
                         >
                             {messages.map((msg, index) => {
@@ -453,7 +482,7 @@ export default function AIChatWidget() {
                                         </div>
 
                                         {options.length > 0 && isLast && !loading && (
-                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10, paddingLeft: 36 }}>
+                                            <div className="aria-options-row" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10, paddingLeft: 36 }}>
                                                 {options.map((opt) => (
                                                     <button
                                                         key={opt}
@@ -618,6 +647,7 @@ export default function AIChatWidget() {
 
                         {/* Input bar */}
                         <div
+                            className="aria-input-bar"
                             style={{
                                 padding: "12px 14px",
                                 background: "#fff",
@@ -625,6 +655,7 @@ export default function AIChatWidget() {
                                 display: "flex",
                                 gap: 8,
                                 alignItems: "center",
+                                flexShrink: 0,
                             }}
                         >
                             <input
