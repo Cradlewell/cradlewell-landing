@@ -65,18 +65,18 @@ function detectCareType(text: string): CareType {
 }
 
 function detectDuration(text: string): Duration {
-    const t = text.toLowerCase();
-    if (/\b12\b|\btwelve\b/.test(t)) return "12";
-    if (/\b10\b|\bten\b/.test(t)) return "10";
-    if (/\b8\b|\beight\b/.test(t)) return "8";
+    const t = text.toLowerCase().replace(/\s+/g, "");
+    if (/12/.test(t) || /twelve/.test(t)) return "12";
+    if (/10/.test(t) || /ten/.test(t)) return "10";
+    if (/8/.test(t) || /eight/.test(t)) return "8";
     return null;
 }
 
 function detectTimeSlot(text: string): string | null {
     const t = text.toLowerCase();
-    if (/\b10\s*am\b|10am/.test(t)) return "10 AM–6 PM";
-    if (/\b9\s*am\b|9am/.test(t)) return "9 AM–5 PM";
-    if (/\b8\s*am\b|8am/.test(t)) return "8 AM–4 PM";
+    if (/10\s*am|10am/.test(t)) return "10 AM–6 PM";
+    if (/9\s*am|9am/.test(t)) return "9 AM–5 PM";
+    if (/8\s*am|8am/.test(t)) return "8 AM–4 PM";
     return null;
 }
 
