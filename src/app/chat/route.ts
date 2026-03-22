@@ -139,7 +139,7 @@ ${shouldCollectLead ? "High probability — move to Step 6 now." : "Only move to
         const systemPrompt = babyStageConfirmed ? serviceFlowPrompt : greetingPrompt;
 
         const completion = await client.messages.create({
-            model: "claude-sonnet-4-5",
+            model: "claude-sonnet-4-6",
             max_tokens: 1024,
             temperature: 0.4,
             system: systemPrompt,
