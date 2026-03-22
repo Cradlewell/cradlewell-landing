@@ -30,11 +30,6 @@ function isBabyStageConfirmed(messages: Array<{ role: string; content: string }>
     return false;
 }
 
-/** True if the message is purely a greeting with no meaningful content */
-function isPureGreeting(text: string): boolean {
-    return /^(hi+|hello+|hey+|hii+|helo+|namaste|hola|hai|sup|yo|good (morning|evening|afternoon)|greetings?)[\s!.,]*$/i.test(text.trim());
-}
-
 function getPageContext(pagePath: string, pageTitle: string) {
     const lower = `${pagePath} ${pageTitle}`.toLowerCase();
     if (lower.includes("price")) return "The user is likely comparing care plans or pricing.";
@@ -44,12 +39,6 @@ function getPageContext(pagePath: string, pageTitle: string) {
     return "The user is browsing the website and may need help understanding Cradlewell services.";
 }
 
-// Pool of warm greeting responses (rotated randomly)
-const GREETING_RESPONSES = [
-    "Hi there! 🌸 So happy you're here. I'm Aria and I'd love to support you. Is your little one already home, or are you expecting soon?\n[[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]",
-    "Hello! 🌸 Welcome — you've come to the right place. I'm here to help you every step of the way. Is your baby already home, or are you getting ready for delivery?\n[[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]",
-    "Hey there! 🌸 So glad you reached out. This is a beautiful (and busy!) time — I'm here to make things a little easier. Is your little one home yet, or are you still expecting?\n[[OPTIONS:Baby is home 🏠|Expecting soon 🤰]]",
-];
 
 export async function POST(req: NextRequest) {
     try {
@@ -67,12 +56,6 @@ export async function POST(req: NextRequest) {
             [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
         const babyStageConfirmed = isBabyStageConfirmed(messages);
-
-        // ── SHORTCUT: pure greeting + baby stage not yet known → fixed warm reply ──
-        if (!babyStageConfirmed && isPureGreeting(lastUserMessage)) {
-            const reply = GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
-            return NextResponse.json({ reply });
-        }
 
         const shouldCollectLead = detectLeadIntent(lastUserMessage);
         const conversationSummary = buildConversationSummary(messages);
@@ -154,7 +137,7 @@ ${shouldCollectLead ? "High probability — move to Step 6 now." : "Only move to
         `.trim();
 
         const completion = await client.chat.completions.create({
-            model: "gpt-4.1-mini",
+            model: "gpt-4.1",
             temperature: 0.4,
             messages: [
                 {
