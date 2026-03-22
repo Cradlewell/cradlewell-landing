@@ -10,6 +10,7 @@ import { headers } from 'next/headers';
 import NurseHeader from '@/components/NursesHeader';
 import LayoutClient from '@/components/LayoutClient';
 import { Metadata } from 'next';
+import AIChatWidget from "@/components/AIChatWidget";
 
 
 export const metadata: Metadata = {
@@ -29,12 +30,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <head>
         <link rel="icon" href="/images/favicon.png" />
 
-          {/* Google Site Verification */}
-  <meta
-    name="google-site-verification"
-    content="8akbxzJkvsESfM46RB53TzV8NkmREJX7Q14wN4EJdhI"
-  />
-        
+        {/* Hide Zoho SalesIQ widget — replaced by AI chat */}
+        <style>{`#zsiqwidget, .zsiq_flt_rel, .zsiq_theme1_float { display: none !important; }`}</style>
+
+        {/* Google Site Verification */}
+        <meta
+          name="google-site-verification"
+          content="8akbxzJkvsESfM46RB53TzV8NkmREJX7Q14wN4EJdhI"
+        />
+
         {/* Font Awesome CDN */}
         <link
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -136,7 +140,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           })}
         </Script>
 
-{/* 3️⃣ MedicalOrganization Schema */}
+        {/* 3️⃣ MedicalOrganization Schema */}
         <Script id="medical-organization-schema" type="application/ld+json" strategy="afterInteractive">
           {`
             {
@@ -331,7 +335,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <Footer />
 
         {/* Zoho SalesIQ Chatbot */}
-        <Script id="zoho-salesiq" strategy="afterInteractive">
+        {/* <Script id="zoho-salesiq" strategy="afterInteractive">
           {`
             window.$zoho = window.$zoho || {};
             $zoho.salesiq = $zoho.salesiq || {
@@ -343,7 +347,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           id="zoho-salesiq-widget"
           src="https://salesiq.zohopublic.in/widget?wc=siqff2837401ef098932e99f42c34a99d5032abb5c8efb6ffe3506b63bde446afdf"
           strategy="afterInteractive"
-        />
+        /> */}
+        {/* ✅ YOUR AI CHATBOT */}
+        <AIChatWidget />
       </body>
     </html>
   );
