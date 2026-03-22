@@ -72,6 +72,32 @@ export default function AIChatWidget() {
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
 
+    // iOS keyboard handling via visualViewport
+    const [chatPos, setChatPos] = useState({ bottom: 20, height: 580 });
+
+    useEffect(() => {
+        if (typeof window === "undefined" || !window.visualViewport) return;
+        const vv = window.visualViewport;
+        const update = () => {
+            const isMobile = window.innerWidth <= 480;
+            if (!isMobile) {
+                setChatPos({ bottom: 20, height: 580 });
+                return;
+            }
+            const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+            setChatPos({ bottom: kb + 8, height: Math.floor(vv.height) - 76 });
+        };
+        vv.addEventListener("resize", update);
+        vv.addEventListener("scroll", update);
+        window.addEventListener("resize", update);
+        update();
+        return () => {
+            vv.removeEventListener("resize", update);
+            vv.removeEventListener("scroll", update);
+            window.removeEventListener("resize", update);
+        };
+    }, []);
+
     useEffect(() => {
         const timer = setTimeout(() => {
             if (!hasAutoOpened) {
@@ -274,11 +300,9 @@ export default function AIChatWidget() {
                 @media (max-width: 480px) {
                     .aria-widget-container {
                         right: 8px !important;
-                        bottom: 8px !important;
                     }
                     .aria-chat-window {
                         width: calc(100vw - 16px) !important;
-                        height: calc(100dvh - 76px) !important;
                         border-radius: 20px !important;
                     }
                     .aria-options-row {
@@ -296,7 +320,7 @@ export default function AIChatWidget() {
                 }
             `}</style>
 
-            <div className="aria-widget-container" style={{ position: "fixed", right: 20, bottom: 20, zIndex: 9999 }}>
+            <div className="aria-widget-container" style={{ position: "fixed", right: 20, bottom: chatPos.bottom, zIndex: 9999 }}>
 
                 {/* Floating button */}
                 {!isOpen && (
@@ -331,7 +355,7 @@ export default function AIChatWidget() {
                         style={{
                             width: 370,
                             maxWidth: "calc(100vw - 24px)",
-                            height: 580,
+                            height: chatPos.height,
                             background: "#fff",
                             borderRadius: 24,
                             boxShadow: "0 24px 64px rgba(79,70,229,0.18), 0 4px 16px rgba(0,0,0,0.08)",
@@ -438,6 +462,9 @@ export default function AIChatWidget() {
                                 minHeight: 0,
                             }}
                         >
+                            {/* Spacer pushes messages to the bottom when few messages */}
+                            <div style={{ flex: 1 }} />
+
                             {messages.map((msg, index) => {
                                 const options = msg.role === "assistant" ? parseOptions(msg.content) : [];
                                 const isLast = index === messages.length - 1;
