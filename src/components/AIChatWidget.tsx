@@ -58,6 +58,15 @@ export default function AIChatWidget() {
     const [leadSubmitting, setLeadSubmitting] = useState(false);
     const [leadSubmitted, setLeadSubmitted] = useState(false);
     const [focusedField, setFocusedField] = useState<string | null>(null);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+    const BENGALURU_AREAS = [
+        "Whitefield", "Koramangala", "Indiranagar", "HSR Layout", "Marathahalli",
+        "Electronic City", "Jayanagar", "JP Nagar", "Bannerghatta Road", "Sarjapur Road",
+        "Hebbal", "Yelahanka", "Rajajinagar", "Malleswaram", "Basavanagudi",
+        "Banashankari", "BTM Layout", "Bellandur", "Domlur", "Frazer Town",
+        "KR Puram", "Bommanahalli", "Nagarabhavi", "Vijayanagar", "Other",
+    ];
 
     const [leadForm, setLeadForm] = useState<LeadForm>({
         name: "",
@@ -194,10 +203,16 @@ export default function AIChatWidget() {
     }
 
     async function submitLead() {
-        if (!leadForm.name.trim() || !leadForm.phone.trim()) {
-            alert("Please enter your name and phone number.");
+        const errors: Record<string, string> = {};
+        if (!leadForm.name.trim()) errors.name = "Name is required";
+        if (!leadForm.phone.trim()) errors.phone = "Phone number is required";
+        else if (leadForm.phone.replace(/\D/g, "").length !== 10) errors.phone = "Enter a valid 10-digit number";
+        if (!leadForm.city) errors.city = "Please select your area";
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
             return;
         }
+        setFormErrors({});
 
         try {
             setLeadSubmitting(true);
@@ -660,42 +675,72 @@ export default function AIChatWidget() {
                                     </div>
 
                                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                                        {[
-                                            { label: "Your name *", key: "name", placeholder: "e.g. Priya Sharma", type: "text" },
-                                            { label: "Phone number *", key: "phone", placeholder: "e.g. 9876543210", type: "tel" },
-                                            { label: "Email", key: "email", placeholder: "Optional", type: "email" },
-                                            { label: "City", key: "city", placeholder: "e.g. Bangalore", type: "text" },
-                                        ].map(({ label, key, placeholder, type }) => (
-                                            <div key={key}>
-                                                <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
-                                                    {label}
-                                                </div>
-                                                <input
-                                                    className="aria-lead-input"
-                                                    type={type}
-                                                    placeholder={placeholder}
-                                                    value={leadForm[key as keyof LeadForm]}
-                                                    onFocus={() => setFocusedField(key)}
-                                                    onBlur={() => setFocusedField(null)}
-                                                    onChange={(e) =>
-                                                        setLeadForm((prev) => ({ ...prev, [key]: e.target.value }))
-                                                    }
-                                                    style={{
-                                                        width: "100%",
-                                                        padding: "9px 12px",
-                                                        fontSize: 13,
-                                                        border: focusedField === key
-                                                            ? "1.5px solid #7B61FF"
-                                                            : "1.5px solid #e5e7eb",
-                                                        borderRadius: 10,
-                                                        boxSizing: "border-box",
-                                                        color: "#1a1a2e",
-                                                        background: "#fafafa",
-                                                        transition: "border-color 0.2s",
-                                                    }}
-                                                />
-                                            </div>
-                                        ))}
+                                        {/* Name */}
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Your name *</div>
+                                            <input
+                                                className="aria-lead-input"
+                                                type="text"
+                                                placeholder="e.g. Priya Sharma"
+                                                value={leadForm.name}
+                                                onFocus={() => setFocusedField("name")}
+                                                onBlur={() => setFocusedField(null)}
+                                                onChange={(e) => { setLeadForm((p) => ({ ...p, name: e.target.value })); setFormErrors((p) => ({ ...p, name: "" })); }}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.name ? "1.5px solid #ef4444" : focusedField === "name" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
+                                            />
+                                            {formErrors.name && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>{formErrors.name}</div>}
+                                        </div>
+
+                                        {/* Phone */}
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Phone number *</div>
+                                            <input
+                                                className="aria-lead-input"
+                                                type="tel"
+                                                placeholder="e.g. 9876543210"
+                                                value={leadForm.phone}
+                                                maxLength={10}
+                                                onFocus={() => setFocusedField("phone")}
+                                                onBlur={() => setFocusedField(null)}
+                                                onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 10); setLeadForm((p) => ({ ...p, phone: v })); setFormErrors((p) => ({ ...p, phone: "" })); }}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.phone ? "1.5px solid #ef4444" : focusedField === "phone" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
+                                            />
+                                            {formErrors.phone && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>{formErrors.phone}</div>}
+                                        </div>
+
+                                        {/* Email */}
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Email</div>
+                                            <input
+                                                className="aria-lead-input"
+                                                type="email"
+                                                placeholder="Optional"
+                                                value={leadForm.email}
+                                                onFocus={() => setFocusedField("email")}
+                                                onBlur={() => setFocusedField(null)}
+                                                onChange={(e) => setLeadForm((p) => ({ ...p, email: e.target.value }))}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: focusedField === "email" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
+                                            />
+                                        </div>
+
+                                        {/* City dropdown */}
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Area in Bengaluru *</div>
+                                            <select
+                                                className="aria-lead-input"
+                                                value={leadForm.city}
+                                                onFocus={() => setFocusedField("city")}
+                                                onBlur={() => setFocusedField(null)}
+                                                onChange={(e) => { setLeadForm((p) => ({ ...p, city: e.target.value })); setFormErrors((p) => ({ ...p, city: "" })); }}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.city ? "1.5px solid #ef4444" : focusedField === "city" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: leadForm.city ? "#1a1a2e" : "#9ca3af", background: "#fafafa", appearance: "none", cursor: "pointer" }}
+                                            >
+                                                <option value="" disabled>Select your area</option>
+                                                {BENGALURU_AREAS.map((area) => (
+                                                    <option key={area} value={area}>{area}</option>
+                                                ))}
+                                            </select>
+                                            {formErrors.city && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>{formErrors.city}</div>}
+                                        </div>
 
                                         <button
                                             onClick={submitLead}
@@ -724,7 +769,23 @@ export default function AIChatWidget() {
                             )}
                         </div>
 
-                        {/* Input bar */}
+                        {/* Input bar — hidden after session ends */}
+                        {leadSubmitted ? (
+                            <div
+                                className="aria-input-bar"
+                                style={{
+                                    padding: "12px 14px",
+                                    background: "#f5f6fa",
+                                    borderTop: "1px solid #f0f0f5",
+                                    textAlign: "center",
+                                    fontSize: 12,
+                                    color: "#9ca3af",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                Chat session ended · We&apos;ll call you soon 🌸
+                            </div>
+                        ) : (
                         <div
                             className="aria-input-bar"
                             style={{
@@ -791,6 +852,7 @@ export default function AIChatWidget() {
                                 </svg>
                             </button>
                         </div>
+                        )}
                     </div>
                 )}
             </div>
