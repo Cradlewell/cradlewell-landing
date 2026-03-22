@@ -191,17 +191,33 @@ export default function AIChatWidget() {
                                allText.match(/\b(8|9|10|12)\s*(?:hour|hrs?)/);
             const hours = hoursMatch?.[1] || "";
 
-            // Time slot — scan ALL messages, take the LAST match (most likely the confirmed slot)
-            // Handles cases where user clicks "Yes, that works" and slot only appears in assistant message
-            const slotPattern = /(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-)\s*\d{1,2}\s*(?:am|pm))/gi;
-            let lastSlotMatch: RegExpExecArray | null = null;
-            let slotExec: RegExpExecArray | null;
-            while ((slotExec = slotPattern.exec(allText)) !== null) {
-                lastSlotMatch = slotExec;
+            // Time slot detection — priority: user text > all text fallback
+            // 1. Strict match in user text (e.g. "8 AM – 4 PM")
+            const userStrictSlot = userText.match(/(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-)\s*\d{1,2}\s*(?:am|pm))/i);
+            // 2. Flexible match in user text (e.g. "9 to 5", "10 to 6") — no AM/PM required
+            const userFlexSlot = userText.match(/\b(\d{1,2})\s*(?:to|–|-)\s*(\d{1,2})\b/);
+
+            let slot = "";
+            if (userStrictSlot) {
+                slot = userStrictSlot[1].replace(/\b(am|pm)\b/gi, (m: string) => m.toUpperCase());
+            } else if (userFlexSlot) {
+                // Infer AM/PM from shift type
+                const h1 = userFlexSlot[1];
+                const h2 = userFlexSlot[2];
+                slot = shiftType === "Night" ? `${h1} PM – ${h2} AM` : `${h1} AM – ${h2} PM`;
+            } else {
+                // Fallback: scan ALL messages, take last strict slot match
+                // Handles "Yes, that works" responses where user never types the time
+                const strictPattern = /(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-)\s*\d{1,2}\s*(?:am|pm))/gi;
+                let lastSlotMatch: RegExpExecArray | null = null;
+                let slotExec: RegExpExecArray | null;
+                while ((slotExec = strictPattern.exec(allText)) !== null) {
+                    lastSlotMatch = slotExec;
+                }
+                slot = lastSlotMatch
+                    ? lastSlotMatch[1].replace(/\b(am|pm)\b/gi, (m: string) => m.toUpperCase())
+                    : "";
             }
-            const slot = lastSlotMatch
-                ? lastSlotMatch[1].replace(/\b(am|pm)\b/gi, (m: string) => m.toUpperCase())
-                : "";
 
             const summary = `Looking for ${serviceType} – ${shiftType} support${hours ? `, ${hours} hrs` : ""}${slot ? `, ${slot}` : ""}.`;
 
