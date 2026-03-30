@@ -62,6 +62,10 @@ const HeroHeader1 = () => {
 							src="/images/bannerimg.png"
 							alt="Trusted Nurse-led Newborn and Postnatal Home Care Support Banner for Mothers and Babies by Cradlewell in Bangalore"
 							className="rounded img-fluid mt-3"
+							fetchPriority="high"
+							loading="eager"
+							width="600"
+							height="500"
 						/>
 					</Col>
 				</Row>

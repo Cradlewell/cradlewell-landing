@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import BackgroundBox from "@/components/BackgroundBox";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: 'https://www.cradlewell.com',
+  },
+};
 import FAQSection from "@/components/FAQSection";
 import Footer from "@/components/Footer";
 import FoundersCarousel from "@/components/FoundersCarousel";

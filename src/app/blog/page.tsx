@@ -1,4 +1,21 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Newborn & Postnatal Care Blog | Expert Nursing Guides | Cradlewell Bangalore",
+  description:
+    "Expert guides on newborn care, postnatal recovery, breastfeeding, jaundice monitoring, and mother & baby health — written by certified nurses at Cradlewell Bangalore.",
+  alternates: {
+    canonical: "https://www.cradlewell.com/blog",
+  },
+  openGraph: {
+    title: "Newborn & Postnatal Care Blog | Cradlewell Bangalore",
+    description:
+      "Expert nursing guides on newborn care, postnatal recovery, breastfeeding, and more from certified nurses at Cradlewell.",
+    url: "https://www.cradlewell.com/blog",
+    type: "website",
+  },
+};
 
 type WPPost = {
   id: number;

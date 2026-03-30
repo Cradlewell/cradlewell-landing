@@ -89,8 +89,37 @@ export default async function BlogPost({ params }: Props) {
   const featuredImage =
     blog._embedded?.["wp:featuredmedia"]?.[0]?.source_url || null;
 
+  const blogPostingSchema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": blog.title.rendered.replace(/<[^>]*>/g, ''),
+    "datePublished": blog.date,
+    "dateModified": blog.modified || blog.date,
+    "author": {
+      "@type": "Organization",
+      "@id": "https://www.cradlewell.com/#organization",
+      "name": "Cradlewell Care Team",
+      "url": "https://www.cradlewell.com",
+    },
+    "publisher": { "@id": "https://www.cradlewell.com/#organization" },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://www.cradlewell.com/blog/${slug}`,
+    },
+    ...(featuredImage && {
+      "image": {
+        "@type": "ImageObject",
+        "url": featuredImage,
+      },
+    }),
+  };
+
   return (
     <div className="bg-light">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
+      />
 
       {/* HERO SECTION */}
       <section className="bg-white py-5 border-bottom">

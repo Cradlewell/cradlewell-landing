@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d \"{\"\"messages\"\":[{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"hi\"\"}]}\")",
+      "Bash(BASE=\"http://localhost:3000/api/chat\")",
+      "Bash(__NEW_LINE_d2206a1a0437a19b__ echo:*)",
+      "Bash(curl -s -X POST $BASE -H \"Content-Type: application/json\" -d \"{\"\"messages\"\":[{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"hi\"\"}]}\")",
+      "Bash(curl -s -X POST $BASE -H \"Content-Type: application/json\" -d \"{\"\"messages\"\":[{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"hi\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Hi there! Is your little one already home, or are you still expecting?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"home\"\"}]}\")",
+      "Bash(curl -s -X POST $BASE -H \"Content-Type: application/json\" -d \"{\"\"messages\"\":[{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"hi\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Hi there!\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"home\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Lovely! Are you looking for a Certified Nurse or a Postnatal Caregiver?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"japa\"\"}]}\")",
+      "Bash(curl -s -X POST $BASE -H \"Content-Type: application/json\" -d \"{\"\"messages\"\":[{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"home\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Certified Nurse or Postnatal Caregiver \\(Japa/MOBA\\)?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"japa\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Great! Day care or night care?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"day\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"We have 8, 10, or 12-hour day shifts. Which suits you best?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"10hrs\"\"}]}\")",
+      "Bash(__NEW_LINE_5d24582b3a267561__ echo:*)",
+      "Bash(curl -s -X POST $BASE -H \"Content-Type: application/json\" -d \"{\"\"messages\"\":[{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"home\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Certified Nurse or Postnatal Caregiver \\(Japa/MOBA\\)?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"japa\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Great! Day care or night care?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"day\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"We have 8, 10, or 12-hour day shifts. Which suits you best?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"12hrs\"\"}]}\")",
+      "Bash(curl -s -X POST $BASE -H \"Content-Type: application/json\" -d \"{\"\"messages\"\":[{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"home\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Certified Nurse or Postnatal Caregiver \\(Japa/MOBA\\)?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"japa\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"Great! Day care or night care?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"day\"\"},{\"\"role\"\":\"\"assistant\"\",\"\"content\"\":\"\"We have 8, 10, or 12-hour day shifts. Which suits you best?\"\"},{\"\"role\"\":\"\"user\"\",\"\"content\"\":\"\"8hrs\"\"}]}\")"
     ]
   }
 }

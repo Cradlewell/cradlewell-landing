@@ -6,14 +6,20 @@ import RealNurses from '@/NurseComponents/RealNurses'
 import WhatYouWillDo from '@/NurseComponents/WhatYouWillDo'
 import WhyChooseCradlewell from '@/NurseComponents/WhyChooseCradlewell'
 import WhyNurseSec from '@/NurseComponents/WhyNurseSec'
-import Head from 'next/head'
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Join Our Certified Nursing Team | Work From Home | Cradlewell Bangalore",
+  description:
+    "Join Cradlewell's certified nursing team providing home-based newborn and postnatal care across Bangalore. Flexible shifts, professional growth, and meaningful work. Apply as a nurse today.",
+  alternates: {
+    canonical: "https://www.cradlewell.com/nurses",
+  },
+};
 
 export default function Nurses() {
   return (
     <>
-    <Head>
-        <title>Nurses | Cradlewell</title>
-    </Head>
     <NurseBanner/>
     <WhyNurseSec/>
     <WhyChooseCradlewell/>

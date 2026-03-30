@@ -2,9 +2,12 @@ import React from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions | Cradlewell",
+  title: "Terms & Conditions | Cradlewell – Nurse-led Newborn & Postnatal Home Care Bangalore",
   description:
-    "Terms & Conditions governing nurse-led newborn and postnatal home care services provided by Cradlewell.",
+    "Terms & Conditions governing nurse-led newborn and postnatal home care services provided by Cradlewell (Tenderkin Wellness Private Limited) in Bangalore, India.",
+  alternates: {
+    canonical: "https://www.cradlewell.com/terms-conditions",
+  },
 };
 
 const TermsOfUse: React.FC = () => {
