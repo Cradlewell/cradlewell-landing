@@ -3,56 +3,92 @@
 import React from "react";
 import { Container, Row, Col } from "react-bootstrap";
 
+const stats = [
+  { number: "100+", label: "Families Served" },
+  { number: "4.8★", label: "Customer Rating" },
+  { number: "40+", label: "Years Experience" },
+];
+
 const HeroBelow = () => {
-	return (
-		<div className="py-5" id="whychoose">
-			<Container>
-				<Row className="">
-					{/* Text Section */}
-					<Col lg={6} className="mb-4 mt-2 mb-lg-0">
-						<h2 className="fw-bold display-6 px-3">
-							Designed for New <span className="text-primary">Moms</span><br />
-							<span className="text-primary">Who Deserve</span> to Breathe
-						</h2>
-			
-					</Col>
+  return (
+    <div className="py-5" id="whychoose" style={{ backgroundColor: "#ffffff" }}>
+      <Container>
+        <Row className="align-items-center">
+          {/* Text */}
+          <Col lg={6} className="mb-4 mb-lg-0 px-4">
+            <span className="section-eyebrow">Why Cradlewell</span>
+            <h2 className="fw-bold mb-3">
+              Designed for New{" "}
+              <span className="primary-color">Moms</span>
+              <br />
+              <span className="primary-color">Who Deserve</span> to Breathe
+            </h2>
+            <p style={{ fontSize: "1.08rem", lineHeight: "1.75", maxWidth: 480 }}>
+              Certified nurses visit your home so you can rest, recover, and bond
+              with your baby — without the overwhelm of doing everything alone.
+            </p>
+          </Col>
 
-					{/* Images Section */}
-					<Col lg={6}>
-			<p className="text-muted mt-3 px-3">
-							Professional Newborn & Postpartum Care, Delivered to Your Door<br />
-							<span className="d-block">
-								Subheadline: Trusted by new mothers to provide certified nursing
-								support—right at home. Professional Newborn & Postpartum Care, Delivered to Your Door.
-							</span>
-						</p>
+          {/* Stats panel */}
+          <Col lg={6} className="px-4">
+            <div
+              className="d-flex align-items-center justify-content-center"
+              style={{
+                background: "#F8FAFC",
+                borderRadius: 20,
+                padding: "32px 16px",
+                border: "1px solid rgba(15,23,42,0.07)",
+              }}
+            >
+              {stats.map((s, i) => (
+                <React.Fragment key={i}>
+                  <div className="text-center flex-fill px-2 px-md-3">
+                    <div
+                      className="stat-number"
+                      style={{
+                        fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)",
+                        color: i === 1 ? "#F97316" : "#0F172A",
+                      }}
+                    >
+                      {s.number}
+                    </div>
+                    <div className="stat-label">{s.label}</div>
+                  </div>
+                  {i < stats.length - 1 && (
+                    <div
+                      style={{
+                        width: 1,
+                        height: 52,
+                        background: "rgba(15,23,42,0.10)",
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </Col>
+        </Row>
 
-						<Row className="text-center mt-4">
-							<Col xs={4}>
-								<h2 className="display-5 fw-bold">100+</h2>
-								<p className="small text-muted mb-0">Families Served (and growing)</p>
-							</Col>
-							<Col xs={4}>
-								<h4 className="display-5 fw-bold">40+</h4>
-								<p className="small text-muted mb-0">Years of Combined Healthcare Experience</p>
-							</Col>
-							<Col xs={4}>
-								<h4 className="display-5 fw-bold">
-									4.8 <span style={{ color: "#f1c40f" }}>★</span>
-								</h4>
-								<p className="small text-muted mb-0">Early Customer Satisfaction</p>
-							</Col>
-						</Row>
-					</Col>
-				</Row>
-
-                <div className="container mt-5">
-                    <img className="img-fluid" src="/images/img1.png" alt="Professional Nurse Providing Newborn and Postnatal Home Care Services to Mother and Baby in Bangalore" />
-                </div>
-                
-			</Container>
-		</div>
-	);
+        {/* Full-width image */}
+        <div
+          className="mt-5"
+          style={{
+            borderRadius: 20,
+            overflow: "hidden",
+            boxShadow: "0 8px 40px rgba(15,23,42,0.09)",
+          }}
+        >
+          <img
+            className="img-fluid"
+            src="/images/img1.png"
+            alt="Professional Nurse Providing Newborn and Postnatal Home Care Services to Mother and Baby in Bangalore"
+            style={{ width: "100%", display: "block" }}
+          />
+        </div>
+      </Container>
+    </div>
+  );
 };
 
 export default HeroBelow;

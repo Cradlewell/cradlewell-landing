@@ -60,10 +60,6 @@ const PricingSection = () => {
                 </li>
                 <li className="d-flex align-items-start mb-3">
                   <i className="far fa-check-circle text-primary me-2 mt-1"></i>
-                  <span>Breastfeeding support and feeding schedule guidance</span>
-                </li>
-                <li className="d-flex align-items-start mb-3">
-                  <i className="far fa-check-circle text-primary me-2 mt-1"></i>
                   <span>Basic vitals check & health tracking</span>
                 </li>
                 <li className="d-flex align-items-start mb-3">

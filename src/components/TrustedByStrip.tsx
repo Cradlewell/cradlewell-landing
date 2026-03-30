@@ -111,7 +111,13 @@ const TrustedByStrip = () => {
                 position: "absolute", top: 0, left: 0, right: 0, height: "3px",
                 background: "linear-gradient(90deg, #5F47FF, #6388FF)",
               }} />
-              <div style={{ fontSize: "38px", marginBottom: "14px" }}>🏆</div>
+              <div style={{ marginBottom: "14px", display: "flex", justifyContent: "center" }}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M5 3H3a1 1 0 00-1 1v3c0 2.21 1.79 4 4 4h.5M19 3h2a1 1 0 011 1v3c0 2.21-1.79 4-4 4h-.5" stroke="#5F47FF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 15c-3.87 0-7-3.13-7-7V3h14v5c0 3.87-3.13 7-7 7z" fill="#EEF2FF" stroke="#5F47FF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M8 21h8M12 15v6" stroke="#5F47FF" strokeWidth="1.7" strokeLinecap="round"/>
+                </svg>
+              </div>
               <div style={{ fontSize: "15px", fontWeight: "800", color: "#1A1A2E", marginBottom: "5px" }}>
                 Health &amp; Wellness
               </div>
@@ -142,7 +148,11 @@ const TrustedByStrip = () => {
                 position: "absolute", top: 0, left: 0, right: 0, height: "3px",
                 background: "linear-gradient(90deg, #5F47FF, #6388FF)",
               }} />
-              <div style={{ fontSize: "34px", marginBottom: "14px", color: "#5F47FF", lineHeight: 1 }}>✦</div>
+              <div style={{ marginBottom: "14px", display: "flex", justifyContent: "center" }}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z" fill="#EEF2FF" stroke="#5F47FF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
               <div style={{ fontSize: "15px", fontWeight: "800", color: "#1A1A2E", marginBottom: "5px" }}>
                 Healthtech Startup
               </div>

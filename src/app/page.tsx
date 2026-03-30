@@ -32,8 +32,8 @@ export default function Home() {
         <HeroBelow/>
         <BackgroundBox/>
         <TrustedByStrip/>
-        <PricingSection/>
         <StepsSection/>
+        <PricingSection/>
         <TestimonialsSection/>
         <FoundersCarousel/>
         {/* <TeamCarousel/> */}

@@ -2,7 +2,6 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import { ReactNode } from 'react';
-import '@fontsource/outfit';
 import Footer from '@/components/Footer';
 import LayoutClient from '@/components/LayoutClient';
 import { Metadata } from 'next';
@@ -325,6 +324,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <link rel="preconnect" href="https://connect.facebook.net" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Premium typography: Lexend (headings) + Source Sans 3 (body) */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
+          rel="stylesheet"
+        />
         <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
 
         {/* H4 Performance: Preload hero image for LCP improvement */}
