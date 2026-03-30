@@ -158,7 +158,7 @@ const HeroHeader1 = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0F172A", lineHeight: 1.2 }}>4.8 / 5.0</div>
-                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>100+ Google Reviews</div>
+                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>Google Reviews</div>
                 </div>
               </div>
             </div>

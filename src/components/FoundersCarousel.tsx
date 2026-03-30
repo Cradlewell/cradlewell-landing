@@ -82,19 +82,20 @@ const FoundersCarousel = () => (
             >
               {/* Photo */}
               <div style={{
-                width: 88,
-                height: 88,
-                borderRadius: 18,
+                width: 110,
+                height: 110,
+                borderRadius: '50%',
                 overflow: 'hidden',
-                margin: '0 auto 16px',
-                boxShadow: '0 4px 18px rgba(15,23,42,0.12)',
+                margin: '0 auto 18px',
+                boxShadow: '0 6px 24px rgba(15,23,42,0.15)',
+                border: '3px solid rgba(95,71,255,0.12)',
               }}>
                 <Image
                   src={member.image}
                   alt={member.name}
-                  width={88}
-                  height={88}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  width={110}
+                  height={110}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }}
                 />
               </div>
 
