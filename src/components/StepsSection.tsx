@@ -1,98 +1,160 @@
 'use client';
 
 import React from 'react';
-import { Container, Row, Col, Button } from 'react-bootstrap';
-import { useModal } from './ModalContext'; // adjust path if needed
+import { Container, Button } from 'react-bootstrap';
+import { useModal } from './ModalContext';
+import ScrollReveal from './ScrollReveal';
 
+const steps = [
+  {
+    number: '01',
+    icon: '/images/icon1.png',
+    title: 'Choose Day or Night Care',
+    desc: 'Select daytime or overnight care based on what you and your baby need most.',
+  },
+  {
+    number: '02',
+    icon: '/images/icon2.png',
+    title: 'Book Your Slot',
+    desc: 'Pick your preferred time, share your baby\'s details, and confirm in under 5 minutes.',
+  },
+  {
+    number: '03',
+    icon: '/images/icon3.png',
+    title: 'Get Professional Care',
+    desc: 'A certified nurse arrives at your home, fully prepared and ready to care.',
+  },
+];
 
 const StepsSection = () => {
-      const { openModal } = useModal();
+  const { openModal } = useModal();
+
   return (
-    <section className="py-5 bg-white" id='howitworks'>
+    <section className="py-5 bg-white" id="howitworks">
       <Container>
-        {/* Heading */}
-        <div className="text-center mb-5">
-          <h1 className="fw-bold">
-            Nurse-Led Newborn & Postnatal <span style={{ color: '#5B7CFA' }}> <br /> Home Care in Bangalore</span>
-          </h1>
+        <ScrollReveal direction="none">
+          <div className="text-center mb-5">
+            <span className="section-eyebrow">How It Works</span>
+            <h2 className="fw-bold mt-2">
+              Nurse-Led Newborn &amp; Postnatal{' '}
+              <span style={{ color: '#5B7CFA' }}>
+                <br className="d-none d-md-block" />
+                Home Care in Bangalore
+              </span>
+            </h2>
+            <p style={{ color: '#64748B', maxWidth: 480, margin: '10px auto 0', fontSize: '1rem' }}>
+              Simple, fast, and designed around your family.
+            </p>
+          </div>
+        </ScrollReveal>
+
+        {/* Steps grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: 20,
+          position: 'relative',
+        }}>
+          {steps.map((step, i) => (
+            <ScrollReveal key={i} direction="up" delay={i * 110}>
+              <div style={{
+                background: '#F6F7FF',
+                borderRadius: 20,
+                padding: '36px 28px 32px',
+                position: 'relative',
+                height: '100%',
+                border: '1px solid rgba(95,71,255,0.08)',
+                transition: 'box-shadow 220ms ease, transform 220ms ease',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = '0 10px 36px rgba(95,71,255,0.13)';
+                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+              }}
+              >
+                {/* Step number — top right */}
+                <div style={{
+                  position: 'absolute',
+                  top: 20,
+                  right: 24,
+                  fontSize: '2.4rem',
+                  fontFamily: "'Lexend', system-ui, sans-serif",
+                  fontWeight: 800,
+                  color: 'rgba(95,71,255,0.10)',
+                  lineHeight: 1,
+                  letterSpacing: '-0.04em',
+                }}>
+                  {step.number}
+                </div>
+
+                {/* Icon */}
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 14,
+                  background: 'rgba(95,71,255,0.10)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 20,
+                }}>
+                  <img src={step.icon} alt={step.title} width="26" height="26" />
+                </div>
+
+                <h3 style={{
+                  fontFamily: "'Lexend', system-ui, sans-serif",
+                  fontWeight: 700,
+                  fontSize: '1.05rem',
+                  color: '#0F172A',
+                  marginBottom: 10,
+                  letterSpacing: '-0.01em',
+                }}>
+                  {step.title}
+                </h3>
+                <p style={{
+                  color: '#64748B',
+                  fontSize: '0.94rem',
+                  lineHeight: 1.65,
+                  margin: 0,
+                  fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                }}>
+                  {step.desc}
+                </p>
+
+                {/* Bottom accent line */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  background: 'linear-gradient(90deg, #5F47FF, #6388FF)',
+                  borderRadius: '0 0 20px 20px',
+                  opacity: 0.5,
+                }} />
+              </div>
+            </ScrollReveal>
+          ))}
         </div>
 
-        {/* Steps */}
-        <Row className="g-4 justify-content-center">
-          {/* Step 1 */}
-          <Col xs={12} md={6} lg={4}>
-            <div className="p-4 rounded-4 text-center pb-5" style={{ backgroundColor: '#F6F7FF' }}>
-              <div
-                className="mb-3 mx-auto d-flex align-items-center justify-content-center rounded-circle"
-                style={{
-                  width: '60x',
-                  height: '60px',
-                }}
-              >
-                <img src="/images/icon1.png" alt="Choose a Care Plan" width="24" height="24" />
-              </div>
-              <h6 className="fw-bold mb-2">Choose Day or Night Care</h6>
-              <p className="text-muted mb-0 px-5" style={{ fontSize: '0.95rem' }}>
-                Select daytime or overnight care based on what you need.
-              </p>
-            </div>
-          </Col>
-
-          {/* Step 2 */}
-          <Col xs={12} md={6} lg={4}>
-            <div className="p-4 rounded-4 text-center pb-5" style={{ backgroundColor: '#F6F7FF' }}>
-              <div
-                className="mb-3 mx-auto d-flex align-items-center justify-content-center rounded-circle"
-                style={{
-                  width: '60px',
-                  height: '60px',
-                }}
-              >
-                <img src="/images/icon2.png" alt="Book Your Slot" width="24" height="24" />
-              </div>
-              <h6 className="fw-bold mb-2">Book Your Slot</h6>
-              <p className="text-muted mb-0 px-5" style={{ fontSize: '0.95rem' }}>
-                Pick your time, add your baby’s profile, and relax.
-              </p>
-            </div>
-          </Col>
-
-          {/* Step 3 */}
-          <Col xs={12} md={6} lg={4}>
-            <div className="p-4 rounded-4 text-center pb-5" style={{ backgroundColor: '#F6F7FF' }}>
-              <div
-                className="mb-3 mx-auto d-flex align-items-center justify-content-center rounded-circle"
-                style={{
-                  width: '60px',
-                  height: '60px',
-                }}
-              >
-                <img src="/images/icon3.png" alt="Get Professional Care" width="24" height="24" />
-              </div>
-              <h6 className="fw-bold mb-2">Get Professional Care</h6>
-              <p className="text-muted mb-0 px-5" style={{ fontSize: '0.95rem' }}>
-                A certified nurse arrives fully <br /> prepared.
-              </p>
-            </div>
-          </Col>
-        </Row>
-
-        {/* CTA Button */}
-        <div className="text-center mt-5">
-          <Button
-          onClick={openModal}
-            variant="primary"
-            style={{
-              backgroundColor: '#5B7CFA',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              fontWeight: 500,
-            }}
-          >
-            Book Your First Slot
-          </Button>
-        </div>
+        {/* CTA */}
+        <ScrollReveal direction="none" delay={200}>
+          <div className="text-center mt-5">
+            <Button
+              onClick={openModal}
+              variant="primary"
+              style={{ padding: '13px 32px', fontSize: '1rem' }}
+            >
+              Book Your First Slot
+            </Button>
+            <p className="mt-2 text-muted" style={{ fontSize: '0.82rem' }}>
+              Free consultation · No commitment needed
+            </p>
+          </div>
+        </ScrollReveal>
       </Container>
     </section>
   );

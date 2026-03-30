@@ -608,6 +608,68 @@ p {
 /* ─── Sticky Top Sidebar ─────────────────────────────────────── */
 .sticky-top { z-index: 1030; }
 
+/* ─── Hero Floating Badges ───────────────────────────────────── */
+.hero-image-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.hero-badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.92);
+  backdropFilter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 12px;
+  padding: 9px 14px;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.12);
+  font-family: 'Lexend', system-ui, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hero-badge-tl {
+  top: 16px;
+  left: -12px;
+  animation: badge-float 3.5s ease-in-out infinite;
+}
+
+.hero-badge-br {
+  bottom: 32px;
+  right: -12px;
+  animation: badge-float 3.8s ease-in-out infinite 0.6s;
+}
+
+.hero-badge-rm {
+  top: 44%;
+  right: -12px;
+  animation: badge-float 4s ease-in-out infinite 1.2s;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+@keyframes badge-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-7px); }
+}
+
+/* Hide badges on very small screens */
+@media (max-width: 575px) {
+  .hero-badge { display: none; }
+}
+
+/* ─── Sticky Mobile CTA ──────────────────────────────────────── */
+/* Add bottom padding to page on mobile so content isn't hidden */
+@media (max-width: 991px) {
+  body { padding-bottom: 74px; }
+}
+
 /* ─── Misc ───────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python scripts/search.py \"healthcare premium trust conversion CTA urgency scarcity social proof\" --domain ux -n 6 -f markdown)"
+      "Bash(python scripts/search.py \"healthcare premium trust conversion CTA urgency scarcity social proof\" --domain ux -n 6 -f markdown)",
+      "Read(//c/Users/lokes/OneDrive/Desktop/Cradlewell/**)",
+      "Bash(npm install:*)"
     ]
   }
 }

@@ -56,11 +56,11 @@ const HeroHeader1 = () => {
               </div>
             </div>
 
-            <h2 className="ezy__header1-heading mb-4">
+            <h1 className="ezy__header1-heading mb-4">
               <span className="primary-color">Expert</span>{" "}
               <br />
               Newborn &amp; Mother Care
-            </h2>
+            </h1>
 
             <p className="ezy__header1-sub-heading mb-5">
               Certified postpartum nurses visit your home to support mother
@@ -117,17 +117,51 @@ const HeroHeader1 = () => {
             </p>
           </Col>
 
+          {/* Hero image with floating badges */}
           <Col lg={6} className="mt-5 mt-lg-0">
-            <img
-              src="/images/bannerimg.png"
-              alt="Trusted Nurse-led Newborn and Postnatal Home Care Support Banner for Mothers and Babies by Cradlewell in Bangalore"
-              className="rounded img-fluid mt-3"
-              fetchPriority="high"
-              loading="eager"
-              width="600"
-              height="500"
-              style={{ borderRadius: 20, boxShadow: "0 16px 64px rgba(15,23,42,0.14)" }}
-            />
+            <div className="hero-image-wrap">
+              <img
+                src="/images/bannerimg.png"
+                alt="Trusted Nurse-led Newborn and Postnatal Home Care Support Banner for Mothers and Babies by Cradlewell in Bangalore"
+                className="rounded img-fluid mt-3"
+                fetchPriority="high"
+                loading="eager"
+                width="600"
+                height="500"
+                style={{ borderRadius: 20, boxShadow: "0 16px 64px rgba(15,23,42,0.14)", width: "100%", display: "block" }}
+              />
+
+              {/* Floating badge — top left */}
+              <div className="hero-badge hero-badge-tl">
+                <span style={{ fontSize: "1rem" }}>🏆</span>
+                <div>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0F172A", lineHeight: 1.2 }}>Award Winning</div>
+                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>Entrepreneur India 2026</div>
+                </div>
+              </div>
+
+              {/* Floating badge — bottom right */}
+              <div className="hero-badge hero-badge-br">
+                <span style={{ fontSize: "1rem" }}>✅</span>
+                <div>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0F172A", lineHeight: 1.2 }}>ISO 9001 Certified</div>
+                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>Background-verified nurses</div>
+                </div>
+              </div>
+
+              {/* Floating badge — right mid */}
+              <div className="hero-badge hero-badge-rm">
+                <div style={{ display: "flex", gap: 2 }}>
+                  {[1,2,3,4,5].map(i => (
+                    <span key={i} style={{ color: "#F59E0B", fontSize: "0.7rem" }}>★</span>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0F172A", lineHeight: 1.2 }}>4.8 / 5.0</div>
+                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>100+ Google Reviews</div>
+                </div>
+              </div>
+            </div>
           </Col>
         </Row>
       </Container>
