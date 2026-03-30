@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/search.py \"healthcare premium trust conversion CTA urgency scarcity social proof\" --domain ux -n 6 -f markdown)"
+    ]
+  }
+}
