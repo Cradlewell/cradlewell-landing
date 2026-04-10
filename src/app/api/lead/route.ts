@@ -73,7 +73,6 @@ export async function POST(req: NextRequest) {
             shift_time: lead.shiftTime,
             care_start_date: lead.careStartDate,
             service_days: lead.serviceDays,
-            page_path: lead.pagePath,
         };
 
         const response = await fetch(webhookUrl, {
