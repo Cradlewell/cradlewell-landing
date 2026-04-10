@@ -677,6 +677,18 @@ body.modal-open .sticky-mobile-cta {
   body { padding-bottom: 74px; }
 }
 
+/* ─── Mobile: float buttons above sticky CTA ─────────────────── */
+@media (max-width: 991px) {
+  /* WhatsApp sits at right edge, Aria sits 60px left of it (both at same height) */
+  .whatsapp-widget {
+    bottom: 90px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    padding: 10px;
+  }
+}
+
 /* ─── Misc ───────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -356,6 +356,8 @@ export default function AIChatWidget() {
                     zIndex: 9999,
                     ...(isMobile && isOpen
                         ? { top: 0, left: 0, right: 0, bottom: 0 }
+                        : isMobile
+                        ? { right: 80, bottom: 90 }
                         : { right: 20, bottom: 20 }
                     ),
                 }}
@@ -364,40 +366,42 @@ export default function AIChatWidget() {
                 {/* Floating button */}
                 {!isOpen && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        {/* Speech bubble label */}
-                        <div style={{
-                            position: "relative",
-                            background: "#fff",
-                            color: "#4F46E5",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            padding: "8px 14px",
-                            borderRadius: 20,
-                            boxShadow: "0 4px 16px rgba(99,136,255,0.25)",
-                            whiteSpace: "nowrap",
-                            border: "1.5px solid rgba(99,136,255,0.2)",
-                            cursor: "pointer",
-                        }} onClick={() => setIsOpen(true)}>
-                            Need help?
-                            {/* Arrow pointing right */}
-                            <span style={{
-                                position: "absolute",
-                                right: -8,
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                width: 0,
-                                height: 0,
-                                borderTop: "6px solid transparent",
-                                borderBottom: "6px solid transparent",
-                                borderLeft: "8px solid #fff",
-                            }} />
-                        </div>
+                        {/* Speech bubble label — desktop only */}
+                        {!isMobile && (
+                            <div style={{
+                                position: "relative",
+                                background: "#fff",
+                                color: "#4F46E5",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                padding: "8px 14px",
+                                borderRadius: 20,
+                                boxShadow: "0 4px 16px rgba(99,136,255,0.25)",
+                                whiteSpace: "nowrap",
+                                border: "1.5px solid rgba(99,136,255,0.2)",
+                                cursor: "pointer",
+                            }} onClick={() => setIsOpen(true)}>
+                                Need help?
+                                {/* Arrow pointing right */}
+                                <span style={{
+                                    position: "absolute",
+                                    right: -8,
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    width: 0,
+                                    height: 0,
+                                    borderTop: "6px solid transparent",
+                                    borderBottom: "6px solid transparent",
+                                    borderLeft: "8px solid #fff",
+                                }} />
+                            </div>
+                        )}
                         <button
                             onClick={() => setIsOpen(true)}
                             aria-label="Chat with Aria"
                             style={{
-                                width: 60,
-                                height: 60,
+                                width: isMobile ? 48 : 60,
+                                height: isMobile ? 48 : 60,
                                 borderRadius: "50%",
                                 border: "none",
                                 background: "linear-gradient(135deg, #7B61FF, #4F46E5)",
@@ -411,7 +415,7 @@ export default function AIChatWidget() {
                                 flexShrink: 0,
                             }}
                         >
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                            <svg width={isMobile ? 22 : 26} height={isMobile ? 22 : 26} viewBox="0 0 24 24" fill="none">
                                 <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white"/>
                             </svg>
                         </button>
