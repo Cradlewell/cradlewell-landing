@@ -4,6 +4,7 @@ import './globals.css';
 import { ReactNode } from 'react';
 import Footer from '@/components/Footer';
 import LayoutClient from '@/components/LayoutClient';
+import { ModalProvider } from '@/components/ModalContext';
 import { Metadata } from 'next';
 import AIChatWidget from "@/components/AIChatWidget";
 
@@ -423,10 +424,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           />
         </noscript>
 
-        <LayoutClient />
-        <main>{children}</main>
-        <Footer />
-        <AIChatWidget />
+        <ModalProvider>
+          <LayoutClient />
+          <main>{children}</main>
+          <Footer />
+          <AIChatWidget />
+        </ModalProvider>
       </body>
     </html>
   );

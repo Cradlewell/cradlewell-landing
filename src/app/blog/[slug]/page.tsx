@@ -1,5 +1,4 @@
 import Blogbutton from "@/components/Blogbutton";
-import { ModalProvider } from "@/components/ModalContext";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic"; // 👈 ADD THIS
@@ -177,9 +176,7 @@ export default async function BlogPost({ params }: Props) {
                 Get professional at-home care services for mother and baby.
               </p>
 
-              <ModalProvider>
-                <Blogbutton />
-              </ModalProvider>
+              <Blogbutton />
             </div>
           </div>
 
