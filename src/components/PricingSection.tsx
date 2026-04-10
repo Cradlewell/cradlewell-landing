@@ -84,7 +84,7 @@ const PricingSection = () => {
                 ))}
               </ul>
 
-              <Button variant="primary" className="mt-auto w-100" onClick={openModal}>
+              <Button variant="primary" className="mt-auto w-100" onClick={() => openModal('Nurse Care')}>
                 Get Nurse Care
               </Button>
             </Card>
@@ -132,7 +132,7 @@ const PricingSection = () => {
                 ))}
               </ul>
 
-              <Button variant="light" className="text-primary mt-auto w-100" onClick={openModal}>
+              <Button variant="light" className="text-primary mt-auto w-100" onClick={() => openModal('MOBA Care')}>
                 Get MOBA Care
               </Button>
             </Card>

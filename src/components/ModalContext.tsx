@@ -4,7 +4,7 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 import { Modal } from 'react-bootstrap';
 
 type ModalContextType = {
-  openModal: () => void;
+  openModal: (service?: string) => void;
   closeModal: () => void;
 };
 
@@ -18,12 +18,50 @@ export const useModal = () => useContext(ModalContext);
 const defaultForm = {
   name: '',
   phone: '',
-  email: '',
-  city: '',
-  service: 'Day Care (8 Hrs)',
-  preferredStartDate: '',
-  duration: '30 Days',
+  service: '',
+  babyStatus: '',
+  hospitalName: '',
+  birthStageStatus: '',
+  babyAge: '',
+  currentWeight: '',
+  address: '',
+  shiftType: '',
+  shiftHours: '',
+  shiftTime: '',
+  careStartDate: '',
+  serviceDays: '',
 };
+
+const HOSPITALS = [
+  'Manipal Hospital', 'Fortis Hospital', 'Apollo Hospital',
+  'Columbia Asia Hospital', 'Cloudnine Hospital', 'Sakra World Hospital',
+  'Narayana Health', "St. John's Medical College Hospital",
+  'Motherhood Hospital', 'Rainbow Children\'s Hospital',
+  'BGS Gleneagles Global Hospital', 'Aster CMI Hospital', 'Other',
+];
+
+function getShiftHours(service: string, shiftType: string): string[] {
+  if (!service || !shiftType) return [];
+  if (service === 'Nurse Care') return shiftType === 'Day' ? ['8 Hours'] : ['9 Hours'];
+  if (service === 'MOBA Care') return shiftType === 'Day' ? ['8 Hours', '10 Hours', '12 Hours'] : ['10 Hours', '12 Hours'];
+  return [];
+}
+
+function getShiftTimes(service: string, shiftType: string, shiftHours: string): string[] {
+  if (!service || !shiftType || !shiftHours) return [];
+  if (service === 'Nurse Care') {
+    if (shiftType === 'Day' && shiftHours === '8 Hours') return ['8:00 AM – 4:00 PM', '9:00 AM – 5:00 PM', '10:00 AM – 6:00 PM'];
+    if (shiftType === 'Night' && shiftHours === '9 Hours') return ['9:00 PM – 6:00 AM'];
+  }
+  if (service === 'MOBA Care') {
+    if (shiftType === 'Day' && shiftHours === '8 Hours')  return ['8:00 AM – 4:00 PM', '9:00 AM – 5:00 PM', '10:00 AM – 6:00 PM'];
+    if (shiftType === 'Day' && shiftHours === '10 Hours') return ['9:00 AM – 7:00 PM'];
+    if (shiftType === 'Day' && shiftHours === '12 Hours') return ['8:00 AM – 8:00 PM'];
+    if (shiftType === 'Night' && shiftHours === '10 Hours') return ['9:00 PM – 7:00 AM'];
+    if (shiftType === 'Night' && shiftHours === '12 Hours') return ['8:00 PM – 8:00 AM'];
+  }
+  return [];
+}
 
 export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const [showModal, setShowModal] = useState(false);
@@ -31,7 +69,12 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState(defaultForm);
 
-  const openModal = () => setShowModal(true);
+  const openModal = (service?: string) => {
+    setForm(prev => ({ ...defaultForm, service: service ?? prev.service }));
+    setSubmitted(false);
+    setShowModal(true);
+  };
+
   const closeModal = () => {
     setShowModal(false);
     setSubmitted(false);
@@ -40,8 +83,17 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => {
+      const next = { ...prev, [name]: value };
+      if (name === 'service' || name === 'shiftType') {
+        next.shiftHours = '';
+        next.shiftTime = '';
+      }
+      if (name === 'shiftHours') next.shiftTime = '';
+      return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,19 +106,23 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({
           name: form.name,
           phone: form.phone,
-          email: form.email,
-          city: form.city,
           service: form.service,
-          preferredStartDate: form.preferredStartDate,
-          summary: `Duration: ${form.duration}`,
+          babyStatus: form.babyStatus,
+          hospitalName: form.hospitalName,
+          birthStageStatus: form.birthStageStatus,
+          babyAge: form.babyAge,
+          currentWeight: form.currentWeight,
+          address: form.address,
+          shiftType: form.shiftType,
+          shiftHours: form.shiftHours,
+          shiftTime: form.shiftTime,
+          careStartDate: form.careStartDate,
+          serviceDays: form.serviceDays,
           pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
         }),
       });
-      if (res.ok) {
-        setSubmitted(true);
-      } else {
-        alert('Something went wrong. Please try again.');
-      }
+      if (res.ok) setSubmitted(true);
+      else alert('Something went wrong. Please try again.');
     } catch {
       alert('Something went wrong. Please try again.');
     } finally {
@@ -74,114 +130,176 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const shiftHoursOptions = getShiftHours(form.service, form.shiftType);
+  const shiftTimeOptions = getShiftTimes(form.service, form.shiftType, form.shiftHours);
+
   return (
     <ModalContext.Provider value={{ openModal, closeModal }}>
       {children}
 
-      <Modal show={showModal} onHide={closeModal} centered>
+      <Modal show={showModal} onHide={closeModal} centered size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Book Your Nurse Now</Modal.Title>
+          <Modal.Title>Book Your Care Now</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: '75vh', overflowY: 'auto' }}>
           {submitted ? (
-            <div className="text-center py-4">
+            <div className="text-center py-5">
               <h5 className="text-success fw-semibold">Thank you! We&apos;ll call you shortly.</h5>
               <p className="text-muted mt-2">Our team will reach out within a few hours.</p>
             </div>
           ) : (
-            <>
-              <p className="text-muted">
-                Get expert mother &amp; baby care at home, starting from 10 days.
-              </p>
-              <form onSubmit={handleSubmit}>
-                <div className="form-group mb-3">
-                  <label>Full Name*</label>
-                  <input
-                    type="text"
-                    name="name"
-                    className="form-control"
-                    required
-                    pattern="[A-Za-z ]+"
-                    title="Please enter a valid full name"
-                    value={form.name}
-                    onChange={handleChange}
-                  />
-                </div>
+            <form onSubmit={handleSubmit}>
 
-                <div className="form-group mb-3">
-                  <label>Phone Number*</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    className="form-control"
-                    required
-                    pattern="^[0-9]{10}$"
-                    title="Please enter a valid 10-digit phone number"
-                    maxLength={10}
-                    value={form.phone}
-                    onChange={handleChange}
-                  />
-                </div>
+              {/* Name */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Full Name*</label>
+                <input type="text" name="name" className="form-control" required
+                  pattern="[A-Za-z ]+" title="Letters only" value={form.name} onChange={handleChange} />
+              </div>
 
-                <div className="form-group mb-3">
-                  <label>Email Address</label>
-                  <input
-                    type="email"
-                    name="email"
-                    className="form-control"
-                    value={form.email}
-                    onChange={handleChange}
-                  />
-                </div>
+              {/* Phone */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Phone Number*</label>
+                <input type="tel" name="phone" className="form-control" required
+                  pattern="^[0-9]{10}$" title="10-digit number" maxLength={10}
+                  value={form.phone} onChange={handleChange} />
+              </div>
 
-                <div className="form-group mb-3">
-                  <label>City &amp; Locality*</label>
-                  <input
-                    type="text"
-                    name="city"
-                    className="form-control"
-                    required
-                    value={form.city}
-                    onChange={handleChange}
-                  />
-                </div>
+              {/* Service */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Service*</label>
+                <select name="service" className="form-select" required value={form.service} onChange={handleChange}>
+                  <option value="">Select Service</option>
+                  <option value="Nurse Care">Nurse Care</option>
+                  <option value="MOBA Care">MOBA Care</option>
+                </select>
+              </div>
 
+              {/* Baby Born or Expecting */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Baby Born or Expecting?*</label>
+                <select name="babyStatus" className="form-select" required value={form.babyStatus} onChange={handleChange}>
+                  <option value="">Select</option>
+                  <option value="Baby is Born">Baby is Born</option>
+                  <option value="Expecting">Expecting</option>
+                </select>
+              </div>
+
+              {/* Hospital Name */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Hospital Name</label>
+                <select name="hospitalName" className="form-select" value={form.hospitalName} onChange={handleChange}>
+                  <option value="">Select Hospital</option>
+                  {HOSPITALS.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+
+              {/* Baby Birth Stage Status */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Baby Birth Stage</label>
+                <select name="birthStageStatus" className="form-select" value={form.birthStageStatus} onChange={handleChange}>
+                  <option value="">Select</option>
+                  <option value="Just Delivered (0-7 days)">Just Delivered (0–7 days)</option>
+                  <option value="Newborn (1-4 weeks)">Newborn (1–4 weeks)</option>
+                  <option value="Infant (1-3 months)">Infant (1–3 months)</option>
+                  <option value="Not Yet Born (Expecting)">Not Yet Born (Expecting)</option>
+                </select>
+              </div>
+
+              {/* Baby Age */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Baby Age</label>
+                <select name="babyAge" className="form-select" value={form.babyAge} onChange={handleChange}>
+                  <option value="">Select</option>
+                  <option value="Not yet born">Not yet born</option>
+                  <option value="0-7 days">0–7 days</option>
+                  <option value="1-2 weeks">1–2 weeks</option>
+                  <option value="2-4 weeks">2–4 weeks</option>
+                  <option value="1-2 months">1–2 months</option>
+                  <option value="2-3 months">2–3 months</option>
+                  <option value="3-6 months">3–6 months</option>
+                </select>
+              </div>
+
+              {/* Current Weight */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Baby&apos;s Current Weight</label>
+                <select name="currentWeight" className="form-select" value={form.currentWeight} onChange={handleChange}>
+                  <option value="">Select</option>
+                  <option value="Below 2.0 kg">Below 2.0 kg</option>
+                  <option value="2.0 - 2.5 kg">2.0 – 2.5 kg</option>
+                  <option value="2.5 - 3.0 kg">2.5 – 3.0 kg</option>
+                  <option value="3.0 - 3.5 kg">3.0 – 3.5 kg</option>
+                  <option value="3.5 - 4.0 kg">3.5 – 4.0 kg</option>
+                  <option value="Above 4.0 kg">Above 4.0 kg</option>
+                </select>
+              </div>
+
+              {/* Address */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Current Address / Location*</label>
+                <input type="text" name="address" className="form-control" required
+                  placeholder="House no., street, area, city" value={form.address} onChange={handleChange} />
+              </div>
+
+              {/* Shift Type */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Shift Type*</label>
+                <select name="shiftType" className="form-select" required value={form.shiftType} onChange={handleChange}>
+                  <option value="">Select</option>
+                  <option value="Day">Day</option>
+                  <option value="Night">Night</option>
+                </select>
+              </div>
+
+              {/* Shift Hours — dynamic */}
+              {shiftHoursOptions.length > 0 && (
                 <div className="form-group mb-3">
-                  <label>Type of Care Needed</label>
-                  <select name="service" className="form-select" value={form.service} onChange={handleChange}>
-                    <option value="Day Care (8 Hrs)">Day Care (8 Hrs)</option>
-                    <option value="Night Care (9 Hrs)">Night Care (9 Hrs)</option>
+                  <label className="form-label fw-semibold">Shift Hours*</label>
+                  <select name="shiftHours" className="form-select" required value={form.shiftHours} onChange={handleChange}>
+                    <option value="">Select</option>
+                    {shiftHoursOptions.map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
+              )}
 
+              {/* Shift Time — dynamic */}
+              {shiftTimeOptions.length > 0 && (
                 <div className="form-group mb-3">
-                  <label>Preferred Start Date</label>
-                  <input
-                    type="date"
-                    name="preferredStartDate"
-                    className="form-control"
-                    min={today}
-                    value={form.preferredStartDate}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="form-group mb-3">
-                  <label>Duration of Service</label>
-                  <select name="duration" className="form-select" value={form.duration} onChange={handleChange}>
-                    <option value="30 Days">30 Days</option>
-                    <option value="60 Days">60 Days</option>
-                    <option value="Custom / Decide On Call">Custom / Decide On Call</option>
+                  <label className="form-label fw-semibold">Shift Timing*</label>
+                  <select name="shiftTime" className="form-select" required value={form.shiftTime} onChange={handleChange}>
+                    <option value="">Select</option>
+                    {shiftTimeOptions.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
+              )}
 
-                <div className="d-grid">
-                  <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
-                    {submitting ? 'Submitting...' : 'Submit'}
-                  </button>
-                </div>
-              </form>
-            </>
+              {/* Care Start Date */}
+              <div className="form-group mb-3">
+                <label className="form-label fw-semibold">Care Start Date*</label>
+                <input type="date" name="careStartDate" className="form-control" required
+                  min={today} value={form.careStartDate} onChange={handleChange} />
+              </div>
+
+              {/* Service Days */}
+              <div className="form-group mb-4">
+                <label className="form-label fw-semibold">Service Duration*</label>
+                <select name="serviceDays" className="form-select" required value={form.serviceDays} onChange={handleChange}>
+                  <option value="">Select</option>
+                  <option value="3 Day Trial">3 Day Trial</option>
+                  <option value="30 Days">30 Days</option>
+                  <option value="60 Days">60 Days</option>
+                  <option value="Custom / Decide On Call">Custom / Decide On Call</option>
+                </select>
+              </div>
+
+              <div className="d-grid">
+                <button type="submit" className="btn btn-primary w-100 py-2" disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Book Now'}
+                </button>
+              </div>
+
+            </form>
           )}
         </Modal.Body>
       </Modal>

@@ -4,13 +4,22 @@ import { z } from "zod";
 const LeadSchema = z.object({
     name: z.string().min(1),
     phone: z.string().min(6),
-    email: z.string().optional().default(""),
-    city: z.string().optional().default(""),
     service: z.string().optional().default(""),
-    babyStage: z.string().optional().default(""),
-    preferredStartDate: z.string().optional().default(""),
-    summary: z.string().optional().default(""),
+    babyStatus: z.string().optional().default(""),
+    hospitalName: z.string().optional().default(""),
+    birthStageStatus: z.string().optional().default(""),
+    babyAge: z.string().optional().default(""),
+    currentWeight: z.string().optional().default(""),
+    address: z.string().optional().default(""),
+    shiftType: z.string().optional().default(""),
+    shiftHours: z.string().optional().default(""),
+    shiftTime: z.string().optional().default(""),
+    careStartDate: z.string().optional().default(""),
+    serviceDays: z.string().optional().default(""),
     pagePath: z.string().optional().default(""),
+    // legacy compat fields
+    email: z.string().optional().default(""),
+    summary: z.string().optional().default(""),
 });
 
 export async function POST(req: NextRequest) {
@@ -24,31 +33,47 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, error: "Webhook not configured" }, { status: 500 });
         }
 
+        // Compute date / time / day in IST
+        const now = new Date();
+
+        const lead_generated_date = new Intl.DateTimeFormat("en-IN", {
+            timeZone: "Asia/Kolkata",
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        }).format(now);
+
+        const lead_generated_time = new Intl.DateTimeFormat("en-IN", {
+            timeZone: "Asia/Kolkata",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        }).format(now).toUpperCase();
+
+        const lead_generated_day = new Intl.DateTimeFormat("en-IN", {
+            timeZone: "Asia/Kolkata",
+            weekday: "long",
+        }).format(now);
+
         const payload = {
             name: lead.name,
-            phone: lead.phone,
-            email: lead.email,
-            city: lead.city,
+            phone_number: lead.phone,
+            lead_generated_date,
+            lead_generated_time,
+            lead_generated_day,
             service: lead.service,
-            babyStage: lead.babyStage,
-            preferredStartDate: lead.preferredStartDate,
-            pagePath: lead.pagePath,
-            summary: lead.summary,
-            submittedAt: (() => {
-                const now = new Date();
-                const parts = new Intl.DateTimeFormat("en-IN", {
-                    timeZone: "Asia/Kolkata",
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                }).formatToParts(now);
-                const p: Record<string, string> = {};
-                for (const part of parts) p[part.type] = part.value;
-                return `${p.day} ${p.month} ${p.year}, ${p.hour}:${p.minute} ${(p.dayPeriod || "").toUpperCase()}`;
-            })(),
+            baby_born_or_expecting: lead.babyStatus,
+            hospital_name: lead.hospitalName,
+            baby_birth_stage_status: lead.birthStageStatus,
+            baby_age: lead.babyAge,
+            current_weight: lead.currentWeight,
+            address: lead.address,
+            shift_type: lead.shiftType,
+            shift_hours: lead.shiftHours,
+            shift_time: lead.shiftTime,
+            care_start_date: lead.careStartDate,
+            service_days: lead.serviceDays,
+            page_path: lead.pagePath,
         };
 
         const response = await fetch(webhookUrl, {
