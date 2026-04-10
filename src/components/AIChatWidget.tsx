@@ -116,6 +116,7 @@ export default function AIChatWidget() {
     }, [isMobile, isOpen]);
 
     useEffect(() => {
+        if (isMobile) return; // no auto-open on mobile
         const timer = setTimeout(() => {
             if (!hasAutoOpened) {
                 setIsOpen(true);
@@ -123,7 +124,7 @@ export default function AIChatWidget() {
             }
         }, 20000);
         return () => clearTimeout(timer);
-    }, [hasAutoOpened, pathname]);
+    }, [hasAutoOpened, isMobile, pathname]);
 
     useEffect(() => {
         const handleExitIntent = (e: MouseEvent) => {

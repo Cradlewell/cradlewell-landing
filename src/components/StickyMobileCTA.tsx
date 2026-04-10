@@ -14,7 +14,7 @@ export default function StickyMobileCTA() {
 
   return (
     <div
-      className="d-flex d-lg-none align-items-center gap-3"
+      className="d-flex d-lg-none align-items-center gap-3 sticky-mobile-cta"
       style={{
         position: 'fixed',
         bottom: 0,

@@ -529,6 +529,13 @@ p {
   transition: transform 0.25s var(--cw-ease), box-shadow 0.25s var(--cw-ease);
 }
 
+/* Hide floating widgets when booking modal is open */
+body.modal-open .whatsapp-widget,
+body.modal-open .aria-widget-container,
+body.modal-open .sticky-mobile-cta {
+  display: none !important;
+}
+
 .whatsapp-widget:hover {
   transform: scale(1.1);
   box-shadow: 0 8px 28px rgba(37,211,102,0.45);

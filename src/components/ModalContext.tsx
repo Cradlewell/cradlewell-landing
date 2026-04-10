@@ -139,7 +139,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     <ModalContext.Provider value={{ openModal, closeModal }}>
       {children}
 
-      <Modal show={showModal} onHide={closeModal} centered size="lg">
+      <Modal show={showModal} onHide={closeModal} centered size="lg" fullscreen="sm-down">
         <Modal.Header closeButton>
           <Modal.Title>Book Your Care Now</Modal.Title>
         </Modal.Header>
