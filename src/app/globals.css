@@ -42,6 +42,7 @@
 /* ─── Base ───────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -52,6 +53,7 @@ body {
   background-color: var(--cw-surface-page);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 :root {
@@ -677,15 +679,11 @@ body.modal-open .sticky-mobile-cta {
   body { padding-bottom: 74px; }
 }
 
-/* ─── Mobile: float buttons above sticky CTA ─────────────────── */
+/* ─── Mobile: hide floating widgets (hero + sticky CTA handle CTAs) ─── */
 @media (max-width: 991px) {
-  /* WhatsApp sits at right edge, Aria sits 60px left of it (both at same height) */
-  .whatsapp-widget {
-    bottom: 90px;
-    right: 20px;
-    width: 48px;
-    height: 48px;
-    padding: 10px;
+  .whatsapp-widget,
+  .aria-widget-container {
+    display: none !important;
   }
 }
 

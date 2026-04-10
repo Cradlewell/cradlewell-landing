@@ -356,8 +356,6 @@ export default function AIChatWidget() {
                     zIndex: 9999,
                     ...(isMobile && isOpen
                         ? { top: 0, left: 0, right: 0, bottom: 0 }
-                        : isMobile
-                        ? { right: 80, bottom: 90 }
                         : { right: 20, bottom: 20 }
                     ),
                 }}
@@ -400,8 +398,8 @@ export default function AIChatWidget() {
                             onClick={() => setIsOpen(true)}
                             aria-label="Chat with Aria"
                             style={{
-                                width: isMobile ? 48 : 60,
-                                height: isMobile ? 48 : 60,
+                                width: 60,
+                                height: 60,
                                 borderRadius: "50%",
                                 border: "none",
                                 background: "linear-gradient(135deg, #7B61FF, #4F46E5)",
@@ -415,7 +413,7 @@ export default function AIChatWidget() {
                                 flexShrink: 0,
                             }}
                         >
-                            <svg width={isMobile ? 22 : 26} height={isMobile ? 22 : 26} viewBox="0 0 24 24" fill="none">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
                                 <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white"/>
                             </svg>
                         </button>
