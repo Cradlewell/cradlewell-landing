@@ -67,13 +67,19 @@ const PricingSection = () => {
                 </div>
               </div>
 
-              <h3 className="text-dark text-center mb-1 fw-semibold">Nurse Care</h3>
-              <p className="text-primary fw-semibold text-center mb-1" style={{ fontSize: "0.95rem" }}>
-                Hospital-Grade Newborn &amp; Mother Care at Home
-              </p>
-              <p className="text-muted text-center mb-3" style={{ fontSize: "0.85rem" }}>
-                8-hour / 9-hour professional nurse support
-              </p>
+              <h3 className="text-dark text-center mb-2 fw-semibold">Nurse Care</h3>
+              <div className="text-center mb-3">
+                <span style={{
+                  display: "inline-block",
+                  background: "linear-gradient(135deg, #6675F7, #4f46e5)",
+                  borderRadius: 12,
+                  padding: "10px 24px",
+                }}>
+                  <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", letterSpacing: "0.05em", display: "block" }}>STARTING FROM</span>
+                  <span style={{ fontSize: "1.6rem", fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>₹2,000</span>
+                  <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)" }}> / day</span>
+                </span>
+              </div>
 
               <ul className="list-unstyled mt-2 text-start mx-auto" style={{ maxWidth: 420 }}>
                 {nurseFeatures.map((item, i) => (
@@ -115,13 +121,21 @@ const PricingSection = () => {
                 </div>
               </div>
 
-              <h3 className="text-white text-center mb-1 fw-semibold">MOBA Care</h3>
-              <p className="text-white fw-semibold text-center mb-1" style={{ fontSize: "0.95rem", opacity: 0.9 }}>
-                Structured Mother &amp; Baby Support at Home
-              </p>
-              <p className="text-center mb-3" style={{ fontSize: "0.85rem", opacity: 0.75 }}>
-                8 / 10 / 12-hour daily assistance
-              </p>
+              <h3 className="text-white text-center mb-2 fw-semibold">MOBA Care</h3>
+              <div className="text-center mb-3">
+                <span style={{
+                  display: "inline-block",
+                  background: "rgba(255,255,255,0.15)",
+                  border: "1px solid rgba(255,255,255,0.35)",
+                  borderRadius: 12,
+                  padding: "10px 24px",
+                  backdropFilter: "blur(6px)",
+                }}>
+                  <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.75)", letterSpacing: "0.05em", display: "block" }}>STARTING FROM</span>
+                  <span style={{ fontSize: "1.6rem", fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>₹1,500</span>
+                  <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.75)" }}> / day</span>
+                </span>
+              </div>
 
               <ul className="list-unstyled mt-2 text-start mx-auto" style={{ maxWidth: 420 }}>
                 {mobaFeatures.map((item, i) => (
