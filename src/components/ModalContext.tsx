@@ -116,7 +116,9 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
           shiftType: form.shiftType,
           shiftHours: form.shiftHours,
           shiftTime: form.shiftTime,
-          careStartDate: form.careStartDate,
+          careStartDate: form.careStartDate
+            ? form.careStartDate.split('-').reverse().join('-')
+            : '',
           serviceDays: form.serviceDays,
           pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
         }),
@@ -194,46 +196,45 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                 </select>
               </div>
 
-              {/* Baby Birth Stage Status */}
-              <div className="form-group mb-3">
-                <label className="form-label fw-semibold">Baby Birth Stage</label>
-                <select name="birthStageStatus" className="form-select" value={form.birthStageStatus} onChange={handleChange}>
-                  <option value="">Select</option>
-                  <option value="Just Delivered (0-7 days)">Just Delivered (0–7 days)</option>
-                  <option value="Newborn (1-4 weeks)">Newborn (1–4 weeks)</option>
-                  <option value="Infant (1-3 months)">Infant (1–3 months)</option>
-                  <option value="Not Yet Born (Expecting)">Not Yet Born (Expecting)</option>
-                </select>
-              </div>
+              {/* Baby Birth Stage, Age, Weight — hidden when Expecting */}
+              {form.babyStatus !== 'Expecting' && (
+                <>
+                  <div className="form-group mb-3">
+                    <label className="form-label fw-semibold">Baby Birth Stage</label>
+                    <select name="birthStageStatus" className="form-select" value={form.birthStageStatus} onChange={handleChange}>
+                      <option value="">Select</option>
+                      <option value="Normal">Normal</option>
+                      <option value="Preterm / Early birth">Preterm / Early birth</option>
+                    </select>
+                  </div>
 
-              {/* Baby Age */}
-              <div className="form-group mb-3">
-                <label className="form-label fw-semibold">Baby Age</label>
-                <select name="babyAge" className="form-select" value={form.babyAge} onChange={handleChange}>
-                  <option value="">Select</option>
-                  <option value="Not yet born">Not yet born</option>
-                  <option value="0-7 days">0–7 days</option>
-                  <option value="1-2 weeks">1–2 weeks</option>
-                  <option value="2-4 weeks">2–4 weeks</option>
-                  <option value="1-2 months">1–2 months</option>
-                  <option value="2-3 months">2–3 months</option>
-                  <option value="3-6 months">3–6 months</option>
-                </select>
-              </div>
+                  <div className="form-group mb-3">
+                    <label className="form-label fw-semibold">Baby Age</label>
+                    <select name="babyAge" className="form-select" value={form.babyAge} onChange={handleChange}>
+                      <option value="">Select</option>
+                      <option value="0-7 days">0–7 days</option>
+                      <option value="1-2 weeks">1–2 weeks</option>
+                      <option value="2-4 weeks">2–4 weeks</option>
+                      <option value="1-2 months">1–2 months</option>
+                      <option value="2-3 months">2–3 months</option>
+                      <option value="3-6 months">3–6 months</option>
+                    </select>
+                  </div>
 
-              {/* Current Weight */}
-              <div className="form-group mb-3">
-                <label className="form-label fw-semibold">Baby&apos;s Current Weight</label>
-                <select name="currentWeight" className="form-select" value={form.currentWeight} onChange={handleChange}>
-                  <option value="">Select</option>
-                  <option value="Below 2.0 kg">Below 2.0 kg</option>
-                  <option value="2.0 - 2.5 kg">2.0 – 2.5 kg</option>
-                  <option value="2.5 - 3.0 kg">2.5 – 3.0 kg</option>
-                  <option value="3.0 - 3.5 kg">3.0 – 3.5 kg</option>
-                  <option value="3.5 - 4.0 kg">3.5 – 4.0 kg</option>
-                  <option value="Above 4.0 kg">Above 4.0 kg</option>
-                </select>
-              </div>
+                  <div className="form-group mb-3">
+                    <label className="form-label fw-semibold">Baby&apos;s Current Weight</label>
+                    <select name="currentWeight" className="form-select" value={form.currentWeight} onChange={handleChange}>
+                      <option value="">Select</option>
+                      <option value="Below 2.0 kg">Below 2.0 kg</option>
+                      <option value="2.0 - 2.5 kg">2.0 – 2.5 kg</option>
+                      <option value="2.5 - 3.0 kg">2.5 – 3.0 kg</option>
+                      <option value="3.0 - 3.5 kg">3.0 – 3.5 kg</option>
+                      <option value="3.5 - 4.0 kg">3.5 – 4.0 kg</option>
+                      <option value="Above 4.0 kg">Above 4.0 kg</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
               {/* Address */}
               <div className="form-group mb-3">

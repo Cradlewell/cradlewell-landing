@@ -43,12 +43,12 @@ export async function POST(req: NextRequest) {
             year: "numeric",
         }).format(now);
 
-        const lead_generated_time = new Intl.DateTimeFormat("en-IN", {
+        const lead_generated_time = new Intl.DateTimeFormat("en-US", {
             timeZone: "Asia/Kolkata",
             hour: "numeric",
             minute: "2-digit",
             hour12: true,
-        }).format(now).toUpperCase();
+        }).format(now); // e.g. "10:30 AM" or "9:05 PM"
 
         const lead_generated_day = new Intl.DateTimeFormat("en-IN", {
             timeZone: "Asia/Kolkata",
