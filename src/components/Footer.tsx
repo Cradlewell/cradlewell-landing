@@ -7,8 +7,89 @@ import Image from 'next/image';
 import { FaX } from 'react-icons/fa6';
 import Link from 'next/link';
 
+const defaultSupportForm = {
+  name: '',
+  phone: '',
+  preferredTime: '-None-',
+  supportType: '-None-',
+  message: '',
+};
+
 const Footer = () => {
-    const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+
+  // Inline callback form
+  const [callbackPhone, setCallbackPhone] = useState('');
+  const [callbackSubmitting, setCallbackSubmitting] = useState(false);
+  const [callbackDone, setCallbackDone] = useState(false);
+
+  // Support modal form
+  const [supportForm, setSupportForm] = useState(defaultSupportForm);
+  const [supportSubmitting, setSupportSubmitting] = useState(false);
+  const [supportSubmitted, setSupportSubmitted] = useState(false);
+
+  const handleCallbackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCallbackSubmitting(true);
+    try {
+      const res = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Web User',
+          phone: callbackPhone,
+          pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
+          summary: 'Footer callback request',
+        }),
+      });
+      if (res.ok) {
+        setCallbackDone(true);
+        setCallbackPhone('');
+      } else {
+        alert('Something went wrong. Please try again.');
+      }
+    } catch {
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setCallbackSubmitting(false);
+    }
+  };
+
+  const handleSupportChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setSupportForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSupportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSupportSubmitting(true);
+    try {
+      const res = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: supportForm.name,
+          phone: supportForm.phone,
+          summary: `Preferred Time: ${supportForm.preferredTime} | Support Type: ${supportForm.supportType} | Message: ${supportForm.message}`,
+          pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
+        }),
+      });
+      if (res.ok) {
+        setSupportSubmitted(true);
+      } else {
+        alert('Something went wrong. Please try again.');
+      }
+    } catch {
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setSupportSubmitting(false);
+    }
+  };
+
+  const closeSupportModal = () => {
+    setShowSupportModal(false);
+    setSupportSubmitted(false);
+    setSupportForm(defaultSupportForm);
+  };
 
   return (
     <>
@@ -41,7 +122,7 @@ const Footer = () => {
 
       <Container style={{ position: 'relative', zIndex: 1 }}>
         <Row className="mb-4">
-          {/* Logo & newsletter */}
+          {/* Logo & callback form */}
           <Col md={5} className="mb-4 mb-md-0">
             <div className="d-flex align-items-center mb-3">
               <Image src="/images/logo2.png" alt="logo" width={180} height={40} className="me-2" />
@@ -50,43 +131,51 @@ const Footer = () => {
             <p style={{ color: '#C4C4C4' }}>
               Providing premium, hospital-grade postnatal and newborn care in the comfort of your home. Your peace of mind is our priority.
             </p>
-<Form className="d-flex align-items-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.06)', borderRadius: 999, padding: 4, width: '100%', maxWidth: 360, }} action="https://crm.zoho.in/crm/WebToLeadForm" method="POST" target="_blank" acceptCharset="UTF-8" > {/* Required Zoho Hidden Fields */} <input type="hidden" name="xnQsjsdp" value="ab57b5b359d00f17753c941644d97aeae606c083f09556afcb2c2379fc14a70e" /> <input type="hidden" name="xmIwtLD" value="4fa3f4e2ad017703fd868e31ccdc8072c25fbd99924ea5fb0cf4d96832587a30510aa3c76c4fdb67a0092f76a7a4daca" /> <input type="hidden" name="actionType" value="TGVhZHM=" /> <input type="hidden" name="returnURL" value="https://yourdomain.com/thank-you" />
-{/* Zoho requires Last Name field */}
-<input type="hidden" name="Last Name" value="WebUser" />
 
-{/* Visible Phone input */}
-<Form.Control
-type="tel"
-name="Phone"
-placeholder="Enter your phone number"
-required
-pattern="[0-9]{10}"
-maxLength={10}
-className="border-0"
-style={{
-backgroundColor: 'rgba(255, 255, 255, 0.12)',
-borderRadius: 999,
-padding: '10px 16px',
-fontSize: '0.9rem',
-color: '#ffffff',
-flex: 1,
-}}
-/>
-  <Button
-    type="submit"
-    className="border-0 ms-2"
-    style={{
-      backgroundColor: '#6675F7',
-      borderRadius: 999,
-      padding: '10px 20px',
-      fontSize: '0.9rem',
-      color: '#fff',
-    }}
-  >
-    Get a Call Back
-  </Button>
-</Form>
-
+            {callbackDone ? (
+              <p style={{ color: '#a0f0a0', fontSize: '0.9rem' }}>
+                Got it! We&apos;ll call you back soon.
+              </p>
+            ) : (
+              <Form
+                className="d-flex align-items-center"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.06)', borderRadius: 999, padding: 4, width: '100%', maxWidth: 360 }}
+                onSubmit={handleCallbackSubmit}
+              >
+                <Form.Control
+                  type="tel"
+                  placeholder="Enter your phone number"
+                  required
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  className="border-0"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    borderRadius: 999,
+                    padding: '10px 16px',
+                    fontSize: '0.9rem',
+                    color: '#ffffff',
+                    flex: 1,
+                  }}
+                  value={callbackPhone}
+                  onChange={e => setCallbackPhone(e.target.value)}
+                />
+                <Button
+                  type="submit"
+                  className="border-0 ms-2"
+                  disabled={callbackSubmitting}
+                  style={{
+                    backgroundColor: '#6675F7',
+                    borderRadius: 999,
+                    padding: '10px 20px',
+                    fontSize: '0.9rem',
+                    color: '#fff',
+                  }}
+                >
+                  {callbackSubmitting ? '...' : 'Get a Call Back'}
+                </Button>
+              </Form>
+            )}
           </Col>
 
           {/* Contact info */}
@@ -104,38 +193,18 @@ flex: 1,
           <Col md={2}>
             <h4 className=" mb-3">Follow Us</h4>
             <div className="d-flex gap-3 fs-5">
- <a
-      href="https://www.facebook.com/share/1HRDvZY1K3/?mibextid=wwXIfr"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-light"
-    >
-      <FaFacebookF />
-    </a>
-    <a
-      href="https://www.instagram.com/cradlewell_care?igsh=b3pkOHBxMTIyMGF4"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-light"
-    >
-      <FaInstagram />
-    </a>
-    <a
-      href="https://www.linkedin.com/company/cradlewell/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-light"
-    >
-      <FaLinkedinIn />
-    </a>
-    <a
-      href="https://x.com/cradle_well?s=11"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-light"
-    >
-      <FaX />
-    </a>
+              <a href="https://www.facebook.com/share/1HRDvZY1K3/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="text-light">
+                <FaFacebookF />
+              </a>
+              <a href="https://www.instagram.com/cradlewell_care?igsh=b3pkOHBxMTIyMGF4" target="_blank" rel="noopener noreferrer" className="text-light">
+                <FaInstagram />
+              </a>
+              <a href="https://www.linkedin.com/company/cradlewell/" target="_blank" rel="noopener noreferrer" className="text-light">
+                <FaLinkedinIn />
+              </a>
+              <a href="https://x.com/cradle_well?s=11" target="_blank" rel="noopener noreferrer" className="text-light">
+                <FaX />
+              </a>
             </div>
           </Col>
         </Row>
@@ -145,50 +214,70 @@ flex: 1,
             © Copyright 2025, All Rights Reserved by TENDERKIN WELLNESS PRIVATE LIMITED
           </Col>
           <Col md={6} className="text-md-end mt-3 mt-md-0">
-<Link href="/privacy-policy" className="me-3 text-light text-decoration-none">
-  Privacy Policy
-</Link>            
-<Link href="/terms-conditions" className="me-3 text-light text-decoration-none">
-Terms & Conditions
-</Link>             <span className="text-light" style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={() => setShowSupportModal(true)}>Support</span>
+            <Link href="/privacy-policy" className="me-3 text-light text-decoration-none">
+              Privacy Policy
+            </Link>
+            <Link href="/terms-conditions" className="me-3 text-light text-decoration-none">
+              Terms &amp; Conditions
+            </Link>
+            <span
+              className="text-light"
+              style={{ cursor: 'pointer', textDecoration: 'underline' }}
+              onClick={() => setShowSupportModal(true)}
+            >
+              Support
+            </span>
           </Col>
         </Row>
       </Container>
     </footer>
-      <Modal show={showSupportModal} onHide={() => setShowSupportModal(false)} centered size="lg">
-  <Modal.Header closeButton>
-    <Modal.Title>Need Help? We Will Call You Back</Modal.Title>
-  </Modal.Header>
-  <Modal.Body>
-    <div
-      dangerouslySetInnerHTML={{
-        __html: `
-          <form id="webform941304000000475011" action="https://crm.zoho.in/crm/WebToLeadForm"
-            name="WebToLeads941304000000475011" method="POST"
-            onSubmit="javascript:document.charset='UTF-8'; return checkMandatory941304000000475011();"
-            accept-charset="UTF-8">
 
-            <!-- Required Zoho Fields -->
-            <input type="text" style="display:none;" name="xnQsjsdp" value="ed70e75daf868e22b0b3fd743e12dc0005b7b4aa65666436ac6f51a086d43316" />
-            <input type="hidden" name="zc_gad" id="zc_gad" value="" />
-            <input type="text" style="display:none;" name="xmIwtLD" value="24192fb6bab63e1a2aad26bad1bcb0604dc25969a105ff878cf1328903b60e23af63509661cd13ec16e83fdd13f096a7" />
-            <input type="text" style="display:none;" name="actionType" value="TGVhZHM=" />
-            <input type="text" style="display:none;" name="returnURL" value="null" />
-
-            <div class="form-group mb-3">
+    {/* Support Modal */}
+    <Modal show={showSupportModal} onHide={closeSupportModal} centered size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>Need Help? We Will Call You Back</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {supportSubmitted ? (
+          <div className="text-center py-4">
+            <h5 className="text-success fw-semibold">Thank you! We&apos;ll call you shortly.</h5>
+            <p className="text-muted mt-2">Our team will reach out within a few hours.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSupportSubmit}>
+            <div className="form-group mb-3">
               <label>Full Name*</label>
-              <input type="text" name="Last Name" class="form-control" required pattern="[A-Za-z ]+" title="Please enter letters only" maxlength="80" />
+              <input
+                type="text"
+                name="name"
+                className="form-control"
+                required
+                pattern="[A-Za-z ]+"
+                title="Please enter letters only"
+                maxLength={80}
+                value={supportForm.name}
+                onChange={handleSupportChange}
+              />
             </div>
 
-            <div class="form-group mb-3">
+            <div className="form-group mb-3">
               <label>Phone Number*</label>
-              <input type="tel" name="Phone" class="form-control" required pattern="^[0-9]{10}$" maxlength="10" title="Please enter a valid 10-digit phone number" />
+              <input
+                type="tel"
+                name="phone"
+                className="form-control"
+                required
+                pattern="^[0-9]{10}$"
+                maxLength={10}
+                title="Please enter a valid 10-digit phone number"
+                value={supportForm.phone}
+                onChange={handleSupportChange}
+              />
             </div>
 
-            <div class="form-group mb-3">
+            <div className="form-group mb-3">
               <label>Preferred Time for Call</label>
-              <select name="LEADCF4" class="form-select">
+              <select name="preferredTime" className="form-select" value={supportForm.preferredTime} onChange={handleSupportChange}>
                 <option value="-None-">-None-</option>
                 <option value="Anytime">Anytime</option>
                 <option value="10 AM - 12 PM">10 AM – 12 PM</option>
@@ -197,9 +286,9 @@ Terms & Conditions
               </select>
             </div>
 
-            <div class="form-group mb-3">
+            <div className="form-group mb-3">
               <label>Type of Support Needed</label>
-              <select name="LEADCF5" class="form-select">
+              <select name="supportType" className="form-select" value={supportForm.supportType} onChange={handleSupportChange}>
                 <option value="-None-">-None-</option>
                 <option value="Booking Help">Booking Help</option>
                 <option value="Service Feedback">Service Feedback</option>
@@ -209,38 +298,27 @@ Terms & Conditions
               </select>
             </div>
 
-            <div class="form-group mb-3">
+            <div className="form-group mb-3">
               <label>Message / Additional Notes</label>
-              <textarea name="Description" class="form-control" rows="3"></textarea>
+              <textarea
+                name="message"
+                className="form-control"
+                rows={3}
+                value={supportForm.message}
+                onChange={handleSupportChange}
+              />
             </div>
 
-            <div class="d-grid">
-              <input type="submit" class="btn btn-primary w-100" value="Submit Request" />
+            <div className="d-grid">
+              <button type="submit" className="btn btn-primary w-100" disabled={supportSubmitting}>
+                {supportSubmitting ? 'Submitting...' : 'Submit Request'}
+              </button>
             </div>
-
-            <script>
-              function checkMandatory941304000000475011 () {
-                var mndFields = ['Last Name', 'Phone'];
-                var fldLabels = ['Full Name', 'Phone'];
-                for (var i = 0; i < mndFields.length; i++) {
-                  var field = document.forms['WebToLeads941304000000475011'][mndFields[i]];
-                  if (field && field.value.trim().length === 0) {
-                    alert(fldLabels[i] + ' cannot be empty.');
-                    field.focus();
-                    return false;
-                  }
-                }
-                return true;
-              }
-            </script>
           </form>
-        `,
-      }}
-    />
-  </Modal.Body>
-</Modal>
-
-      </>
+        )}
+      </Modal.Body>
+    </Modal>
+    </>
   );
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
 	Button,
 	Collapse,
@@ -58,7 +58,7 @@ const NavMenu2: React.FC<NavMenu2Props> = ({ toggleSearch, openModal }) => (
 				<FiPhoneCall /> Call Us
 			</a>
 		</Nav.Item>
-    		<Nav.Item className="nav-item mx-2">
+    	<Nav.Item className="nav-item mx-2">
 			<a className="btn btn-primary" onClick={openModal}>
 				Contact Us
 			</a>
@@ -77,23 +77,67 @@ const SearchForm: React.FC = () => (
 	</Form>
 );
 
+const defaultContactForm = {
+  name: '',
+  phone: '',
+  preferredTime: '-None-',
+  supportType: '-None-',
+  message: '',
+};
+
 const Navigation5: React.FC = () => {
 	const [isOpenSearch, setIsOpenSearch] = useState(false);
 	const [showModal, setShowModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState(defaultContactForm);
 
 	const toggleSearch = () => setIsOpenSearch((prev) => !prev);
 	const openModal = () => setShowModal(true);
-	const closeModal = () => setShowModal(false);
+	const closeModal = () => {
+    setShowModal(false);
+    setSubmitted(false);
+    setForm(defaultContactForm);
+  };
 
-  	useEffect(() => {
+  React.useEffect(() => {
 		const handleScroll = () => {
 			setScrolled(window.scrollY > 0);
 		};
-
 		window.addEventListener('scroll', handleScroll);
 		return () => window.removeEventListener('scroll', handleScroll);
 	}, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          summary: `Preferred Time: ${form.preferredTime} | Support Type: ${form.supportType} | Message: ${form.message}`,
+          pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
+        }),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        alert('Something went wrong. Please try again.');
+      }
+    } catch {
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
 	return (
 		<div className={`ezy__nav5 light sticky-top ${scrolled ? 'shadow-sm' : ''}`}>
@@ -122,90 +166,92 @@ const Navigation5: React.FC = () => {
 				</Container>
 			</Navbar>
 
-			{/* Free Trial Modal */}
-			   <Modal show={showModal} onHide={closeModal} centered>
-                   <Modal.Header closeButton>
-                     <Modal.Title>Need Help? We Will Call You Back</Modal.Title>
-                   </Modal.Header>
-                   <Modal.Body>
-                       <div
-                         dangerouslySetInnerHTML={{
-                           __html: `
-                             <form id="webform941304000000475011" action="https://crm.zoho.in/crm/WebToLeadForm"
-                               name="WebToLeads941304000000475011" method="POST"
-                               onSubmit="javascript:document.charset='UTF-8'; return checkMandatory941304000000475011();"
-                               accept-charset="UTF-8">
-                   
-                               <!-- Required Zoho Fields -->
-                               <input type="text" style="display:none;" name="xnQsjsdp" value="ed70e75daf868e22b0b3fd743e12dc0005b7b4aa65666436ac6f51a086d43316" />
-                               <input type="hidden" name="zc_gad" id="zc_gad" value="" />
-                               <input type="text" style="display:none;" name="xmIwtLD" value="24192fb6bab63e1a2aad26bad1bcb0604dc25969a105ff878cf1328903b60e23af63509661cd13ec16e83fdd13f096a7" />
-                               <input type="text" style="display:none;" name="actionType" value="TGVhZHM=" />
-                               <input type="text" style="display:none;" name="returnURL" value="null" />
-                   
-                               <div class="form-group mb-3">
-                                 <label>Full Name*</label>
-                                 <input type="text" name="Last Name" class="form-control" required pattern="[A-Za-z ]+" title="Please enter letters only" maxlength="80" />
-                               </div>
-                   
-                               <div class="form-group mb-3">
-                                 <label>Phone Number*</label>
-                                 <input type="tel" name="Phone" class="form-control" required pattern="^[0-9]{10}$" maxlength="10" title="Please enter a valid 10-digit phone number" />
-                               </div>
-                   
-                               <div class="form-group mb-3">
-                                 <label>Preferred Time for Call</label>
-                                 <select name="LEADCF4" class="form-select">
-                                   <option value="-None-">-None-</option>
-                                   <option value="Anytime">Anytime</option>
-                                   <option value="10 AM - 12 PM">10 AM - 12 PM</option>
-                                   <option value="12 PM - 4 PM">12 PM - 4 PM</option>
-                                   <option value="4 PM - 8 PM">4 PM - 8 PM</option>
-                                 </select>
-                               </div>
-                   
-                               <div class="form-group mb-3">
-                                 <label>Type of Support Needed</label>
-                                 <select name="LEADCF5" class="form-select">
-                                   <option value="-None-">-None-</option>
-                                   <option value="Booking Help">Booking Help</option>
-                                   <option value="Service Feedback">Service Feedback</option>
-                                   <option value="Nurse Concern">Nurse Concern</option>
-                                   <option value="Change Package">Change Package</option>
-                                   <option value="Other">Other</option>
-                                 </select>
-                               </div>
-                   
-                               <div class="form-group mb-3">
-                                 <label>Message / Additional Notes</label>
-                                 <textarea name="Description" class="form-control" rows="3"></textarea>
-                               </div>
-                   
-                               <div class="d-grid">
-                                 <input type="submit" class="btn btn-primary w-100" value="Submit Request" />
-                               </div>
-                   
-                               <script>
-                                 function checkMandatory941304000000475011 () {
-                                   var mndFields = ['Last Name', 'Phone'];
-                                   var fldLabels = ['Full Name', 'Phone'];
-                                   for (var i = 0; i < mndFields.length; i++) {
-                                     var field = document.forms['WebToLeads941304000000475011'][mndFields[i]];
-                                     if (field && field.value.trim().length === 0) {
-                                       alert(fldLabels[i] + ' cannot be empty.');
-                                       field.focus();
-                                       return false;
-                                     }
-                                   }
-                                   return true;
-                                 }
-                               </script>
-                             </form>
-                           `,
-                         }}
-                       />
-                     </Modal.Body>
-                 </Modal>
+			{/* Contact Us Modal */}
+			<Modal show={showModal} onHide={closeModal} centered>
+				<Modal.Header closeButton>
+					<Modal.Title>Need Help? We Will Call You Back</Modal.Title>
+				</Modal.Header>
+				<Modal.Body>
+          {submitted ? (
+            <div className="text-center py-4">
+              <h5 className="text-success fw-semibold">Thank you! We&apos;ll call you shortly.</h5>
+              <p className="text-muted mt-2">Our team will reach out within a few hours.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="form-group mb-3">
+                <label>Full Name*</label>
+                <input
+                  type="text"
+                  name="name"
+                  className="form-control"
+                  required
+                  pattern="[A-Za-z ]+"
+                  title="Please enter letters only"
+                  maxLength={80}
+                  value={form.name}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group mb-3">
+                <label>Phone Number*</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  className="form-control"
+                  required
+                  pattern="^[0-9]{10}$"
+                  maxLength={10}
+                  title="Please enter a valid 10-digit phone number"
+                  value={form.phone}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group mb-3">
+                <label>Preferred Time for Call</label>
+                <select name="preferredTime" className="form-select" value={form.preferredTime} onChange={handleChange}>
+                  <option value="-None-">-None-</option>
+                  <option value="Anytime">Anytime</option>
+                  <option value="10 AM - 12 PM">10 AM – 12 PM</option>
+                  <option value="12 PM - 4 PM">12 PM – 4 PM</option>
+                  <option value="4 PM - 8 PM">4 PM – 8 PM</option>
+                </select>
+              </div>
+
+              <div className="form-group mb-3">
+                <label>Type of Support Needed</label>
+                <select name="supportType" className="form-select" value={form.supportType} onChange={handleChange}>
+                  <option value="-None-">-None-</option>
+                  <option value="Booking Help">Booking Help</option>
+                  <option value="Service Feedback">Service Feedback</option>
+                  <option value="Nurse Concern">Nurse Concern</option>
+                  <option value="Change Package">Change Package</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div className="form-group mb-3">
+                <label>Message / Additional Notes</label>
+                <textarea
+                  name="message"
+                  className="form-control"
+                  rows={3}
+                  value={form.message}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="d-grid">
+                <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+          )}
+				</Modal.Body>
+			</Modal>
 		</div>
 	);
 };
