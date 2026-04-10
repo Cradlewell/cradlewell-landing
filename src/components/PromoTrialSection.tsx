@@ -103,7 +103,7 @@ const PromoTrialSection = () => {
 
         <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center align-items-center">
           <Button
-            onClick={openModal}
+            onClick={() => openModal()}
             style={{
               background: 'linear-gradient(135deg, #F97316 0%, #fb923c 100%)',
               border: 'none',

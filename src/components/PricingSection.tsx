@@ -139,7 +139,7 @@ const PricingSection = () => {
           </Col>
         </Row>
 
-        <Button variant="primary" className="mt-5" onClick={openModal}>
+        <Button variant="primary" className="mt-5" onClick={() => openModal()}>
           Book Free Consultation Call
         </Button>
         <p className="mt-2 text-muted fw-bold">Limited availability — book your preferred time slot now.</p>

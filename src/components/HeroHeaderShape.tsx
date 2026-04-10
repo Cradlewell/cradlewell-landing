@@ -69,7 +69,7 @@ const HeroHeader1 = () => {
 
             <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start">
               <button
-                onClick={openModal}
+                onClick={() => openModal()}
                 className="btn btn-primary fs-6 px-4 py-3"
                 style={{ borderRadius: 12 }}
               >

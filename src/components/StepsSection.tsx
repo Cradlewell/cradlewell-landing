@@ -144,7 +144,7 @@ const StepsSection = () => {
         <ScrollReveal direction="none" delay={200}>
           <div className="text-center mt-5">
             <Button
-              onClick={openModal}
+              onClick={() => openModal()}
               variant="primary"
               style={{ padding: '13px 32px', fontSize: '1rem' }}
             >

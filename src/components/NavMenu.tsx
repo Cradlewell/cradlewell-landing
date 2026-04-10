@@ -59,7 +59,7 @@ const NavMenu2: React.FC<NavMenu2Props> = ({ toggleSearch, openModal }) => (
 			</a>
 		</Nav.Item>
     	<Nav.Item className="nav-item mx-2">
-			<a className="btn btn-primary" onClick={openModal}>
+			<a className="btn btn-primary" onClick={() => openModal()}>
 				Contact Us
 			</a>
 		</Nav.Item>

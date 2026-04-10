@@ -14,7 +14,7 @@ const BackgroundBox = () => {
             nurses — when you need it, where you need it.
           </p>
           <button
-            onClick={openModal}
+            onClick={() => openModal()}
             className="background-box-btn"
           >
             Book Free Consultation

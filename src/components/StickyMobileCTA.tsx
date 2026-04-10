@@ -59,7 +59,7 @@ export default function StickyMobileCTA() {
 
       {/* CTA button */}
       <button
-        onClick={openModal}
+        onClick={() => openModal()}
         style={{
           background: 'linear-gradient(135deg, #5F47FF 0%, #6388FF 100%)',
           border: 'none',

@@ -133,7 +133,7 @@ export default function DarkBreakSection() {
 
             {/* CTA */}
             <button
-              onClick={openModal}
+              onClick={() => openModal()}
               style={{
                 background: 'linear-gradient(135deg, #F97316 0%, #fb923c 100%)',
                 border: 'none',
