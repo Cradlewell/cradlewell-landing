@@ -121,7 +121,7 @@ const HeroHeader1 = () => {
           <Col lg={6} className="mt-5 mt-lg-0">
             <div className="hero-image-wrap">
               <img
-                src="/images/website_hero_image.png"
+                src="/images/website_Hero_Image.png"
                 alt="Trusted Nurse-led Newborn and Postnatal Home Care Support Banner for Mothers and Babies by Cradlewell in Bangalore"
                 className="rounded img-fluid mt-3"
                 fetchPriority="high"
