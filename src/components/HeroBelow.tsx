@@ -120,7 +120,7 @@ const HeroBelow = () => {
                 <div className="d-flex align-items-center justify-content-center">
                   <StatCounter end={100} suffix="+" label="Families Served" />
                   <div style={{ width: 1, height: 52, background: "rgba(15,23,42,0.10)", flexShrink: 0 }} />
-                  <StatCounter end={4.8} suffix="★" label="Customer Rating" decimals={1} color="#F97316" />
+                  <StatCounter end={4.9} suffix="★" label="Customer Rating" decimals={1} color="#F97316" />
                   <div style={{ width: 1, height: 52, background: "rgba(15,23,42,0.10)", flexShrink: 0 }} />
                   <StatCounter end={40} suffix="+" label="Years Experience" />
                 </div>
