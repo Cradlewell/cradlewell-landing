@@ -19,7 +19,7 @@ type LeadForm = {
 };
 
 const INITIAL_MESSAGE =
-    "Hi, I'm Aria 🌸 So glad you reached out. Is your little one already home, or are you getting ready for delivery?";
+    "Hi, I'm Aria 🌸 So glad you reached out. Is your little one already home, or are you getting ready for delivery?\n[[OPTIONS:Baby is home|Still expecting]]";
 
 function cleanReply(text: string) {
     return text

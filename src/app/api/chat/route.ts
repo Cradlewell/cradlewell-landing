@@ -16,7 +16,7 @@ const RequestSchema = z.object({
 
 type ServiceType = "nurse" | "japa" | null;
 type CareType = "day" | "night" | null;
-type Duration = "8" | "10" | "12" | null;
+type Duration = "8" | "9" | "10" | "12" | null;
 
 interface FlowState {
     serviceType: ServiceType;
@@ -68,6 +68,7 @@ function detectDuration(text: string): Duration {
     const t = text.toLowerCase().replace(/\s+/g, "");
     if (/12/.test(t) || /twelve/.test(t)) return "12";
     if (/10/.test(t) || /ten/.test(t)) return "10";
+    if (/\b9\b|nine/.test(text.toLowerCase())) return "9";
     if (/8/.test(t) || /eight/.test(t)) return "8";
     return null;
 }
@@ -124,18 +125,18 @@ function parseFlowState(messages: Array<{ role: string; content: string }>): Flo
 function getFlowReply(state: FlowState, isFirstServiceQuestion: boolean): string {
     const { serviceType, careType, duration, timeSlot } = state;
 
+    const TIME_SLOT_OPTIONS = "[[OPTIONS:8 AM–4 PM|9 AM–5 PM|10 AM–6 PM]]";
+
     // Step 1: Ask service type
     if (!serviceType) {
-        const welcome = isFirstServiceQuestion
-            ? "Lovely, we're here to help! 🌸 "
-            : "";
-        return `${welcome}Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?`;
+        const welcome = isFirstServiceQuestion ? "Lovely, we're here to help! 🌸 " : "";
+        return `${welcome}Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?\n[[OPTIONS:Certified Nurse|Postnatal Caregiver (Japa)]]`;
     }
 
     // Step 2: Ask care type
     if (!careType) {
         const label = serviceType === "nurse" ? "Certified Nurse" : "Japa/MOBA caregiver";
-        return `Great, a ${label} it is! Day care or night care?`;
+        return `Great, a ${label} it is! Day care or night care?\n[[OPTIONS:Day care|Night care]]`;
     }
 
     // Step 3+: Branch by service + care type
@@ -145,7 +146,7 @@ function getFlowReply(state: FlowState, isFirstServiceQuestion: boolean): string
         }
         if (careType === "day") {
             if (!timeSlot) {
-                return "Which time slot works for you? 8 AM–4 PM, 9 AM–5 PM, or 10 AM–6 PM?";
+                return `Which time slot works for you?\n${TIME_SLOT_OPTIONS}`;
             }
             return `${timeSlot} — noted! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
         }
@@ -154,18 +155,18 @@ function getFlowReply(state: FlowState, isFirstServiceQuestion: boolean): string
     if (serviceType === "japa") {
         if (careType === "night") {
             if (!duration) {
-                return "We have two night options — 9 hrs (9 PM–6 AM) or 12 hrs (8 PM–8 AM). Which works for you?";
+                return "We have two night options — 9 hrs (9 PM–6 AM) or 12 hrs (8 PM–8 AM). Which works for you?\n[[OPTIONS:9 hrs (9 PM–6 AM)|12 hrs (8 PM–8 AM)]]";
             }
             const shift = duration === "12" ? "8 PM–8 AM" : "9 PM–6 AM";
             return `${shift} — great choice! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
         }
         if (careType === "day") {
             if (!duration) {
-                return "We have 8, 10, or 12-hour day shifts. Which suits you best?";
+                return `We have 8, 10, or 12-hour day shifts. Which suits you best?\n[[OPTIONS:8 hours|10 hours|12 hours]]`;
             }
             if (duration === "8") {
                 if (!timeSlot) {
-                    return "Which slot works best for you? 8 AM–4 PM, 9 AM–5 PM, or 10 AM–6 PM?";
+                    return `Which slot works best for you?\n${TIME_SLOT_OPTIONS}`;
                 }
                 return `${timeSlot} — perfect! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
             }
@@ -179,7 +180,7 @@ function getFlowReply(state: FlowState, isFirstServiceQuestion: boolean): string
     }
 
     // Fallback
-    return "Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?";
+    return `Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?\n[[OPTIONS:Certified Nurse|Postnatal Caregiver (Japa)]]`;
 }
 
 // ── Is this an informational question? ───────────────────────────────────────
