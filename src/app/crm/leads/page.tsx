@@ -1,10 +1,10 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useDB, isStale, isUrgentNew } from "@/lib/crm-store";
+import { useDB, api } from "@/lib/crm-store";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
-import { Plus, Search, Download, AlertCircle, Clock } from "lucide-react";
+import { Plus, Search, Download, Trash2 } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadSource, LeadStage } from "@/lib/crm-types";
 
@@ -24,6 +24,13 @@ export default function LeadsPage() {
   const db = useDB();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
+
+  const handleDelete = (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    if (confirm(`Delete lead "${name}"? This cannot be undone.`)) {
+      api.deleteLead(id);
+    }
+  };
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "">("");
   const [filterSource, setFilterSource] = useState<LeadSource | "">("");
@@ -137,27 +144,14 @@ export default function LeadsPage() {
                 <th>Days</th>
                 <th>Stage</th>
                 <th>Owner</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(l => (
                 <tr key={l.id} onClick={() => setSelectedLead(l.id)}>
                   <td className="sticky-col" style={{ minWidth: 160 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{l.name}</span>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        {isUrgentNew(l) && (
-                          <span className="crm-badge" style={{ background: "#FEF2F2", color: "#DC2626" }}>
-                            <AlertCircle size={10} /> Urgent
-                          </span>
-                        )}
-                        {isStale(l) && (
-                          <span className="crm-badge" style={{ background: "#FFFBEB", color: "#B45309" }}>
-                            <Clock size={10} /> Stale
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{l.name}</span>
                   </td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <a href={`tel:${l.phone}`} style={{ color: "var(--crm-primary)", textDecoration: "none", fontSize: "0.875rem" }} onClick={e => e.stopPropagation()}>
@@ -181,6 +175,17 @@ export default function LeadsPage() {
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.serviceDays ? `${l.serviceDays} days` : "—"}</td>
                   <td><StageBadge stage={l.stage} /></td>
                   <td style={{ fontSize: "0.8rem" }}>{l.owner}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    <button
+                      onClick={e => handleDelete(e, l.id, l.name)}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 6px", borderRadius: 6, color: "var(--crm-text-muted)", display: "flex", alignItems: "center" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#DC2626")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "var(--crm-text-muted)")}
+                      title="Delete lead"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
