@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { CRADLEWELL_KNOWLEDGE } from "@/lib/cradlewell-knowledge";
 
@@ -192,9 +192,9 @@ function isInfoQuestion(text: string): boolean {
 
 export async function POST(req: NextRequest) {
     try {
-        if (!process.env.ANTHROPIC_API_KEY) {
+        if (!process.env.GEMINI_API_KEY) {
             return NextResponse.json(
-                { reply: "Server configuration error: ANTHROPIC_API_KEY is missing." },
+                { reply: "Server configuration error: GEMINI_API_KEY is missing." },
                 { status: 500 }
             );
         }
@@ -218,31 +218,31 @@ export async function POST(req: NextRequest) {
             // If user asked an informational question, let Claude answer it,
             // then append the next flow step at the end
             if (isInfoQuestion(lastUserMsg) && !flowReply.includes("[[COLLECT_LEAD]]")) {
-                const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-                const nextStep = flowReply;
-                const completion = await client.messages.create({
-                    model: "claude-sonnet-4-6",
-                    max_tokens: 200,
-                    temperature: 0.3,
-                    system: `You are Aria from Cradlewell. Answer the user's question in 1–2 short plain text sentences. No markdown, no bullet points, no bold text.\n\nKnowledge:\n${CRADLEWELL_KNOWLEDGE}\n\nAfter answering, always end with: "${nextStep}"`,
-                    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+                const model = genAI.getGenerativeModel({
+                    model: "gemini-1.5-flash",
+                    systemInstruction: `You are Aria from Cradlewell. Answer the user's question in 1–2 short plain text sentences. No markdown, no bullet points, no bold text.\n\nKnowledge:\n${CRADLEWELL_KNOWLEDGE}\n\nAfter answering, always end with: "${flowReply}"`,
                 });
-                const aiAnswer = (completion.content[0]?.type === "text" ? completion.content[0].text : "").trim();
-                return NextResponse.json({ reply: aiAnswer || nextStep });
+                const result = await model.generateContent({
+                    contents: messages.map((m) => ({
+                        role: m.role === "assistant" ? "model" : "user",
+                        parts: [{ text: m.content }],
+                    })),
+                    generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
+                });
+                const aiAnswer = result.response.text().trim();
+                return NextResponse.json({ reply: aiAnswer || flowReply });
             }
 
             // Happy path: return deterministic reply
             return NextResponse.json({ reply: flowReply });
         }
 
-        // ── GREETING MODE: Claude AI (before baby stage confirmed) ────────────
-        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-        const completion = await client.messages.create({
-            model: "claude-sonnet-4-6",
-            max_tokens: 128,
-            temperature: 0.5,
-            system: `You are Aria from Cradlewell — warm and caring.
+        // ── GREETING MODE: Gemini AI (before baby stage confirmed) ───────────
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            systemInstruction: `You are Aria from Cradlewell — warm and caring.
 
 RULES:
 - Reply in 1 sentence only. Maximum 15 words.
@@ -250,11 +250,18 @@ RULES:
 - Ask ONCE: "Is your little one already home, or are you still expecting?"
 - If already answered, do not repeat the question.
 - No markdown, no bullet points.`,
-            messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        });
+
+        const result = await model.generateContent({
+            contents: messages.map((m) => ({
+                role: m.role === "assistant" ? "model" : "user",
+                parts: [{ text: m.content }],
+            })),
+            generationConfig: { maxOutputTokens: 128, temperature: 0.5 },
         });
 
         const reply =
-            (completion.content[0]?.type === "text" ? completion.content[0].text : "").trim() ||
+            result.response.text().trim() ||
             "Is your little one already home, or are you still expecting?";
 
         return NextResponse.json({ reply });
