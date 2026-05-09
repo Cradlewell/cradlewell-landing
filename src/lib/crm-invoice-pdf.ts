@@ -60,7 +60,8 @@ function amountInWords(amount: number): string {
 
 async function fetchLogoBase64(): Promise<string | null> {
   try {
-    const res = await fetch("/images/cw_logo.png");
+    const url = (typeof window !== "undefined" ? window.location.origin : "") + "/images/cw_logo.png";
+    const res = await fetch(url);
     if (!res.ok) return null;
     const blob = await res.blob();
     return await new Promise((resolve) => {
@@ -70,7 +71,24 @@ async function fetchLogoBase64(): Promise<string | null> {
       reader.readAsDataURL(blob);
     });
   } catch {
-    return null;
+    // fallback: load via Image element + canvas
+    try {
+      return await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext("2d")!.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = () => resolve(null);
+        img.src = "/images/cw_logo.png";
+      });
+    } catch {
+      return null;
+    }
   }
 }
 
