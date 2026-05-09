@@ -102,20 +102,25 @@ async function storeMessage(waPhone: string, direction: "inbound" | "outbound", 
 
 // ── Session helpers ───────────────────────────────────────────────────────────
 
-async function getSession(waPhone: string) {
+interface Session {
+    wa_phone: string;
+    step: string;
+    name?: string;
+    service?: string;
+    baby_status?: string;
+    location?: string;
+    due_date?: string;
+    shift?: string;
+    time_slot?: string;
+}
+
+async function getSession(waPhone: string): Promise<Session | null> {
     const { data } = await supabase
         .from("whatsapp_sessions")
         .select("*")
         .eq("wa_phone", waPhone)
         .single();
-    return data as {
-        wa_phone: string;
-        step: string;
-        name?: string;
-        service?: string;
-        baby_status?: string;
-        location?: string;
-    } | null;
+    return data as Session | null;
 }
 
 async function upsertSession(waPhone: string, updates: Record<string, string>) {
@@ -140,27 +145,24 @@ async function upsertSession(waPhone: string, updates: Record<string, string>) {
 
 // ── Push lead to CRM ──────────────────────────────────────────────────────────
 
-async function pushLeadToCRM(
-    waPhone: string,
-    name: string,
-    service: string,
-    babyStatus: string,
-    location?: string
-) {
+async function pushLeadToCRM(session: Session, waPhone: string) {
     const phone = waPhone.replace(/\D/g, "").slice(-10);
     const now = new Date();
 
     try {
         const { error } = await supabase.from("leads").insert({
             id: crypto.randomUUID(),
-            name,
+            name: session.name || "WhatsApp User",
             phone,
             whatsapp: phone,
             source: "WhatsApp",
             lead_date: now.toISOString(),
-            service_required: service,
-            baby_status: babyStatus || "Unknown",
-            address: location || null,
+            service_required: session.service || "",
+            baby_status: session.baby_status || "Unknown",
+            address: session.location || null,
+            care_start_date: session.due_date || null,
+            preferred_shift: session.shift || null,
+            shift_time: session.time_slot || null,
             owner: "Unassigned",
             stage: "New Lead",
             temperature: "Cold",
@@ -173,7 +175,24 @@ async function pushLeadToCRM(
     }
 }
 
-// ── Bot flow ──────────────────────────────────────────────────────────────────
+// ── Build summary thank-you message ──────────────────────────────────────────
+
+function buildSummary(session: Session): string {
+    const lines: string[] = [];
+    lines.push(`Thank you, ${session.name}! 🌸 Here's a summary of your care request:\n`);
+    if (session.name)       lines.push(`👤 Name: ${session.name}`);
+    if (session.baby_status) lines.push(`🤰 Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
+    if (session.location)   lines.push(`📍 Location: ${session.location}`);
+    if (session.due_date)   lines.push(`🗓 Due Date: ${session.due_date}`);
+    if (session.service)    lines.push(`💼 Service: ${session.service}`);
+    if (session.shift)      lines.push(`🌅 Shift: ${session.shift}`);
+    if (session.time_slot)  lines.push(`⏰ Timing: ${session.time_slot}`);
+    lines.push(`\nOur care advisor will call you shortly to confirm availability.`);
+    lines.push(`For urgent help, call: +91 93638 93639`);
+    return lines.join("\n");
+}
+
+// ── Button constants ──────────────────────────────────────────────────────────
 
 const BABY_STATUS_BUTTONS = [
     { id: "home", title: "Baby is home" },
@@ -185,13 +204,26 @@ const SERVICE_BUTTONS = [
     { id: "japa", title: "Postnatal Caregiver" },
 ];
 
+const SHIFT_BUTTONS = [
+    { id: "day", title: "Day care" },
+    { id: "night", title: "Night care" },
+];
+
+const DAY_SLOT_BUTTONS = [
+    { id: "slot_8", title: "8 AM – 4 PM" },
+    { id: "slot_9", title: "9 AM – 5 PM" },
+    { id: "slot_10", title: "10 AM – 6 PM" },
+];
+
+// ── Bot flow ──────────────────────────────────────────────────────────────────
+
 async function handleMessage(waPhone: string, incomingText: string, profileName?: string) {
     const text = incomingText.trim();
     const session = await getSession(waPhone);
 
     await storeMessage(waPhone, "inbound", text);
 
-    // New user or restart after completion
+    // ── New user or restart ───────────────────────────────────────────────────
     if (!session || session.step === "completed") {
         if (profileName) {
             await upsertSession(waPhone, { step: "ask_baby_status", name: profileName });
@@ -208,7 +240,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // Step: collect name (fallback if profile name was unavailable)
+    // ── Collect name ──────────────────────────────────────────────────────────
     if (session.step === "ask_name") {
         const name = profileName || text;
         await upsertSession(waPhone, { name, step: "ask_baby_status" });
@@ -218,7 +250,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // Step: collect baby status
+    // ── Collect baby status ───────────────────────────────────────────────────
     if (session.step === "ask_baby_status") {
         const t = text.toLowerCase();
         let babyStatus = "";
@@ -248,16 +280,26 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // Step: location received as text (fallback — ideally handled via handleLocation)
+    // ── Collect location (text fallback if GPS share not used) ───────────────
     if (session.step === "ask_location") {
-        await upsertSession(waPhone, { location: text, step: "ask_service" });
+        await upsertSession(waPhone, { location: text, step: "ask_due_date" });
+        const bodyText =
+            "📅 Please type your expected due date\n(e.g. *15 June 2025*)";
+        await sendMessage(waPhone, bodyText);
+        await storeMessage(waPhone, "outbound", bodyText);
+        return;
+    }
+
+    // ── Collect due date ──────────────────────────────────────────────────────
+    if (session.step === "ask_due_date") {
+        await upsertSession(waPhone, { due_date: text, step: "ask_service" });
         const bodyText = "Got it! 🌸 What kind of care are you looking for?";
         await sendButtonMessage(waPhone, bodyText, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", bodyText);
         return;
     }
 
-    // Step: collect service → push lead
+    // ── Collect service ───────────────────────────────────────────────────────
     if (session.step === "ask_service") {
         const t = text.toLowerCase();
         let service = "";
@@ -271,29 +313,78 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             return;
         }
 
-        await upsertSession(waPhone, { service, step: "completed" });
-        await pushLeadToCRM(
-            waPhone,
-            session.name || "WhatsApp User",
-            service,
-            session.baby_status || "",
-            session.location
-        );
-
-        const reply = `Thank you, ${session.name}! 🌸 Our care advisor will call you shortly.\n\nFor urgent queries, call us: +91 93638 93639`;
-        await sendMessage(waPhone, reply);
-        await storeMessage(waPhone, "outbound", reply);
+        await upsertSession(waPhone, { service, step: "ask_shift" });
+        const bodyText = `Great choice! 🌸 Would you need *Day care* or *Night care*?`;
+        await sendButtonMessage(waPhone, bodyText, SHIFT_BUTTONS);
+        await storeMessage(waPhone, "outbound", bodyText);
         return;
     }
 
-    // Already completed — any follow-up message
+    // ── Collect shift ─────────────────────────────────────────────────────────
+    if (session.step === "ask_shift") {
+        const t = text.toLowerCase();
+        let shift = "";
+
+        if (/^day$|day care/.test(t)) shift = "Day";
+        else if (/^night$|night care/.test(t)) shift = "Night";
+        else {
+            await sendButtonMessage(waPhone, "Please tap your preferred shift:", SHIFT_BUTTONS);
+            await storeMessage(waPhone, "outbound", "Please tap your preferred shift:");
+            return;
+        }
+
+        await upsertSession(waPhone, { shift });
+
+        if (shift === "Day") {
+            await upsertSession(waPhone, { step: "ask_time_slot" });
+            const bodyText =
+                "We have *8-hour* morning shifts. Please select your preferred timing:";
+            await sendButtonMessage(waPhone, bodyText, DAY_SLOT_BUTTONS);
+            await storeMessage(waPhone, "outbound", bodyText);
+        } else {
+            // Night is fixed — 9 PM to 6 AM (9 hrs)
+            const timeSlot = "9 PM – 6 AM";
+            await upsertSession(waPhone, { time_slot: timeSlot, step: "completed" });
+            const updatedSession = { ...session, shift, time_slot: timeSlot };
+            await pushLeadToCRM(updatedSession as Session, waPhone);
+            const summary = buildSummary(updatedSession as Session);
+            await sendMessage(waPhone, summary);
+            await storeMessage(waPhone, "outbound", summary);
+        }
+        return;
+    }
+
+    // ── Collect time slot (day shift) ─────────────────────────────────────────
+    if (session.step === "ask_time_slot") {
+        const t = text.toLowerCase();
+        let timeSlot = "";
+
+        if (/8\s*am|8am|8.*4pm|slot_8/.test(t)) timeSlot = "8 AM – 4 PM";
+        else if (/9\s*am|9am|9.*5pm|slot_9/.test(t)) timeSlot = "9 AM – 5 PM";
+        else if (/10\s*am|10am|10.*6pm|slot_10/.test(t)) timeSlot = "10 AM – 6 PM";
+        else {
+            await sendButtonMessage(waPhone, "Please tap your preferred timing:", DAY_SLOT_BUTTONS);
+            await storeMessage(waPhone, "outbound", "Please tap your preferred timing:");
+            return;
+        }
+
+        await upsertSession(waPhone, { time_slot: timeSlot, step: "completed" });
+        const updatedSession = { ...session, time_slot: timeSlot };
+        await pushLeadToCRM(updatedSession as Session, waPhone);
+        const summary = buildSummary(updatedSession as Session);
+        await sendMessage(waPhone, summary);
+        await storeMessage(waPhone, "outbound", summary);
+        return;
+    }
+
+    // ── Already completed ─────────────────────────────────────────────────────
     const reply =
         "Our care advisor will contact you very soon! 🌸 For urgent help, call +91 93638 93639.";
     await sendMessage(waPhone, reply);
     await storeMessage(waPhone, "outbound", reply);
 }
 
-// ── Handle incoming location share ───────────────────────────────────────────
+// ── Handle incoming GPS location share ───────────────────────────────────────
 
 async function handleLocation(
     waPhone: string,
@@ -305,7 +396,6 @@ async function handleLocation(
     const session = await getSession(waPhone);
     if (!session || session.step !== "ask_location") return;
 
-    // Build human-readable location string
     const parts = [name, address].filter(Boolean);
     const locationText =
         parts.length > 0
@@ -313,10 +403,10 @@ async function handleLocation(
             : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
 
     await storeMessage(waPhone, "inbound", `📍 ${locationText}`);
-    await upsertSession(waPhone, { location: locationText, step: "ask_service" });
+    await upsertSession(waPhone, { location: locationText, step: "ask_due_date" });
 
-    const bodyText = "Got it! 🌸 What kind of care are you looking for?";
-    await sendButtonMessage(waPhone, bodyText, SERVICE_BUTTONS);
+    const bodyText = "📅 Please type your expected due date\n(e.g. *15 June 2025*)";
+    await sendMessage(waPhone, bodyText);
     await storeMessage(waPhone, "outbound", bodyText);
 }
 
@@ -346,18 +436,17 @@ export async function POST(req: NextRequest) {
         const message = messages[0];
         const waPhone: string = message.from;
 
-        // Extract WhatsApp profile name from contacts array
         const contacts = body.entry?.[0]?.changes?.[0]?.value?.contacts;
         const profileName: string | undefined = contacts?.[0]?.profile?.name || undefined;
 
-        // Handle location share
+        // Handle GPS location share
         if (message.type === "location") {
             const { latitude, longitude, name, address } = message.location ?? {};
             await handleLocation(waPhone, latitude, longitude, name, address);
             return NextResponse.json({ status: "ok" });
         }
 
-        // Extract text from plain message OR interactive button tap
+        // Extract text from plain message OR button tap
         let text: string | null = null;
         if (message.type === "text") {
             text = message.text?.body ?? null;

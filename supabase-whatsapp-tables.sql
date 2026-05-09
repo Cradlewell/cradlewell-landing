@@ -7,6 +7,9 @@ create table if not exists whatsapp_sessions (
   service text,
   baby_status text,
   location text,
+  due_date text,
+  shift text,
+  time_slot text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -23,5 +26,8 @@ create table if not exists whatsapp_messages (
 create index if not exists idx_whatsapp_messages_phone on whatsapp_messages(wa_phone);
 create index if not exists idx_whatsapp_sessions_phone on whatsapp_sessions(wa_phone);
 
--- Run this if table already exists (adds location column)
+-- Run these if table already exists
 alter table whatsapp_sessions add column if not exists location text;
+alter table whatsapp_sessions add column if not exists due_date text;
+alter table whatsapp_sessions add column if not exists shift text;
+alter table whatsapp_sessions add column if not exists time_slot text;
