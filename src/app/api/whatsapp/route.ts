@@ -337,8 +337,8 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
     if (session.step === "ask_baby_status") {
         const t = text.toLowerCase();
         let babyStatus = "";
-        if (/^home$|^1$|baby is home|^born$|arrived|delivered/.test(t)) babyStatus = "Born";
-        else if (/^expecting$|^2$|still expecting|pregnant|due/.test(t)) babyStatus = "Expecting";
+        if (/^home$|^1$|baby.?is.?home|^born$|arrived|delivered/.test(t)) babyStatus = "Born";
+        else if (/^expecting$|^2$|still.?expecting|pregnant|due/.test(t)) babyStatus = "Expecting";
         else {
             await sendButtonMessage(waPhone, "Please tap one of the options below:", BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap one of the options below:");
@@ -370,7 +370,16 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
 
     // ── Collect due month ─────────────────────────────────────────────────────
     if (session.step === "ask_due_date") {
-        await upsertSession(waPhone, { due_date: text, step: "ask_service" });
+        // id format: "month_YYYY_M" (e.g. "month_2026_5")
+        const monthMatch = /^month_(\d{4})_(\d{1,2})$/.exec(text);
+        if (!monthMatch) {
+            await sendMonthListMessage(waPhone);
+            await storeMessage(waPhone, "outbound", "📅 Please select your expected due month:");
+            return;
+        }
+        const d = new Date(parseInt(monthMatch[1]), parseInt(monthMatch[2]) - 1, 1);
+        const dueDate = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+        await upsertSession(waPhone, { due_date: dueDate, step: "ask_service" });
         const msg = "Got it! 🌸 What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
@@ -381,8 +390,8 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
     if (session.step === "ask_service") {
         const t = text.toLowerCase();
         let service = "";
-        if (/^nurse$|^1$|certified nurse|\bnurse\b/.test(t)) service = "Nurse";
-        else if (/^japa$|^2$|postnatal caregiver|japa|moba|caregiver/.test(t)) service = "Postnatal Caregiver (Japa/MOBA)";
+        if (/^nurse$|^1$/.test(t)) service = "Nurse";
+        else if (/^japa$|^2$/.test(t)) service = "Postnatal Caregiver (Japa/MOBA)";
         else {
             await sendButtonMessage(waPhone, "Please tap the type of care you need:", SERVICE_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap the type of care you need:");
@@ -399,8 +408,8 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
     if (session.step === "ask_shift") {
         const t = text.toLowerCase();
         let shift = "";
-        if (/^day$|day care/.test(t)) shift = "Day";
-        else if (/^night$|night care/.test(t)) shift = "Night";
+        if (/^day$/.test(t)) shift = "Day";
+        else if (/^night$/.test(t)) shift = "Night";
         else {
             await sendButtonMessage(waPhone, "Please tap your preferred shift:", SHIFT_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap your preferred shift:");
@@ -506,14 +515,15 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Extract text from message, button tap, or list selection ──────────
+        // Use id (not title) for interactive replies — ids are programmatic and reliable
         let text: string | null = null;
         if (message.type === "text") {
             text = message.text?.body ?? null;
         } else if (message.type === "interactive") {
             if (message.interactive?.type === "button_reply") {
-                text = message.interactive.button_reply?.title ?? null;
+                text = message.interactive.button_reply?.id ?? null;
             } else if (message.interactive?.type === "list_reply") {
-                text = message.interactive.list_reply?.title ?? null;
+                text = message.interactive.list_reply?.id ?? null;
             }
         }
 
