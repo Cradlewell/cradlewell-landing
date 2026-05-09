@@ -60,7 +60,7 @@ function amountInWords(amount: number): string {
 
 async function fetchLogoBase64(): Promise<string | null> {
   try {
-    const res = await fetch("/images/logo.png");
+    const res = await fetch("/images/cw_logo.png");
     const blob = await res.blob();
     return await new Promise((resolve) => {
       const reader = new FileReader();
@@ -78,62 +78,61 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   const W = 210, H = 297;
   const L = 14, R = W - 14;
 
-  // ─── Gradient header bar ─────────────────────────────────────────────────
-  const steps = 30;
-  for (let i = 0; i < steps; i++) {
-    const t = i / steps;
-    const r = Math.round(99 + t * (95 - 99));
-    const g2 = Math.round(136 + t * (71 - 136));
-    doc.setFillColor(hex(r, g2, 255));
-    doc.rect(L + (R - L) * (i / steps), 0, (R - L) / steps + 0.5, 6, "F");
-  }
+  // ─── Header background ───────────────────────────────────────────────────
+  // Soft purple-tinted banner spanning full width
+  doc.setFillColor("#F5F3FF");
+  doc.rect(0, 0, W, 38, "F");
 
-  // ─── Logo ─────────────────────────────────────────────────────────────────
-  const logoSize = 18;
-  const logoX = L;
-  const logoY = 8;
+  // Accent left strip
+  doc.setFillColor("#6366F1");
+  doc.rect(0, 0, 4, 38, "F");
+
+  // ─── Logo ────────────────────────────────────────────────────────────────
+  const logoSize = 26;
+  const logoX = L + 2;
+  const logoY = 6;
   const logoBase64 = await fetchLogoBase64();
   if (logoBase64) {
     doc.addImage(logoBase64, "PNG", logoX, logoY, logoSize, logoSize);
   }
-  const textX = L + logoSize + 4;
+  const textX = logoX + logoSize + 4;
 
-  // ─── Company info ─────────────────────────────────────────────────────────
-  let y = 12;
+  // ─── Brand name ──────────────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor("#1E293B");
-  doc.text("TENDERKIN WELLNESS PRIVATE LIMITED", textX, y);
+  doc.setFontSize(18);
+  doc.setTextColor("#4F46E5");
+  doc.text("Cradlewell", textX, 16);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor("#64748B");
-  y += 5; doc.text("Your Comfort Is Our Care", textX, y);
-  y += 4.5; doc.text("Site No.26, Laskar Hosur, Adugodi, Koramangala, Bengaluru, Karnataka 560030, India", textX, y);
-  y += 4; doc.text("GSTIN: 29AALCT8756G1ZL  |  care@cradlewell.com  |  www.cradlewell.com", textX, y);
+  doc.setFontSize(7.5);
+  doc.setTextColor("#6B7280");
+  doc.text("TENDERKIN WELLNESS PRIVATE LIMITED", textX, 21.5);
+  doc.text("Your Comfort Is Our Care", textX, 26);
+  doc.text("Site No.26, Laskar Hosur, Adugodi, Koramangala, Bengaluru 560030  |  GSTIN: 29AALCT8756G1ZL", textX, 30.5);
+  doc.text("care@cradlewell.com  |  www.cradlewell.com", textX, 35);
 
-  // ─── TAX INVOICE title ────────────────────────────────────────────────────
+  // ─── TAX INVOICE title ───────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.setTextColor("#6388FF");
-  doc.text("TAX INVOICE", R, 18, { align: "right" });
+  doc.setFontSize(20);
+  doc.setTextColor("#4F46E5");
+  doc.text("TAX INVOICE", R, 16, { align: "right" });
 
   if (data.paymentStatus === "paid" || data.paymentStatus === "partial") {
     const label = data.paymentStatus === "paid" ? "PAID" : "PARTIALLY PAID";
     const pillColor = data.paymentStatus === "paid" ? "#22C55E" : "#F59E0B";
     const pillW = data.paymentStatus === "paid" ? 16 : 30;
     doc.setFillColor(pillColor);
-    doc.roundedRect(R - pillW - 2, 22, pillW, 7, 2, 2, "F");
+    doc.roundedRect(R - pillW - 2, 20, pillW, 7, 2, 2, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     doc.setTextColor("#FFFFFF");
-    doc.text(label, R - pillW / 2 - 2, 26.5, { align: "center" });
+    doc.text(label, R - pillW / 2 - 2, 24.5, { align: "center" });
   }
 
-  // ─── Divider ──────────────────────────────────────────────────────────────
-  y = 36;
-  doc.setDrawColor("#E2E8F0");
-  doc.setLineWidth(0.4);
+  // ─── Divider ─────────────────────────────────────────────────────────────
+  let y = 42;
+  doc.setDrawColor("#E5E7EB");
+  doc.setLineWidth(0.3);
   doc.line(L, y, R, y);
 
   // ─── Meta cards ───────────────────────────────────────────────────────────
@@ -189,13 +188,9 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   // ─── Items table ──────────────────────────────────────────────────────────
   y += addrBoxH + 8;
 
-  for (let i = 0; i < steps; i++) {
-    const t = i / steps;
-    const r2 = Math.round(99 + t * (95 - 99));
-    const g2 = Math.round(136 + t * (71 - 136));
-    doc.setFillColor(hex(r2, g2, 255));
-    doc.rect(L + (R - L) * (i / steps), y, (R - L) / steps + 0.5, 7, "F");
-  }
+  // Solid indigo header for item table
+  doc.setFillColor("#4F46E5");
+  doc.rect(L, y, R - L, 7, "F");
   doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor("#FFFFFF");
   const cols = [
     { label: "#", x: L + 2 }, { label: "DESCRIPTION", x: L + 10 }, { label: "QTY", x: L + 73 },
@@ -253,7 +248,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   if (data.tds > 0) printRow("TDS/TCS", `-Rs.${data.tds.toFixed(0)}`);
   if (data.adjustment !== 0) printRow("Adjustment", `Rs.${data.adjustment.toFixed(0)}`);
   doc.setDrawColor("#E2E8F0"); doc.line(totalsX, y, R, y); y += 3;
-  printRow("TOTAL", `Rs.${grandTotal.toLocaleString("en-IN")}`, true, "#6388FF", "#6388FF");
+  printRow("TOTAL", `Rs.${grandTotal.toLocaleString("en-IN")}`, true, "#4F46E5", "#4F46E5");
   if (data.paymentStatus !== "unpaid") {
     printRow("Amount Paid", `Rs.${data.amountPaid.toLocaleString("en-IN")}`, false, "#22C55E", "#22C55E");
     if (balance > 0) printRow("Balance Due", `Rs.${balance.toLocaleString("en-IN")}`, true, "#EF4444", "#EF4444");
@@ -281,12 +276,17 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   }
 
   // ─── Footer ───────────────────────────────────────────────────────────────
-  doc.setDrawColor("#E2E8F0");
-  doc.line(L, H - 20, R, H - 20);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(gray(100));
-  doc.text("This is a computer-generated invoice. No signature required.", L, H - 14);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor("#6388FF");
-  doc.text("Cradlewell — Your comfort is our care", R, H - 14, { align: "right" });
+  doc.setFillColor("#F5F3FF");
+  doc.rect(0, H - 22, W, 22, "F");
+  doc.setFillColor("#4F46E5");
+  doc.rect(0, H - 22, 4, 22, "F");
+  doc.setDrawColor("#E5E7EB");
+  doc.setLineWidth(0.3);
+  doc.line(L, H - 22, R, H - 22);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(gray(120));
+  doc.text("This is a computer-generated invoice. No signature required.", L + 2, H - 12);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor("#4F46E5");
+  doc.text("Cradlewell — Your comfort is our care", R, H - 12, { align: "right" });
 
   doc.save(`${data.invoiceNumber}-Cradlewell.pdf`);
 }
