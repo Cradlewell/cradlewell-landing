@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
             if (isInfoQuestion(lastUserMsg) && !flowReply.includes("[[COLLECT_LEAD]]")) {
                 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
                 const model = genAI.getGenerativeModel({
-                    model: "gemini-1.5-flash",
+                    model: "gemini-2.5-flash",
                     systemInstruction: `You are Aria from Cradlewell. Answer the user's question in 1–2 short plain text sentences. No markdown, no bullet points, no bold text.\n\nKnowledge:\n${CRADLEWELL_KNOWLEDGE}\n\nAfter answering, always end with: "${flowReply}"`,
                 });
                 const result = await model.generateContent({
@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
         // ── GREETING MODE: Gemini AI (before baby stage confirmed) ───────────
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash",
             systemInstruction: `You are Aria from Cradlewell — warm and caring.
 
 RULES:
