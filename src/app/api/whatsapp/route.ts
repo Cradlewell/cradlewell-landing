@@ -88,6 +88,53 @@ async function sendLocationRequest(to: string, bodyText: string) {
     }
 }
 
+// ── Send due month list (next 9 months) ──────────────────────────────────────
+
+function getNextMonths(count: number): Array<{ id: string; title: string }> {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < count; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const title = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+        const id = `month_${d.getFullYear()}_${d.getMonth() + 1}`;
+        months.push({ id, title });
+    }
+    return months;
+}
+
+async function sendMonthListMessage(to: string) {
+    const rows = getNextMonths(9);
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${ACCESS_TOKEN}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "list",
+                    body: { text: "📅 Please select your expected due month:" },
+                    action: {
+                        button: "Select Month",
+                        sections: [
+                            {
+                                title: "Due Month",
+                                rows: rows.map((r) => ({ id: r.id, title: r.title })),
+                            },
+                        ],
+                    },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("Failed to send month list message:", err);
+    }
+}
+
 // ── Store message in Supabase ─────────────────────────────────────────────────
 
 async function storeMessage(waPhone: string, direction: "inbound" | "outbound", message: string) {
@@ -283,14 +330,12 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Collect location (text fallback if GPS share not used) ───────────────
     if (session.step === "ask_location") {
         await upsertSession(waPhone, { location: text, step: "ask_due_date" });
-        const bodyText =
-            "📅 Please type your expected due date\n(e.g. *15 June 2025*)";
-        await sendMessage(waPhone, bodyText);
-        await storeMessage(waPhone, "outbound", bodyText);
+        await sendMonthListMessage(waPhone);
+        await storeMessage(waPhone, "outbound", "📅 Please select your expected due month:");
         return;
     }
 
-    // ── Collect due date ──────────────────────────────────────────────────────
+    // ── Collect due month (list reply handled in POST; this is typed fallback) ─
     if (session.step === "ask_due_date") {
         await upsertSession(waPhone, { due_date: text, step: "ask_service" });
         const bodyText = "Got it! 🌸 What kind of care are you looking for?";
@@ -405,9 +450,8 @@ async function handleLocation(
     await storeMessage(waPhone, "inbound", `📍 ${locationText}`);
     await upsertSession(waPhone, { location: locationText, step: "ask_due_date" });
 
-    const bodyText = "📅 Please type your expected due date\n(e.g. *15 June 2025*)";
-    await sendMessage(waPhone, bodyText);
-    await storeMessage(waPhone, "outbound", bodyText);
+    await sendMonthListMessage(waPhone);
+    await storeMessage(waPhone, "outbound", "📅 Please select your expected due month:");
 }
 
 // ── GET — Webhook verification ────────────────────────────────────────────────
@@ -446,15 +490,16 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ status: "ok" });
         }
 
-        // Extract text from plain message OR button tap
+        // Extract text from plain message, button tap, or list selection
         let text: string | null = null;
         if (message.type === "text") {
             text = message.text?.body ?? null;
-        } else if (
-            message.type === "interactive" &&
-            message.interactive?.type === "button_reply"
-        ) {
-            text = message.interactive.button_reply?.title ?? null;
+        } else if (message.type === "interactive") {
+            if (message.interactive?.type === "button_reply") {
+                text = message.interactive.button_reply?.title ?? null;
+            } else if (message.interactive?.type === "list_reply") {
+                text = message.interactive.list_reply?.title ?? null;
+            }
         }
 
         if (!text) return NextResponse.json({ status: "ok" });
