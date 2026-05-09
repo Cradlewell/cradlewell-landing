@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase-server";
 
 const LeadSchema = z.object({
     name: z.string().min(1),
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
             hour: "numeric",
             minute: "2-digit",
             hour12: true,
-        }).format(now); // e.g. "10:30 AM" or "9:05 PM"
+        }).format(now);
 
         const lead_generated_day = new Intl.DateTimeFormat("en-IN", {
             timeZone: "Asia/Kolkata",
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
             service_days: lead.serviceDays,
         };
 
+        // ── Write to Google Sheets (primary) ──────────────────────────────────
         const response = await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -85,6 +87,36 @@ export async function POST(req: NextRequest) {
             const text = await response.text();
             console.error("Google Sheet webhook error:", text);
             return NextResponse.json({ success: false, error: text }, { status: 500 });
+        }
+
+        // ── Write to Supabase CRM (secondary — never fail the form) ───────────
+        try {
+            const { error } = await supabase.from("leads").insert({
+                id: crypto.randomUUID(),
+                name: lead.name,
+                phone: lead.phone,
+                whatsapp: lead.phone,
+                source: "Website",
+                lead_date: now.toISOString(),
+                service_required: lead.service,
+                baby_status: lead.babyStatus || "Unknown",
+                hospital_name: lead.hospitalName || null,
+                baby_birth_stage_status: lead.birthStageStatus || null,
+                baby_age: lead.babyAge || null,
+                current_weight: lead.currentWeight || null,
+                address: lead.address || null,
+                preferred_shift: lead.shiftType || null,
+                shift_time: lead.shiftTime || null,
+                care_start_date: lead.careStartDate || null,
+                owner: "Unassigned",
+                stage: "New Lead",
+                temperature: "Cold",
+                last_activity_at: now.toISOString(),
+                created_at: now.toISOString(),
+            });
+            if (error) console.error("Supabase lead insert error:", error.message);
+        } catch (err) {
+            console.error("Supabase lead insert failed:", err);
         }
 
         return NextResponse.json({ success: true });

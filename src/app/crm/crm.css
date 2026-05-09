@@ -918,3 +918,7 @@
   font-weight: 700;
   color: var(--crm-text);
 }
+
+@keyframes crm-spin {
+  to { transform: rotate(360deg); }
+}

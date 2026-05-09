@@ -1,12 +1,20 @@
 "use client";
 import { useState } from "react";
 import { Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
 import CRMSidebar from "@/components/crm/CRMSidebar";
+import { useDBReady } from "@/lib/crm-store";
 import "./crm.css";
 
 export default function CRMLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const ready = useDBReady();
+
+  if (pathname === "/crm/login") {
+    return <>{children}</>;
+  }
 
   return (
     <div className="crm-app">
@@ -33,7 +41,17 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
           </header>
 
           <div className="crm-content">
-            {children}
+            {ready ? children : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", flexDirection: "column", gap: "1rem" }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: "50%",
+                  border: "3px solid #E2E8F0",
+                  borderTopColor: "#6388FF",
+                  animation: "crm-spin 0.7s linear infinite",
+                }} />
+                <p style={{ color: "var(--crm-text-muted)", fontSize: "0.9rem" }}>Loading CRM data…</p>
+              </div>
+            )}
           </div>
         </main>
       </div>
