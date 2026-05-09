@@ -3,7 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Users, Kanban, CalendarClock,
   FileText, Trophy, Receipt, BarChart3,
-  ChevronLeft, ChevronRight, X,
+  ChevronLeft, ChevronRight, X, LogOut,
 } from "lucide-react";
 
 const NAV = [
@@ -74,6 +74,23 @@ export default function CRMSidebar({ collapsed, onToggle, mobileOpen, onMobileCl
             </button>
           ))}
         </nav>
+
+        {/* Logout */}
+        <div className="crm-sidebar-toggle" style={{ borderTop: "1px solid var(--crm-border)" }}>
+          <button
+            onClick={async () => {
+              await fetch("/api/crm/auth", { method: "DELETE" });
+              router.push("/crm/login");
+              router.refresh();
+            }}
+            aria-label="Logout"
+            title={collapsed ? "Logout" : undefined}
+            style={{ color: "#DC2626" }}
+          >
+            <LogOut size={16} />
+            {!collapsed && <span>Logout</span>}
+          </button>
+        </div>
 
         {/* Collapse toggle (desktop) */}
         <div className="crm-sidebar-toggle d-none d-md-block">

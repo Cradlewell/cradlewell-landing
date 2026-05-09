@@ -78,7 +78,7 @@ export default function CRMLoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="care@cradlewell.com"
+              placeholder=""
               required
               style={{
                 width: "100%", padding: "0.65rem 0.9rem",
@@ -100,7 +100,7 @@ export default function CRMLoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder=""
               required
               style={{
                 width: "100%", padding: "0.65rem 0.9rem",
