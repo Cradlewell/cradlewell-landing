@@ -2,11 +2,8 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import { ReactNode } from 'react';
-import Footer from '@/components/Footer';
-import LayoutClient from '@/components/LayoutClient';
-import { ModalProvider } from '@/components/ModalContext';
+import LandingShell from '@/components/LandingShell';
 import { Metadata } from 'next';
-import AIChatWidget from "@/components/AIChatWidget";
 
 const BASE_URL = 'https://www.cradlewell.com';
 
@@ -424,12 +421,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           />
         </noscript>
 
-        <ModalProvider>
-          <LayoutClient />
-          <main>{children}</main>
-          <Footer />
-          <AIChatWidget />
-        </ModalProvider>
+        <LandingShell>{children}</LandingShell>
       </body>
     </html>
   );

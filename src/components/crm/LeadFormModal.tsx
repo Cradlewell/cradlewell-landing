@@ -1,0 +1,202 @@
+"use client";
+import { useState } from "react";
+import { X, UserPlus } from "lucide-react";
+import { api } from "@/lib/crm-store";
+import type { LeadSource, BabyStatus, Shift } from "@/lib/crm-types";
+
+const SOURCES: LeadSource[] = ["Website", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
+const SHIFTS: Shift[] = ["Day (12h)", "Night (12h)", "Full Day (24h)", "Custom"];
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
+
+const INIT = {
+  name: "", phone: "", whatsapp: "", source: "Website" as LeadSource,
+  serviceRequired: "Newborn Care", babyStatus: "Born" as BabyStatus,
+  hospitalName: "", babyAgeOrMonth: "", babyBirthStageStatus: "",
+  babyAge: "", currentWeight: "", area: "", city: "Bengaluru",
+  address: "", preferredShift: "Day (12h)" as Shift,
+  shiftHoursCount: "" as unknown as number, shiftTime: "",
+  careStartDate: "", serviceDays: "" as unknown as number,
+  budget: "" as unknown as number, owner: "", notes: "",
+};
+
+export default function LeadFormModal({ open, onClose }: Props) {
+  const [form, setForm] = useState({ ...INIT });
+  const [saving, setSaving] = useState(false);
+
+  if (!open) return null;
+
+  const set = (k: keyof typeof INIT, v: string | number) =>
+    setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.phone.trim()) return;
+    setSaving(true);
+    api.addLead({
+      ...form,
+      phone: form.phone.trim(),
+      whatsapp: form.whatsapp || form.phone,
+      leadDate: new Date().toISOString(),
+      budget: Number(form.budget) || undefined,
+      shiftHoursCount: Number(form.shiftHoursCount) || undefined,
+      serviceDays: Number(form.serviceDays) || undefined,
+    });
+    setSaving(false);
+    setForm({ ...INIT });
+    onClose();
+  };
+
+  return (
+    <>
+      <div className="modal-backdrop fade show" style={{ zIndex: 1059 }} onClick={onClose} />
+      <div className="modal fade show d-block crm-modal" style={{ zIndex: 1060 }} role="dialog" aria-modal="true" aria-label="New Lead">
+        <div className="modal-dialog modal-lg modal-dialog-scrollable">
+          <div className="modal-content">
+            <div className="modal-header">
+              <div className="d-flex align-items-center gap-2">
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--crm-primary-light)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <UserPlus size={16} color="var(--crm-primary)" />
+                </div>
+                <h5 className="modal-title">New Lead</h5>
+              </div>
+              <button type="button" className="crm-btn crm-btn-ghost crm-btn-icon" onClick={onClose} aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body" style={{ padding: "1.25rem" }}>
+                {/* Contact */}
+                <p className="crm-section-title">Contact Info</p>
+                <div className="crm-grid-2 mb-3">
+                  <div className="crm-form-group">
+                    <label className="crm-label required">Full Name</label>
+                    <input className="crm-input" value={form.name} onChange={e => set("name", e.target.value)} placeholder="Priya Sharma" required />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label required">Phone</label>
+                    <input className="crm-input" type="tel" value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="9876543210" required />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">WhatsApp</label>
+                    <input className="crm-input" type="tel" value={form.whatsapp} onChange={e => set("whatsapp", e.target.value)} placeholder="Same as phone" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Lead Source</label>
+                    <select className="crm-select" value={form.source} onChange={e => set("source", e.target.value)}>
+                      {SOURCES.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Baby */}
+                <p className="crm-section-title">Baby Details</p>
+                <div className="crm-grid-2 mb-3">
+                  <div className="crm-form-group">
+                    <label className="crm-label">Baby Status</label>
+                    <select className="crm-select" value={form.babyStatus} onChange={e => set("babyStatus", e.target.value)}>
+                      <option>Born</option><option>Expecting</option>
+                    </select>
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Hospital Name</label>
+                    <input className="crm-input" value={form.hospitalName} onChange={e => set("hospitalName", e.target.value)} placeholder="Manipal Hospital" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Birth Stage</label>
+                    <input className="crm-input" value={form.babyBirthStageStatus} onChange={e => set("babyBirthStageStatus", e.target.value)} placeholder="Full term / Pre-term / NICU" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Baby Age / Expecting Month</label>
+                    <input className="crm-input" value={form.babyAgeOrMonth} onChange={e => set("babyAgeOrMonth", e.target.value)} placeholder="5 days / 8 months" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Current Weight</label>
+                    <input className="crm-input" value={form.currentWeight} onChange={e => set("currentWeight", e.target.value)} placeholder="3.1 kg" />
+                  </div>
+                </div>
+
+                {/* Service */}
+                <p className="crm-section-title">Service & Shift</p>
+                <div className="crm-grid-2 mb-3">
+                  <div className="crm-form-group">
+                    <label className="crm-label">Service Required</label>
+                    <select className="crm-select" value={form.serviceRequired} onChange={e => set("serviceRequired", e.target.value)}>
+                      <option>Newborn Care</option>
+                      <option>Nurse Care</option>
+                      <option>Moba Care</option>
+                    </select>
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Preferred Shift</label>
+                    <select className="crm-select" value={form.preferredShift} onChange={e => set("preferredShift", e.target.value)}>
+                      {SHIFTS.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Shift Hours</label>
+                    <input className="crm-input" type="number" value={form.shiftHoursCount} onChange={e => set("shiftHoursCount", e.target.value)} placeholder="12" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Shift Time</label>
+                    <input className="crm-input" value={form.shiftTime} onChange={e => set("shiftTime", e.target.value)} placeholder="9:00 AM - 9:00 PM" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Care Start Date</label>
+                    <input className="crm-input" type="date" value={form.careStartDate} onChange={e => set("careStartDate", e.target.value)} />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Service Days</label>
+                    <input className="crm-input" type="number" value={form.serviceDays} onChange={e => set("serviceDays", e.target.value)} placeholder="30" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Budget (₹)</label>
+                    <input className="crm-input" type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="35000" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Assigned To</label>
+                    <input className="crm-input" value={form.owner} onChange={e => set("owner", e.target.value)} placeholder="Ravi" />
+                  </div>
+                </div>
+
+                {/* Location */}
+                <p className="crm-section-title">Location</p>
+                <div className="crm-grid-2 mb-3">
+                  <div className="crm-form-group">
+                    <label className="crm-label">Area</label>
+                    <input className="crm-input" value={form.area} onChange={e => set("area", e.target.value)} placeholder="Koramangala" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">City</label>
+                    <input className="crm-input" value={form.city} onChange={e => set("city", e.target.value)} placeholder="Bengaluru" />
+                  </div>
+                  <div className="crm-form-group" style={{ gridColumn: "1/-1" }}>
+                    <label className="crm-label">Full Address</label>
+                    <textarea className="crm-textarea" value={form.address} onChange={e => set("address", e.target.value)} placeholder="Full address..." style={{ minHeight: 60 }} />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="crm-form-group">
+                  <label className="crm-label">Requirement Notes</label>
+                  <textarea className="crm-textarea" value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Any special requirements..." />
+                </div>
+              </div>
+
+              <div className="modal-footer gap-2">
+                <button type="button" className="crm-btn crm-btn-ghost" onClick={onClose}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary" disabled={saving}>
+                  {saving ? "Saving…" : "Add Lead"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
