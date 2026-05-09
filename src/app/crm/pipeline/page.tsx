@@ -4,7 +4,6 @@ import { useDB, api } from "@/lib/crm-store";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadStage } from "@/lib/crm-types";
 import StageBadge from "@/components/crm/StageBadge";
-import TempBadge from "@/components/crm/TempBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
 import { Plus, StickyNote } from "lucide-react";
@@ -86,17 +85,14 @@ export default function PipelinePage() {
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)", marginTop: 2 }}>{l.id}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                      <span className="crm-tag">{l.serviceRequired}</span>
+                      {l.serviceRequired && <span className="crm-tag">{l.serviceRequired}</span>}
                       {l.preferredShift && <span className="crm-tag">{l.preferredShift}</span>}
+                      {l.shiftHoursCount != null && <span className="crm-tag">{l.shiftHoursCount} hrs</span>}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                      <TempBadge temp={l.temperature} />
-                      {l.closureProbability != null && (
-                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--crm-primary)" }}>{l.closureProbability}%</span>
-                      )}
-                    </div>
+                    {l.shiftTime && (
+                      <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)", marginTop: 4 }}>{l.shiftTime}</div>
+                    )}
                   </div>
                 ))}
               </div>
