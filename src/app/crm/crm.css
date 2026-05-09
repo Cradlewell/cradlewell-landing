@@ -919,6 +919,25 @@
   color: var(--crm-text);
 }
 
+.crm-modal .modal-dialog {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  margin: 5vh auto;
+}
+
+.crm-modal .modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.crm-modal .modal-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
 @keyframes crm-spin {
   to { transform: rotate(360deg); }
 }
