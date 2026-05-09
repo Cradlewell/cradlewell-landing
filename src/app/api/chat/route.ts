@@ -202,6 +202,12 @@ export async function POST(req: NextRequest) {
         const json = await req.json();
         const { messages } = RequestSchema.parse(json);
 
+        // Gemini requires the first content role to be "user" — drop any leading assistant messages
+        const geminiMessages = (() => {
+            const idx = messages.findIndex((m) => m.role === "user");
+            return idx === -1 ? messages : messages.slice(idx);
+        })();
+
         const babyStageConfirmed = isBabyStageConfirmed(messages);
         const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
@@ -224,7 +230,7 @@ export async function POST(req: NextRequest) {
                     systemInstruction: `You are Aria from Cradlewell. Answer the user's question in 1–2 short plain text sentences. No markdown, no bullet points, no bold text.\n\nKnowledge:\n${CRADLEWELL_KNOWLEDGE}\n\nAfter answering, always end with: "${flowReply}"`,
                 });
                 const result = await model.generateContent({
-                    contents: messages.map((m) => ({
+                    contents: geminiMessages.map((m) => ({
                         role: m.role === "assistant" ? "model" : "user",
                         parts: [{ text: m.content }],
                     })),
