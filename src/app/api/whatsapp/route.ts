@@ -65,7 +65,7 @@ async function sendLocationRequest(to: string, bodyText: string) {
     }
 }
 
-// ── Send due month list (next 9 months) ──────────────────────────────────────
+// ── Send due month list (next 9 months + Main Menu) ──────────────────────────
 
 async function sendMonthListMessage(to: string) {
     const months: Array<{ id: string; title: string }> = [];
@@ -90,13 +90,52 @@ async function sendMonthListMessage(to: string) {
                     body: { text: "📅 Please select your expected due month:" },
                     action: {
                         button: "Select Month",
-                        sections: [{ title: "Due Month", rows: months }],
+                        sections: [
+                            { title: "Due Month", rows: months },
+                            { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
+                        ],
                     },
                 },
             }),
         });
     } catch (err) {
         console.error("sendMonthListMessage failed:", err);
+    }
+}
+
+// ── Send day time slot list (with Main Menu) ──────────────────────────────────
+
+async function sendDaySlotListMessage(to: string) {
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "list",
+                    body: { text: "We have *8-hour* morning shifts. Please select your preferred timing:" },
+                    action: {
+                        button: "Select Timing",
+                        sections: [
+                            {
+                                title: "Morning Shifts",
+                                rows: [
+                                    { id: "slot_8", title: "8 AM – 4 PM" },
+                                    { id: "slot_9", title: "9 AM – 5 PM" },
+                                    { id: "slot_10", title: "10 AM – 6 PM" },
+                                ],
+                            },
+                            { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
+                        ],
+                    },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("sendDaySlotListMessage failed:", err);
     }
 }
 
@@ -226,31 +265,47 @@ function buildSummary(session: Session): string {
 const BABY_STATUS_BUTTONS = [
     { id: "home", title: "Baby is home" },
     { id: "expecting", title: "Still expecting" },
+    { id: "main_menu", title: "Main Menu" },
 ];
 
 const SERVICE_BUTTONS = [
     { id: "nurse", title: "Certified Nurse" },
     { id: "japa", title: "Postnatal Caregiver" },
+    { id: "main_menu", title: "Main Menu" },
 ];
 
 const SHIFT_BUTTONS = [
     { id: "day", title: "Day care" },
     { id: "night", title: "Night care" },
-];
-
-const DAY_SLOT_BUTTONS = [
-    { id: "slot_8", title: "8 AM – 4 PM" },
-    { id: "slot_9", title: "9 AM – 5 PM" },
-    { id: "slot_10", title: "10 AM – 6 PM" },
+    { id: "main_menu", title: "Main Menu" },
 ];
 
 // ── Bot flow ──────────────────────────────────────────────────────────────────
+
+async function sendMainMenu(waPhone: string, name?: string) {
+    const greeting = name ? `Welcome back, ${name}! 🌸` : "Welcome back! 🌸";
+    const msg = `${greeting}\n\nIs your little one already home, or are you still expecting?`;
+    await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
+    await storeMessage(waPhone, "outbound", msg);
+}
 
 async function handleMessage(waPhone: string, incomingText: string, waMessageId: string, profileName?: string) {
     const text = incomingText.trim();
     const session = await getSession(waPhone);
 
     await storeMessage(waPhone, "inbound", text, waMessageId);
+
+    // ── Main Menu — restart flow from baby status ─────────────────────────────
+    if (/^main menu$|^menu$/i.test(text) || text === "main_menu") {
+        const name = session?.name || profileName;
+        await upsertSession(waPhone, {
+            step: "ask_baby_status",
+            ...(name ? { name } : {}),
+            baby_status: "", service: "", location: "", due_date: "", shift: "", time_slot: "",
+        });
+        await sendMainMenu(waPhone, name);
+        return;
+    }
 
     // ── New user or restart ───────────────────────────────────────────────────
     if (!session || session.step === "completed") {
@@ -353,11 +408,9 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
         }
 
         if (shift === "Day") {
-            // Single atomic update
             await upsertSession(waPhone, { shift, step: "ask_time_slot" });
-            const msg = "We have *8-hour* morning shifts. Please select your preferred timing:";
-            await sendButtonMessage(waPhone, msg, DAY_SLOT_BUTTONS);
-            await storeMessage(waPhone, "outbound", msg);
+            await sendDaySlotListMessage(waPhone);
+            await storeMessage(waPhone, "outbound", "We have 8-hour morning shifts. Please select your preferred timing:");
         } else {
             const timeSlot = "9 PM – 6 AM";
             await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "completed" });
@@ -378,8 +431,8 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
         else if (/9\s*(am|–)|slot_9/.test(t)) timeSlot = "9 AM – 5 PM";
         else if (/10\s*(am|–)|slot_10/.test(t)) timeSlot = "10 AM – 6 PM";
         else {
-            await sendButtonMessage(waPhone, "Please tap your preferred timing:", DAY_SLOT_BUTTONS);
-            await storeMessage(waPhone, "outbound", "Please tap your preferred timing:");
+            await sendDaySlotListMessage(waPhone);
+            await storeMessage(waPhone, "outbound", "Please select your preferred timing:");
             return;
         }
         await upsertSession(waPhone, { time_slot: timeSlot, step: "completed" });
