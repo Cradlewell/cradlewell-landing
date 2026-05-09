@@ -58,6 +58,20 @@ function amountInWords(amount: number): string {
   return words + " Only";
 }
 
+async function fetchLogoBase64(): Promise<string | null> {
+  try {
+    const res = await fetch("/images/logo.png");
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -74,19 +88,29 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
     doc.rect(L + (R - L) * (i / steps), 0, (R - L) / steps + 0.5, 6, "F");
   }
 
+  // ─── Logo ─────────────────────────────────────────────────────────────────
+  const logoSize = 18;
+  const logoX = L;
+  const logoY = 8;
+  const logoBase64 = await fetchLogoBase64();
+  if (logoBase64) {
+    doc.addImage(logoBase64, "PNG", logoX, logoY, logoSize, logoSize);
+  }
+  const textX = L + logoSize + 4;
+
   // ─── Company info ─────────────────────────────────────────────────────────
   let y = 12;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor("#1E293B");
-  doc.text("TENDERKIN WELLNESS PRIVATE LIMITED", L, y);
+  doc.text("TENDERKIN WELLNESS PRIVATE LIMITED", textX, y);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor("#64748B");
-  y += 5; doc.text("Your Comfort Is Our Care", L, y);
-  y += 4.5; doc.text("Site No.26, Laskar Hosur, Adugodi, Koramangala, Bengaluru, Karnataka 560030, India", L, y);
-  y += 4; doc.text("GSTIN: 29AALCT8756G1ZL  |  care@cradlewell.com  |  www.cradlewell.com", L, y);
+  y += 5; doc.text("Your Comfort Is Our Care", textX, y);
+  y += 4.5; doc.text("Site No.26, Laskar Hosur, Adugodi, Koramangala, Bengaluru, Karnataka 560030, India", textX, y);
+  y += 4; doc.text("GSTIN: 29AALCT8756G1ZL  |  care@cradlewell.com  |  www.cradlewell.com", textX, y);
 
   // ─── TAX INVOICE title ────────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
@@ -262,7 +286,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(gray(100));
   doc.text("This is a computer-generated invoice. No signature required.", L, H - 14);
   doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor("#6388FF");
-  doc.text("For Cradlewell — Trusted Newborn Care at Home", R, H - 14, { align: "right" });
+  doc.text("Cradlewell — Your comfort is our care", R, H - 14, { align: "right" });
 
   doc.save(`${data.invoiceNumber}-Cradlewell.pdf`);
 }
