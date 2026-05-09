@@ -151,7 +151,7 @@ const SERVICE_BUTTONS = [
     { id: "japa", title: "Postnatal Caregiver" },
 ];
 
-async function handleMessage(waPhone: string, incomingText: string) {
+async function handleMessage(waPhone: string, incomingText: string, profileName?: string) {
     const text = incomingText.trim();
     const session = await getSession(waPhone);
 
@@ -159,18 +159,27 @@ async function handleMessage(waPhone: string, incomingText: string) {
 
     // New user or restart after completion
     if (!session || session.step === "completed") {
-        await upsertSession(waPhone, { step: "ask_name" });
-        const reply =
-            "Hi! 🌸 Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nMay I know your name?";
-        await sendMessage(waPhone, reply);
-        await storeMessage(waPhone, "outbound", reply);
+        if (profileName) {
+            // We already have their name from WhatsApp profile — skip ask_name
+            await upsertSession(waPhone, { step: "ask_baby_status", name: profileName });
+            const bodyText = `Hi ${profileName}! 🌸 Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nIs your little one already home, or are you still expecting?`;
+            await sendButtonMessage(waPhone, bodyText, BABY_STATUS_BUTTONS);
+            await storeMessage(waPhone, "outbound", bodyText);
+        } else {
+            await upsertSession(waPhone, { step: "ask_name" });
+            const reply =
+                "Hi! 🌸 Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nMay I know your name?";
+            await sendMessage(waPhone, reply);
+            await storeMessage(waPhone, "outbound", reply);
+        }
         return;
     }
 
-    // Step: collect name
+    // Step: collect name (fallback if profile name was unavailable)
     if (session.step === "ask_name") {
-        await upsertSession(waPhone, { name: text, step: "ask_baby_status" });
-        const bodyText = `Nice to meet you, ${text}! 🌸\n\nIs your little one already home, or are you still expecting?`;
+        const name = profileName || text;
+        await upsertSession(waPhone, { name, step: "ask_baby_status" });
+        const bodyText = `Nice to meet you, ${name}! 🌸\n\nIs your little one already home, or are you still expecting?`;
         await sendButtonMessage(waPhone, bodyText, BABY_STATUS_BUTTONS);
         await storeMessage(waPhone, "outbound", bodyText);
         return;
@@ -265,6 +274,10 @@ export async function POST(req: NextRequest) {
         const message = messages[0];
         const waPhone: string = message.from;
 
+        // Extract WhatsApp profile name from contacts array
+        const contacts = body.entry?.[0]?.changes?.[0]?.value?.contacts;
+        const profileName: string | undefined = contacts?.[0]?.profile?.name || undefined;
+
         // Extract text from plain message OR interactive button tap
         let text: string | null = null;
         if (message.type === "text") {
@@ -278,7 +291,7 @@ export async function POST(req: NextRequest) {
 
         if (!text) return NextResponse.json({ status: "ok" });
 
-        await handleMessage(waPhone, text);
+        await handleMessage(waPhone, text, profileName);
         return NextResponse.json({ status: "ok" });
     } catch (error) {
         console.error("WhatsApp webhook error:", error);
