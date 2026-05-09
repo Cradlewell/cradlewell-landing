@@ -2,15 +2,23 @@
 import { useState, useMemo } from "react";
 import { useDB, isStale, isUrgentNew } from "@/lib/crm-store";
 import StageBadge from "@/components/crm/StageBadge";
-import TempBadge from "@/components/crm/TempBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
-import { Plus, Search, Download, Upload, AlertCircle, Clock } from "lucide-react";
+import { Plus, Search, Download, AlertCircle, Clock } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadSource, LeadStage } from "@/lib/crm-types";
-import { format } from "date-fns";
 
 const SOURCES: LeadSource[] = ["Website", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
+
+function fmtDate(iso: string) {
+  return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso));
+}
+function fmtTime(iso: string) {
+  return new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
+}
+function fmtDay(iso: string) {
+  return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "long" }).format(new Date(iso));
+}
 
 export default function LeadsPage() {
   const db = useDB();
@@ -23,7 +31,7 @@ export default function LeadsPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return db.leads.filter(l => {
-      if (q && !l.name.toLowerCase().includes(q) && !l.phone.includes(q) && !l.id.toLowerCase().includes(q)) return false;
+      if (q && !l.name.toLowerCase().includes(q) && !l.phone.includes(q)) return false;
       if (filterStage && l.stage !== filterStage) return false;
       if (filterSource && l.source !== filterSource) return false;
       return true;
@@ -31,10 +39,28 @@ export default function LeadsPage() {
   }, [db.leads, search, filterStage, filterSource]);
 
   const exportCSV = () => {
-    const headers = ["ID", "Name", "Phone", "Source", "Stage", "Temperature", "Service", "City", "Owner", "Date"].join(",");
-    const rows = filtered.map(l =>
-      [l.id, `"${l.name}"`, l.phone, l.source, l.stage, l.temperature, l.serviceRequired, l.city ?? "", l.owner, format(new Date(l.leadDate), "dd/MM/yyyy")].join(",")
-    );
+    const headers = ["Name", "Phone", "Date", "Time", "Day", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage", "Owner"].join(",");
+    const rows = filtered.map(l => [
+      `"${l.name}"`,
+      l.phone,
+      fmtDate(l.leadDate),
+      fmtTime(l.leadDate),
+      fmtDay(l.leadDate),
+      l.serviceRequired ?? "",
+      l.babyStatus ?? "",
+      l.hospitalName ?? "",
+      l.babyBirthStageStatus ?? "",
+      l.babyAge ?? "",
+      l.currentWeight ?? "",
+      `"${l.address ?? ""}"`,
+      l.preferredShift ?? "",
+      l.shiftHoursCount ?? "",
+      l.shiftTime ?? "",
+      l.careStartDate ?? "",
+      l.serviceDays ?? "",
+      l.stage,
+      l.owner,
+    ].join(","));
     const csv = [headers, ...rows].join("\n");
     const a = document.createElement("a");
     a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
@@ -69,7 +95,7 @@ export default function LeadsPage() {
           <input
             className="crm-input"
             style={{ paddingLeft: 32 }}
-            placeholder="Search name, phone, ID…"
+            placeholder="Search name or phone…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -92,27 +118,34 @@ export default function LeadsPage() {
           <table className="crm-table">
             <thead>
               <tr>
-                <th className="sticky-col">Lead</th>
+                <th className="sticky-col">Name</th>
                 <th>Phone</th>
-                <th>Service</th>
-                <th>Baby</th>
-                <th>Temperature</th>
-                <th>Source</th>
-                <th>City</th>
-                <th>Owner</th>
                 <th>Date</th>
-                <th>Closure %</th>
+                <th>Time</th>
+                <th>Day</th>
+                <th>Service</th>
+                <th>Baby Status</th>
+                <th>Hospital</th>
+                <th>Birth Stage</th>
+                <th>Baby Age</th>
+                <th>Weight</th>
+                <th>Address</th>
+                <th>Shift Type</th>
+                <th>Shift Hours</th>
+                <th>Shift Time</th>
+                <th>Care Start</th>
+                <th>Days</th>
+                <th>Stage</th>
+                <th>Owner</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(l => (
                 <tr key={l.id} onClick={() => setSelectedLead(l.id)}>
-                  <td className="sticky-col" style={{ minWidth: 200 }}>
+                  <td className="sticky-col" style={{ minWidth: 160 }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                       <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{l.name}</span>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "0.7rem", color: "var(--crm-text-muted)" }}>{l.id}</span>
-                        <StageBadge stage={l.stage} />
                         {isUrgentNew(l) && (
                           <span className="crm-badge" style={{ background: "#FEF2F2", color: "#DC2626" }}>
                             <AlertCircle size={10} /> Urgent
@@ -131,18 +164,23 @@ export default function LeadsPage() {
                       {l.phone}
                     </a>
                   </td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: "0.875rem" }}>{l.serviceRequired}</td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: "0.875rem" }}>{l.babyStatus}</td>
-                  <td><TempBadge temp={l.temperature} /></td>
-                  <td style={{ fontSize: "0.8rem", color: "var(--crm-text-muted)" }}>{l.source}</td>
-                  <td style={{ fontSize: "0.8rem" }}>{l.city ?? "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtDate(l.leadDate)}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtTime(l.leadDate)}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtDay(l.leadDate)}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.875rem" }}>{l.serviceRequired || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.babyStatus || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.hospitalName || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.babyBirthStageStatus || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.babyAge || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.currentWeight || "—"}</td>
+                  <td style={{ fontSize: "0.8rem", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.address ?? ""}>{l.address || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.preferredShift || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.shiftHoursCount ? `${l.shiftHoursCount} hrs` : "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.shiftTime || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.careStartDate || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.serviceDays ? `${l.serviceDays} days` : "—"}</td>
+                  <td><StageBadge stage={l.stage} /></td>
                   <td style={{ fontSize: "0.8rem" }}>{l.owner}</td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "var(--crm-text-muted)" }}>
-                    {format(new Date(l.leadDate), "dd MMM")}
-                  </td>
-                  <td style={{ fontWeight: 700, color: "var(--crm-primary)", fontSize: "0.875rem" }}>
-                    {l.closureProbability != null ? `${l.closureProbability}%` : "—"}
-                  </td>
                 </tr>
               ))}
             </tbody>
