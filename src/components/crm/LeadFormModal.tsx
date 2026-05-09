@@ -4,7 +4,7 @@ import { X, UserPlus } from "lucide-react";
 import { api } from "@/lib/crm-store";
 import type { LeadSource, BabyStatus, Shift } from "@/lib/crm-types";
 
-const SOURCES: LeadSource[] = ["Website", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
+const SOURCES: LeadSource[] = ["Website", "WhatsApp"];
 const SHIFTS: Shift[] = ["Day (12h)", "Night (12h)", "Full Day (24h)", "Custom"];
 
 interface Props {
@@ -13,14 +13,14 @@ interface Props {
 }
 
 const INIT = {
-  name: "", phone: "", whatsapp: "", source: "Website" as LeadSource,
+  name: "", phone: "", source: "Website" as LeadSource,
   serviceRequired: "Newborn Care", babyStatus: "Born" as BabyStatus,
-  hospitalName: "", babyAgeOrMonth: "", babyBirthStageStatus: "",
-  babyAge: "", currentWeight: "", area: "", city: "Bengaluru",
-  address: "", preferredShift: "Day (12h)" as Shift,
+  hospitalName: "", babyBirthStageStatus: "",
+  babyAge: "", currentWeight: "", address: "",
+  preferredShift: "Day (12h)" as Shift,
   shiftHoursCount: "" as unknown as number, shiftTime: "",
   careStartDate: "", serviceDays: "" as unknown as number,
-  budget: "" as unknown as number, owner: "", notes: "",
+  notes: "",
 };
 
 export default function LeadFormModal({ open, onClose }: Props) {
@@ -37,13 +37,25 @@ export default function LeadFormModal({ open, onClose }: Props) {
     if (!form.name.trim() || !form.phone.trim()) return;
     setSaving(true);
     api.addLead({
-      ...form,
+      name: form.name.trim(),
       phone: form.phone.trim(),
-      whatsapp: form.whatsapp || form.phone,
+      whatsapp: form.phone.trim(),
+      source: form.source,
       leadDate: new Date().toISOString(),
-      budget: Number(form.budget) || undefined,
+      serviceRequired: form.serviceRequired,
+      babyStatus: form.babyStatus,
+      hospitalName: form.hospitalName || undefined,
+      babyBirthStageStatus: form.babyBirthStageStatus || undefined,
+      babyAge: form.babyAge || undefined,
+      currentWeight: form.currentWeight || undefined,
+      address: form.address || undefined,
+      preferredShift: form.preferredShift,
       shiftHoursCount: Number(form.shiftHoursCount) || undefined,
+      shiftTime: form.shiftTime || undefined,
+      careStartDate: form.careStartDate || undefined,
       serviceDays: Number(form.serviceDays) || undefined,
+      notes: form.notes || undefined,
+      owner: "Unassigned",
     });
     setSaving(false);
     setForm({ ...INIT });
@@ -70,6 +82,7 @@ export default function LeadFormModal({ open, onClose }: Props) {
 
             <form onSubmit={handleSubmit}>
               <div className="modal-body" style={{ padding: "1.25rem" }}>
+
                 {/* Contact */}
                 <p className="crm-section-title">Contact Info</p>
                 <div className="crm-grid-2 mb-3">
@@ -82,13 +95,17 @@ export default function LeadFormModal({ open, onClose }: Props) {
                     <input className="crm-input" type="tel" value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="9876543210" required />
                   </div>
                   <div className="crm-form-group">
-                    <label className="crm-label">WhatsApp</label>
-                    <input className="crm-input" type="tel" value={form.whatsapp} onChange={e => set("whatsapp", e.target.value)} placeholder="Same as phone" />
-                  </div>
-                  <div className="crm-form-group">
                     <label className="crm-label">Lead Source</label>
                     <select className="crm-select" value={form.source} onChange={e => set("source", e.target.value)}>
                       {SOURCES.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-label">Service Required</label>
+                    <select className="crm-select" value={form.serviceRequired} onChange={e => set("serviceRequired", e.target.value)}>
+                      <option>Newborn Care</option>
+                      <option>Nurse Care</option>
+                      <option>Moba Care</option>
                     </select>
                   </div>
                 </div>
@@ -111,8 +128,8 @@ export default function LeadFormModal({ open, onClose }: Props) {
                     <input className="crm-input" value={form.babyBirthStageStatus} onChange={e => set("babyBirthStageStatus", e.target.value)} placeholder="Full term / Pre-term / NICU" />
                   </div>
                   <div className="crm-form-group">
-                    <label className="crm-label">Baby Age / Expecting Month</label>
-                    <input className="crm-input" value={form.babyAgeOrMonth} onChange={e => set("babyAgeOrMonth", e.target.value)} placeholder="5 days / 8 months" />
+                    <label className="crm-label">Baby Age</label>
+                    <input className="crm-input" value={form.babyAge} onChange={e => set("babyAge", e.target.value)} placeholder="5 days / 8 months pregnant" />
                   </div>
                   <div className="crm-form-group">
                     <label className="crm-label">Current Weight</label>
@@ -120,17 +137,9 @@ export default function LeadFormModal({ open, onClose }: Props) {
                   </div>
                 </div>
 
-                {/* Service */}
-                <p className="crm-section-title">Service & Shift</p>
+                {/* Shift */}
+                <p className="crm-section-title">Shift Details</p>
                 <div className="crm-grid-2 mb-3">
-                  <div className="crm-form-group">
-                    <label className="crm-label">Service Required</label>
-                    <select className="crm-select" value={form.serviceRequired} onChange={e => set("serviceRequired", e.target.value)}>
-                      <option>Newborn Care</option>
-                      <option>Nurse Care</option>
-                      <option>Moba Care</option>
-                    </select>
-                  </div>
                   <div className="crm-form-group">
                     <label className="crm-label">Preferred Shift</label>
                     <select className="crm-select" value={form.preferredShift} onChange={e => set("preferredShift", e.target.value)}>
@@ -143,7 +152,7 @@ export default function LeadFormModal({ open, onClose }: Props) {
                   </div>
                   <div className="crm-form-group">
                     <label className="crm-label">Shift Time</label>
-                    <input className="crm-input" value={form.shiftTime} onChange={e => set("shiftTime", e.target.value)} placeholder="9:00 AM - 9:00 PM" />
+                    <input className="crm-input" value={form.shiftTime} onChange={e => set("shiftTime", e.target.value)} placeholder="9:00 AM – 9:00 PM" />
                   </div>
                   <div className="crm-form-group">
                     <label className="crm-label">Care Start Date</label>
@@ -153,36 +162,18 @@ export default function LeadFormModal({ open, onClose }: Props) {
                     <label className="crm-label">Service Days</label>
                     <input className="crm-input" type="number" value={form.serviceDays} onChange={e => set("serviceDays", e.target.value)} placeholder="30" />
                   </div>
-                  <div className="crm-form-group">
-                    <label className="crm-label">Budget (₹)</label>
-                    <input className="crm-input" type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="35000" />
-                  </div>
-                  <div className="crm-form-group">
-                    <label className="crm-label">Assigned To</label>
-                    <input className="crm-input" value={form.owner} onChange={e => set("owner", e.target.value)} placeholder="Ravi" />
-                  </div>
                 </div>
 
                 {/* Location */}
                 <p className="crm-section-title">Location</p>
-                <div className="crm-grid-2 mb-3">
-                  <div className="crm-form-group">
-                    <label className="crm-label">Area</label>
-                    <input className="crm-input" value={form.area} onChange={e => set("area", e.target.value)} placeholder="Koramangala" />
-                  </div>
-                  <div className="crm-form-group">
-                    <label className="crm-label">City</label>
-                    <input className="crm-input" value={form.city} onChange={e => set("city", e.target.value)} placeholder="Bengaluru" />
-                  </div>
-                  <div className="crm-form-group" style={{ gridColumn: "1/-1" }}>
-                    <label className="crm-label">Full Address</label>
-                    <textarea className="crm-textarea" value={form.address} onChange={e => set("address", e.target.value)} placeholder="Full address..." style={{ minHeight: 60 }} />
-                  </div>
+                <div className="crm-form-group mb-3">
+                  <label className="crm-label">Address</label>
+                  <textarea className="crm-textarea" value={form.address} onChange={e => set("address", e.target.value)} placeholder="Full address..." style={{ minHeight: 60 }} />
                 </div>
 
                 {/* Notes */}
                 <div className="crm-form-group">
-                  <label className="crm-label">Requirement Notes</label>
+                  <label className="crm-label">Notes</label>
                   <textarea className="crm-textarea" value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Any special requirements..." />
                 </div>
               </div>
