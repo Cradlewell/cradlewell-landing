@@ -919,23 +919,36 @@
   color: var(--crm-text);
 }
 
+.crm-modal {
+  overflow-y: auto !important;
+}
+
 .crm-modal .modal-dialog {
-  max-height: 90vh;
+  max-height: calc(100vh - 3.5rem);
   display: flex;
   flex-direction: column;
-  margin: 5vh auto;
+  margin: 1.75rem auto;
 }
 
 .crm-modal .modal-content {
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
+  max-height: calc(100vh - 3.5rem);
+  overflow: hidden;
+}
+
+.crm-modal form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
 }
 
 .crm-modal .modal-body {
   overflow-y: auto;
   flex: 1 1 auto;
+  min-height: 0;
 }
 
 @keyframes crm-spin {
