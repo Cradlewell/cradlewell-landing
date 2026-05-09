@@ -103,15 +103,19 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
   doc.setTextColor("#4F46E5");
-  doc.text("Cradlewell", textX, 16);
+  doc.text("Cradlewell", textX, 14);
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor("#6366F1");
+  doc.text("Your Comfort Is Our Care", textX, 19.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor("#6B7280");
-  doc.text("TENDERKIN WELLNESS PRIVATE LIMITED", textX, 21.5);
-  doc.text("Your Comfort Is Our Care", textX, 26);
-  doc.text("Site No.26, Laskar Hosur, Adugodi, Koramangala, Bengaluru 560030  |  GSTIN: 29AALCT8756G1ZL", textX, 30.5);
-  doc.text("care@cradlewell.com  |  www.cradlewell.com", textX, 35);
+  doc.text("TENDERKIN WELLNESS PRIVATE LIMITED", textX, 24.5);
+  doc.text("Site No.26, Laskar Hosur, Adugodi, Koramangala, Bengaluru 560030  |  GSTIN: 29AALCT8756G1ZL", textX, 29.5);
+  doc.text("care@cradlewell.com  |  www.cradlewell.com", textX, 34.5);
 
   // ─── TAX INVOICE title ───────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
@@ -191,12 +195,17 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   y += addrBoxH + 8;
 
   // Solid indigo header for item table
+  const firstCgst = data.items[0]?.cgst ?? 0;
+  const firstSgst = data.items[0]?.sgst ?? 0;
   doc.setFillColor("#4F46E5");
   doc.rect(L, y, R - L, 7, "F");
   doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor("#FFFFFF");
   const cols = [
     { label: "#", x: L + 2 }, { label: "DESCRIPTION", x: L + 10 }, { label: "QTY", x: L + 73 },
-    { label: "RATE", x: L + 88 }, { label: "CGST", x: L + 112 }, { label: "SGST", x: L + 133 }, { label: "AMOUNT", x: L + 155 },
+    { label: "RATE", x: L + 88 },
+    { label: `CGST(${firstCgst}%)`, x: L + 112 },
+    { label: `SGST(${firstSgst}%)`, x: L + 133 },
+    { label: "AMOUNT", x: L + 155 },
   ];
   cols.forEach(c => doc.text(c.label, c.x, y + 5));
   y += 8;
@@ -216,8 +225,8 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
     doc.text(item.description.substring(0, 40), L + 10, y + 4);
     doc.text(String(item.qty), L + 73, y + 4);
     doc.text(`Rs.${item.rate.toLocaleString("en-IN")}`, L + 88, y + 4);
-    doc.text(`${item.cgst}%  Rs.${cgstAmt.toFixed(0)}`, L + 112, y + 4);
-    doc.text(`${item.sgst}%  Rs.${sgstAmt.toFixed(0)}`, L + 133, y + 4);
+    doc.text(`Rs.${cgstAmt.toFixed(0)}`, L + 112, y + 4);
+    doc.text(`Rs.${sgstAmt.toFixed(0)}`, L + 133, y + 4);
     doc.text(`Rs.${total.toLocaleString("en-IN")}`, L + 155, y + 4);
     y += 8;
   });
@@ -244,8 +253,8 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   };
 
   printRow("Subtotal", `Rs.${subtotal.toLocaleString("en-IN")}`);
-  printRow("CGST", `Rs.${totalCGST.toFixed(0)}`);
-  printRow("SGST", `Rs.${totalSGST.toFixed(0)}`);
+  printRow(`CGST(${firstCgst}%)`, `Rs.${totalCGST.toFixed(0)}`);
+  printRow(`SGST(${firstSgst}%)`, `Rs.${totalSGST.toFixed(0)}`);
   if (discountAmt > 0) printRow("Discount", `-Rs.${discountAmt.toFixed(0)}`, false, "#22C55E", "#22C55E");
   if (data.tds > 0) printRow("TDS/TCS", `-Rs.${data.tds.toFixed(0)}`);
   if (data.adjustment !== 0) printRow("Adjustment", `Rs.${data.adjustment.toFixed(0)}`);
