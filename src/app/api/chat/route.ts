@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
-import { CRADLEWELL_KNOWLEDGE } from "@/lib/cradlewell-knowledge";
 
 const RequestSchema = z.object({
     messages: z.array(
@@ -38,7 +36,6 @@ function isBabyStageConfirmed(messages: Array<{ role: string; content: string }>
     if (/\b(arrived|delivered|born|came home)\b/i.test(userText)) return true;
     if (/\b(expecting|pregnant|due date|due in|due next|weeks pregnant|months pregnant|trimester)\b/i.test(userText)) return true;
 
-    // Single-word replies — check ALL user messages (not just the last one)
     for (const m of messages.filter((m) => m.role === "user")) {
         const t = m.content.trim().toLowerCase();
         if (/^(home|already home|yes home|baby home|baby is home|she'?s? home|he'?s? home)$/.test(t)) return true;
@@ -91,29 +88,24 @@ function parseFlowState(messages: Array<{ role: string; content: string }>): Flo
         const msg = messages[i];
         if (msg.role !== "user") continue;
 
-        // Find the most recent assistant message before this user message
         const prevAssistant = messages.slice(0, i).reverse().find((m) => m.role === "assistant")?.content ?? "";
 
-        // Service type: assistant asked nurse vs japa
         if (!serviceType && /nurse.*japa|japa.*nurse|certified nurse|postnatal caregiver/i.test(prevAssistant)) {
             const st = detectServiceType(msg.content);
             if (st) serviceType = st;
         }
 
-        // Care type: assistant asked day vs night
         if (!careType && /day.*night|night.*day/i.test(prevAssistant)) {
             const ct = detectCareType(msg.content);
             if (ct) careType = ct;
         }
 
-        // Duration: assistant offered duration options
-        if (!duration && /8.*10.*12|8-hour|10-hour|12-hour|8 hrs|10 hrs|12 hrs|which suits|which works/i.test(prevAssistant)) {
+        if (!duration && /8.*10.*12|8-hour|10-hour|12-hour|8 hrs|10 hrs|12 hrs|which suits|which works|9 hrs|9 pm|8 pm/i.test(prevAssistant)) {
             const d = detectDuration(msg.content);
             if (d) duration = d;
         }
 
-        // Time slot: assistant asked for time slot
-        if (!timeSlot && /8 am.*4 pm|9 am.*5 pm|which slot|which start time|which time/i.test(prevAssistant)) {
+        if (!timeSlot && /8 am.*4 pm|9 am.*5 pm|10 am.*6 pm|which slot|which start time|which time/i.test(prevAssistant)) {
             const ts = detectTimeSlot(msg.content);
             if (ts) timeSlot = ts;
         }
@@ -124,90 +116,99 @@ function parseFlowState(messages: Array<{ role: string; content: string }>): Flo
 
 function getFlowReply(state: FlowState, isFirstServiceQuestion: boolean): string {
     const { serviceType, careType, duration, timeSlot } = state;
-
     const TIME_SLOT_OPTIONS = "[[OPTIONS:8 AM–4 PM|9 AM–5 PM|10 AM–6 PM]]";
 
-    // Step 1: Ask service type
     if (!serviceType) {
         const welcome = isFirstServiceQuestion ? "Lovely, we're here to help! 🌸 " : "";
         return `${welcome}Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?\n[[OPTIONS:Certified Nurse|Postnatal Caregiver (Japa)]]`;
     }
 
-    // Step 2: Ask care type
     if (!careType) {
         const label = serviceType === "nurse" ? "Certified Nurse" : "Japa/MOBA caregiver";
-        return `Great, a ${label} it is! Day care or night care?\n[[OPTIONS:Day care|Night care]]`;
+        return `Great, a ${label} it is! Would you need day care or night care?\n[[OPTIONS:Day care|Night care]]`;
     }
 
-    // Step 3+: Branch by service + care type
     if (serviceType === "nurse") {
         if (careType === "night") {
             return "Our nurse night shift is 9 PM–6 AM (9 hrs). Let me get you connected!\n[[COLLECT_LEAD]]";
         }
         if (careType === "day") {
-            if (!timeSlot) {
-                return `Which time slot works for you?\n${TIME_SLOT_OPTIONS}`;
-            }
+            if (!timeSlot) return `Which time slot works for you?\n${TIME_SLOT_OPTIONS}`;
             return `${timeSlot} — noted! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
         }
     }
 
     if (serviceType === "japa") {
         if (careType === "night") {
-            if (!duration) {
-                return "We have two night options — 9 hrs (9 PM–6 AM) or 12 hrs (8 PM–8 AM). Which works for you?\n[[OPTIONS:9 hrs (9 PM–6 AM)|12 hrs (8 PM–8 AM)]]";
-            }
+            if (!duration) return "We have two night options — 9 hrs (9 PM–6 AM) or 12 hrs (8 PM–8 AM). Which works for you?\n[[OPTIONS:9 hrs (9 PM–6 AM)|12 hrs (8 PM–8 AM)]]";
             const shift = duration === "12" ? "8 PM–8 AM" : "9 PM–6 AM";
             return `${shift} — great choice! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
         }
         if (careType === "day") {
-            if (!duration) {
-                return `We have 8, 10, or 12-hour day shifts. Which suits you best?\n[[OPTIONS:8 hours|10 hours|12 hours]]`;
-            }
+            if (!duration) return `We have 8, 10, or 12-hour day shifts. Which suits you best?\n[[OPTIONS:8 hours|10 hours|12 hours]]`;
             if (duration === "8") {
-                if (!timeSlot) {
-                    return `Which slot works best for you?\n${TIME_SLOT_OPTIONS}`;
-                }
+                if (!timeSlot) return `Which slot works best for you?\n${TIME_SLOT_OPTIONS}`;
                 return `${timeSlot} — perfect! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
             }
-            if (duration === "10") {
-                return "That's our 9 AM–7 PM shift. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
-            }
-            if (duration === "12") {
-                return "That's our 8 AM–8 PM shift. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
-            }
+            if (duration === "10") return "That's our 9 AM–7 PM shift. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
+            if (duration === "12") return "That's our 8 AM–8 PM shift. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
         }
     }
 
-    // Fallback
     return `Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?\n[[OPTIONS:Certified Nurse|Postnatal Caregiver (Japa)]]`;
 }
 
-// ── Is this an informational question? ───────────────────────────────────────
+// ── Pre-flow greeting: deterministic scripted replies ─────────────────────────
 
-function isInfoQuestion(text: string): boolean {
-    return /\?/.test(text) || /\b(what|how|why|difference|explain|tell me|cost|price|pricing|meaning|which is better)\b/i.test(text);
+function getGreetingReply(lastUserMsg: string): string {
+    const t = lastUserMsg.toLowerCase().trim();
+    const BABY_Q = "Is your little one already home, or are you still expecting?\n[[OPTIONS:Baby is home|Still expecting]]";
+
+    // Pure greetings
+    if (/^(hi+|hello|hey+|helo|namaste|good\s*(morning|evening|afternoon|night)|greetings)[\s!.,]*$/.test(t)) {
+        return `Hi there! 🌸 Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts. ${BABY_Q}`;
+    }
+
+    // What do you do / services
+    if (/what.*(do|offer|provide|serv)|serv|nurse|japa|moba|caregiver|nanny|postnatal|newborn care/.test(t)) {
+        return `At Cradlewell, we provide Certified Nurse care and Japa/MOBA postnatal caregiver services — trained professionals who support your baby and you around the clock. To find the right fit, ${BABY_Q}`;
+    }
+
+    // Pricing / cost
+    if (/price|cost|fee|charge|rate|how much|expensive|affordable|package|quote/.test(t)) {
+        return `Our packages are tailored to your shift type and duration — very competitive for Bengaluru. To give you an accurate quote, ${BABY_Q}`;
+    }
+
+    // Availability / urgent
+    if (/available|urgent|immediately|today|tomorrow|asap|soon/.test(t)) {
+        return `We have care professionals available across Bengaluru and can usually arrange care quickly. ${BABY_Q}`;
+    }
+
+    // Need help / want service
+    if (/help|need|want|looking|require|book|hire|get/.test(t)) {
+        return `We're so glad you reached out! 🌸 Cradlewell is here to make this journey smoother for you. ${BABY_Q}`;
+    }
+
+    // Experience / trust
+    if (/experience|trust|safe|background|trained|qualify|certif/.test(t)) {
+        return `All our caregivers are background-verified, trained professionals with experience in newborn and postnatal care. You're in safe hands. ${BABY_Q}`;
+    }
+
+    // Area / location
+    if (/area|location|bengaluru|bangalore|city|where|cover/.test(t)) {
+        return `We currently serve families across Bengaluru — Whitefield, Koramangala, HSR Layout, Indiranagar, Hebbal, and many more areas. ${BABY_Q}`;
+    }
+
+    // Default — steer to the flow
+    return `Thanks for reaching out to Cradlewell! 🌸 We're here to make your postpartum journey as smooth as possible. ${BABY_Q}`;
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            return NextResponse.json(
-                { reply: "Server configuration error: GEMINI_API_KEY is missing." },
-                { status: 500 }
-            );
-        }
-
         const json = await req.json();
         const { messages } = RequestSchema.parse(json);
-
-        // Gemini requires the first content role to be "user" — drop any leading assistant messages
-        const geminiMessages = (() => {
-            const idx = messages.findIndex((m) => m.role === "user");
-            return idx === -1 ? messages : messages.slice(idx);
-        })();
 
         const babyStageConfirmed = isBabyStageConfirmed(messages);
         const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
@@ -215,62 +216,14 @@ export async function POST(req: NextRequest) {
         // ── SERVICE FLOW: pure state machine ──────────────────────────────────
         if (babyStageConfirmed) {
             const state = parseFlowState(messages);
-
-            // isFirstServiceQuestion: true when no prior assistant message asked a service flow question
             const lastAssistantMsg = [...messages].reverse().find((m) => m.role === "assistant")?.content ?? "";
             const isFirstServiceQuestion = !/nurse.*japa|japa.*nurse|certified nurse|postnatal caregiver|day.*night|night.*day|8.*10.*12|which slot|which start time/i.test(lastAssistantMsg);
-
             const flowReply = getFlowReply(state, isFirstServiceQuestion);
-
-            // If user asked an informational question, let Claude answer it,
-            // then append the next flow step at the end
-            if (isInfoQuestion(lastUserMsg) && !flowReply.includes("[[COLLECT_LEAD]]")) {
-                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-                const model = genAI.getGenerativeModel({
-                    model: "gemini-2.5-flash",
-                    systemInstruction: `You are Aria from Cradlewell. Answer the user's question in 1–2 short plain text sentences. No markdown, no bullet points, no bold text.\n\nKnowledge:\n${CRADLEWELL_KNOWLEDGE}\n\nAfter answering, always end with: "${flowReply}"`,
-                });
-                const result = await model.generateContent({
-                    contents: geminiMessages.map((m) => ({
-                        role: m.role === "assistant" ? "model" : "user",
-                        parts: [{ text: m.content }],
-                    })),
-                    generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
-                });
-                const aiAnswer = result.response.text().trim();
-                return NextResponse.json({ reply: aiAnswer || flowReply });
-            }
-
-            // Happy path: return deterministic reply
             return NextResponse.json({ reply: flowReply });
         }
 
-        // ── GREETING MODE: Gemini AI (before baby stage confirmed) ───────────
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            systemInstruction: `You are Aria from Cradlewell — warm and caring.
-
-RULES:
-- Reply in 1 sentence only. Maximum 15 words.
-- Never mention services, nurses, caregivers, pricing, or shifts.
-- Ask ONCE: "Is your little one already home, or are you still expecting?"
-- If already answered, do not repeat the question.
-- No markdown, no bullet points.`,
-        });
-
-        const result = await model.generateContent({
-            contents: messages.map((m) => ({
-                role: m.role === "assistant" ? "model" : "user",
-                parts: [{ text: m.content }],
-            })),
-            generationConfig: { maxOutputTokens: 128, temperature: 0.5 },
-        });
-
-        const reply =
-            result.response.text().trim() ||
-            "Is your little one already home, or are you still expecting?";
-
+        // ── GREETING MODE: fully scripted, no AI ─────────────────────────────
+        const reply = getGreetingReply(lastUserMsg);
         return NextResponse.json({ reply });
 
     } catch (error) {
