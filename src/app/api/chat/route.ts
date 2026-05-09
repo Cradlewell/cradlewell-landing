@@ -273,10 +273,9 @@ RULES:
         return NextResponse.json({ reply });
 
     } catch (error) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        console.error("Chat route error:", errMsg);
+        console.error("Chat route error:", error);
         return NextResponse.json(
-            { reply: `Error: ${errMsg}` },
+            { reply: "Sorry, something went wrong. Please try again." },
             { status: 500 }
         );
     }
