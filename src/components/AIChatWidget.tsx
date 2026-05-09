@@ -333,51 +333,47 @@ export default function AIChatWidget() {
 
         try {
             setLeadSubmitting(true);
-            // Build a short one-line summary
-            // Service type — user messages only (avoid assistant explanations skewing it)
+            // Extract data from chat conversation
             const userText = messages
                 .filter((m) => m.role === "user")
                 .map((m) => m.content.toLowerCase())
                 .join(" ");
+            const allText = messages.map((m) => m.content.toLowerCase()).join(" ");
 
-            // All messages — used for slot/hours fallback (user sometimes says "yes" instead of the time)
-            const allText = messages
-                .map((m) => m.content.toLowerCase())
-                .join(" ");
+            // Baby status
+            const babyStatus = /baby is home|already home|baby home|\bhome\b|arrived|delivered|born|came home/.test(userText)
+                ? "Born"
+                : /expecting|pregnant|due|still expecting/.test(userText)
+                ? "Expecting"
+                : "";
 
             // Service type
-            let serviceType = "Not specified";
+            let service = "";
             if (/caregiver|japa|moba|postnatal caregiver/.test(userText)) {
-                serviceType = "Postnatal Caregiver (Japa/MOBA)";
+                service = "Postnatal Caregiver (Japa/MOBA)";
             } else if (/\bnurse\b|certified nurse/.test(userText)) {
-                serviceType = "Nurse";
+                service = "Nurse";
             }
 
             // Shift type
-            const shiftType = /night/.test(userText) ? "Night" : /day/.test(userText) ? "Day" : "Not specified";
+            const shiftType = /night/.test(userText) ? "Night" : /day/.test(userText) ? "Day" : "";
 
-            // Duration — check user text first, then all text
+            // Duration
             const hoursMatch = userText.match(/\b(8|9|10|12)\s*(?:hour|hrs?)/) ||
                                allText.match(/\b(8|9|10|12)\s*(?:hour|hrs?)/);
             const hours = hoursMatch?.[1] || "";
 
-            // Time slot detection — priority: user text > all text fallback
-            // 1. Strict match in user text (e.g. "8 AM – 4 PM")
+            // Time slot — user text first, then all messages fallback
             const userStrictSlot = userText.match(/(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-)\s*\d{1,2}\s*(?:am|pm))/i);
-            // 2. Flexible match in user text (e.g. "9 to 5", "10 to 6") — no AM/PM required
             const userFlexSlot = userText.match(/\b(\d{1,2})\s*(?:to|–|-)\s*(\d{1,2})\b/);
-
             let slot = "";
             if (userStrictSlot) {
                 slot = userStrictSlot[1].replace(/\b(am|pm)\b/gi, (m: string) => m.toUpperCase());
             } else if (userFlexSlot) {
-                // Infer AM/PM from shift type
                 const h1 = userFlexSlot[1];
                 const h2 = userFlexSlot[2];
                 slot = shiftType === "Night" ? `${h1} PM – ${h2} AM` : `${h1} AM – ${h2} PM`;
             } else {
-                // Fallback: scan ALL messages, take last strict slot match
-                // Handles "Yes, that works" responses where user never types the time
                 const strictPattern = /(\d{1,2}\s*(?:am|pm)\s*(?:to|–|-)\s*\d{1,2}\s*(?:am|pm))/gi;
                 let lastSlotMatch: RegExpExecArray | null = null;
                 let slotExec: RegExpExecArray | null;
@@ -389,12 +385,25 @@ export default function AIChatWidget() {
                     : "";
             }
 
-            const summary = `Looking for ${serviceType} – ${shiftType} support${hours ? `, ${hours} hrs` : ""}${slot ? `, ${slot}` : ""}.`;
+            const summary = `Looking for ${service || "care"} – ${shiftType || "care"} support${hours ? `, ${hours} hrs` : ""}${slot ? `, ${slot}` : ""}.`;
 
             const res = await fetch("/api/lead", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...leadForm, pagePath: pathname, summary }),
+                body: JSON.stringify({
+                    name: leadForm.name,
+                    phone: leadForm.phone,
+                    email: leadForm.email,
+                    address: leadForm.city,
+                    service,
+                    babyStatus,
+                    shiftType,
+                    shiftHours: hours,
+                    shiftTime: slot,
+                    source: "Aria Chat",
+                    pagePath: pathname,
+                    summary,
+                }),
             });
 
             const data = await res.json();

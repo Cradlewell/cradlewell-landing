@@ -18,6 +18,7 @@ const LeadSchema = z.object({
     careStartDate: z.string().optional().default(""),
     serviceDays: z.string().optional().default(""),
     pagePath: z.string().optional().default(""),
+    source: z.string().optional().default("Website"),
     // legacy compat fields
     email: z.string().optional().default(""),
     summary: z.string().optional().default(""),
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
                 name: lead.name,
                 phone: lead.phone,
                 whatsapp: lead.phone,
-                source: "Website",
+                source: lead.source || "Website",
                 lead_date: now.toISOString(),
                 service_required: lead.service,
                 baby_status: lead.babyStatus || "Unknown",

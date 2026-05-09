@@ -8,7 +8,7 @@ import { Plus, Search, Download, Trash2 } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadSource, LeadStage } from "@/lib/crm-types";
 
-const SOURCES: LeadSource[] = ["Website", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
+const SOURCES: LeadSource[] = ["Website", "Aria Chat", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
 
 function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso));

@@ -11,7 +11,7 @@ export const LEAD_STAGES: LeadStage[] = [
 ];
 
 export type LeadTemperature = "Cold" | "Warm" | "Hot";
-export type LeadSource = "Website" | "WhatsApp" | "Instagram" | "Facebook" | "Google Ads"
+export type LeadSource = "Website" | "Aria Chat" | "WhatsApp" | "Instagram" | "Facebook" | "Google Ads"
   | "Referral" | "Walk-in" | "Hospital Partner" | "Other";
 export type BabyStatus = "Born" | "Expecting";
 export type Shift = "Day" | "Night" | "24hrs" | "Day (12h)" | "Night (12h)" | "Full Day (24h)" | "Custom";
