@@ -517,30 +517,10 @@ p {
   margin-bottom: 16px;
 }
 
-/* ─── WhatsApp Widget ────────────────────────────────────────── */
-.whatsapp-widget {
-  position: fixed;
-  bottom: 100px;
-  right: 20px;
-  background-color: #25D366;
-  color: white;
-  padding: 14px;
-  border-radius: 50%;
-  box-shadow: 0 4px 20px rgba(37,211,102,0.35);
-  z-index: 9999;
-  transition: transform 0.25s var(--cw-ease), box-shadow 0.25s var(--cw-ease);
-}
-
 /* Hide floating widgets when booking modal is open */
-body.modal-open .whatsapp-widget,
 body.modal-open .aria-widget-container,
 body.modal-open .sticky-mobile-cta {
   display: none !important;
-}
-
-.whatsapp-widget:hover {
-  transform: scale(1.1);
-  box-shadow: 0 8px 28px rgba(37,211,102,0.45);
 }
 
 /* ─── Reels / Video ──────────────────────────────────────────── */
@@ -681,7 +661,6 @@ body.modal-open .sticky-mobile-cta {
 
 /* ─── Mobile: hide floating widgets (hero + sticky CTA handle CTAs) ─── */
 @media (max-width: 991px) {
-  .whatsapp-widget,
   .aria-widget-container {
     display: none !important;
   }

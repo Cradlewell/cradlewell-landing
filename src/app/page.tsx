@@ -19,7 +19,6 @@ import StepsSection from "@/components/StepsSection";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import TrustedByStrip from "@/components/TrustedByStrip";
-import WhatsAppWidget from "@/components/WhatsAppWidget";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 export default function Home() {
@@ -36,7 +35,6 @@ export default function Home() {
       <FoundersCarousel />
       <FAQSection />
       <PromoTrialSection />
-      <WhatsAppWidget />
       <StickyMobileCTA />
     </>
   );
