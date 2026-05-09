@@ -5,7 +5,7 @@ const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!;
 const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN!;
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN!;
 
-// ── Send WhatsApp message ─────────────────────────────────────────────────────
+// ── Send plain text message ───────────────────────────────────────────────────
 
 async function sendMessage(to: string, text: string) {
     try {
@@ -24,6 +24,41 @@ async function sendMessage(to: string, text: string) {
         });
     } catch (err) {
         console.error("Failed to send WhatsApp message:", err);
+    }
+}
+
+// ── Send interactive button message (max 3 buttons, title max 20 chars) ───────
+
+async function sendButtonMessage(
+    to: string,
+    body: string,
+    buttons: Array<{ id: string; title: string }>
+) {
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${ACCESS_TOKEN}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "button",
+                    body: { text: body },
+                    action: {
+                        buttons: buttons.map((btn) => ({
+                            type: "reply",
+                            reply: { id: btn.id, title: btn.title },
+                        })),
+                    },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("Failed to send WhatsApp button message:", err);
     }
 }
 
@@ -106,6 +141,16 @@ async function pushLeadToCRM(waPhone: string, name: string, service: string, bab
 
 // ── Bot flow ──────────────────────────────────────────────────────────────────
 
+const BABY_STATUS_BUTTONS = [
+    { id: "home", title: "Baby is home" },
+    { id: "expecting", title: "Still expecting" },
+];
+
+const SERVICE_BUTTONS = [
+    { id: "nurse", title: "Certified Nurse" },
+    { id: "japa", title: "Postnatal Caregiver" },
+];
+
 async function handleMessage(waPhone: string, incomingText: string) {
     const text = incomingText.trim();
     const session = await getSession(waPhone);
@@ -125,10 +170,9 @@ async function handleMessage(waPhone: string, incomingText: string) {
     // Step: collect name
     if (session.step === "ask_name") {
         await upsertSession(waPhone, { name: text, step: "ask_baby_status" });
-        const reply =
-            `Nice to meet you, ${text}! 🌸\n\nIs your little one already home, or are you still expecting?\n\nReply:\n1️⃣ Baby is home\n2️⃣ Still expecting`;
-        await sendMessage(waPhone, reply);
-        await storeMessage(waPhone, "outbound", reply);
+        const bodyText = `Nice to meet you, ${text}! 🌸\n\nIs your little one already home, or are you still expecting?`;
+        await sendButtonMessage(waPhone, bodyText, BABY_STATUS_BUTTONS);
+        await storeMessage(waPhone, "outbound", bodyText);
         return;
     }
 
@@ -136,19 +180,23 @@ async function handleMessage(waPhone: string, incomingText: string) {
     if (session.step === "ask_baby_status") {
         const t = text.toLowerCase();
         let babyStatus = "";
-        if (/^1$|home|born|arrived|delivered/.test(t)) babyStatus = "Born";
-        else if (/^2$|expect|pregnant|due/.test(t)) babyStatus = "Expecting";
+
+        if (/^home$|^1$|baby is home|^born$|arrived|delivered/.test(t)) babyStatus = "Born";
+        else if (/^expecting$|^2$|still expecting|pregnant|due/.test(t)) babyStatus = "Expecting";
         else {
-            const reply = "Please reply:\n1️⃣ Baby is home\n2️⃣ Still expecting";
-            await sendMessage(waPhone, reply);
-            await storeMessage(waPhone, "outbound", reply);
+            await sendButtonMessage(
+                waPhone,
+                "Please tap one of the options below:",
+                BABY_STATUS_BUTTONS
+            );
+            await storeMessage(waPhone, "outbound", "Please tap one of the options below:");
             return;
         }
+
         await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_service" });
-        const reply =
-            "Got it! 🌸 What kind of care are you looking for?\n\n1️⃣ Certified Nurse\n2️⃣ Postnatal Caregiver (Japa/MOBA)";
-        await sendMessage(waPhone, reply);
-        await storeMessage(waPhone, "outbound", reply);
+        const bodyText = "Got it! 🌸 What kind of care are you looking for?";
+        await sendButtonMessage(waPhone, bodyText, SERVICE_BUTTONS);
+        await storeMessage(waPhone, "outbound", bodyText);
         return;
     }
 
@@ -156,21 +204,29 @@ async function handleMessage(waPhone: string, incomingText: string) {
     if (session.step === "ask_service") {
         const t = text.toLowerCase();
         let service = "";
-        if (/^1$|\bnurse\b/.test(t)) service = "Nurse";
-        else if (/^2$|japa|moba|caregiver/.test(t)) service = "Postnatal Caregiver (Japa/MOBA)";
+
+        if (/^nurse$|^1$|certified nurse|\bnurse\b/.test(t)) service = "Nurse";
+        else if (/^japa$|^2$|postnatal caregiver|japa|moba|caregiver/.test(t))
+            service = "Postnatal Caregiver (Japa/MOBA)";
         else {
-            const reply =
-                "Please reply:\n1️⃣ Certified Nurse\n2️⃣ Postnatal Caregiver (Japa/MOBA)";
-            await sendMessage(waPhone, reply);
-            await storeMessage(waPhone, "outbound", reply);
+            await sendButtonMessage(
+                waPhone,
+                "Please tap the type of care you need:",
+                SERVICE_BUTTONS
+            );
+            await storeMessage(waPhone, "outbound", "Please tap the type of care you need:");
             return;
         }
 
         await upsertSession(waPhone, { service, step: "completed" });
-        await pushLeadToCRM(waPhone, session.name || "WhatsApp User", service, session.baby_status || "");
+        await pushLeadToCRM(
+            waPhone,
+            session.name || "WhatsApp User",
+            service,
+            session.baby_status || ""
+        );
 
-        const reply =
-            `Thank you, ${session.name}! 🌸 Our care advisor will call you shortly.\n\nFor urgent queries, call us: +91 93638 93639`;
+        const reply = `Thank you, ${session.name}! 🌸 Our care advisor will call you shortly.\n\nFor urgent queries, call us: +91 93638 93639`;
         await sendMessage(waPhone, reply);
         await storeMessage(waPhone, "outbound", reply);
         return;
@@ -208,7 +264,17 @@ export async function POST(req: NextRequest) {
 
         const message = messages[0];
         const waPhone: string = message.from;
-        const text: string | null = message.type === "text" ? message.text?.body : null;
+
+        // Extract text from plain message OR interactive button tap
+        let text: string | null = null;
+        if (message.type === "text") {
+            text = message.text?.body ?? null;
+        } else if (
+            message.type === "interactive" &&
+            message.interactive?.type === "button_reply"
+        ) {
+            text = message.interactive.button_reply?.title ?? null;
+        }
 
         if (!text) return NextResponse.json({ status: "ok" });
 
