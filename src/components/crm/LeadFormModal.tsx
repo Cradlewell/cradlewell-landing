@@ -12,13 +12,17 @@ interface Props {
   onClose: () => void;
 }
 
+const HOURS = ["1","2","3","4","5","6","7","8","9","10","11","12"];
+const MINS = ["00","15","30","45"];
+
 const INIT = {
   name: "", phone: "", source: "Website" as LeadSource,
   serviceRequired: "Newborn Care", babyStatus: "Born" as BabyStatus,
   hospitalName: "", babyBirthStageStatus: "",
   babyAge: "", currentWeight: "", address: "",
   preferredShift: "Day" as Shift,
-  shiftHoursCount: "" as unknown as number, shiftTime: "",
+  shiftHoursCount: "" as unknown as number,
+  shiftStartHour: "9", shiftStartMin: "00", shiftStartAmpm: "AM",
   careStartDate: "", serviceDays: "" as unknown as number,
   notes: "",
 };
@@ -36,6 +40,7 @@ export default function LeadFormModal({ open, onClose }: Props) {
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim()) return;
     setSaving(true);
+    const shiftTime = `${form.shiftStartHour}:${form.shiftStartMin} ${form.shiftStartAmpm}`;
     api.addLead({
       name: form.name.trim(),
       phone: form.phone.trim(),
@@ -51,7 +56,7 @@ export default function LeadFormModal({ open, onClose }: Props) {
       address: form.address || undefined,
       preferredShift: form.preferredShift,
       shiftHoursCount: Number(form.shiftHoursCount) || undefined,
-      shiftTime: form.shiftTime || undefined,
+      shiftTime,
       careStartDate: form.careStartDate || undefined,
       serviceDays: Number(form.serviceDays) || undefined,
       notes: form.notes || undefined,
@@ -151,8 +156,19 @@ export default function LeadFormModal({ open, onClose }: Props) {
                     <input className="crm-input" type="number" value={form.shiftHoursCount} onChange={e => set("shiftHoursCount", e.target.value)} placeholder="12" />
                   </div>
                   <div className="crm-form-group">
-                    <label className="crm-label">Shift Time</label>
-                    <input className="crm-input" value={form.shiftTime} onChange={e => set("shiftTime", e.target.value)} placeholder="9:00 AM – 9:00 PM" />
+                    <label className="crm-label">Shift Start Time</label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <select className="crm-select" style={{ flex: 1 }} value={form.shiftStartHour} onChange={e => set("shiftStartHour", e.target.value)}>
+                        {HOURS.map(h => <option key={h}>{h}</option>)}
+                      </select>
+                      <select className="crm-select" style={{ flex: 1 }} value={form.shiftStartMin} onChange={e => set("shiftStartMin", e.target.value)}>
+                        {MINS.map(m => <option key={m}>{m}</option>)}
+                      </select>
+                      <select className="crm-select" style={{ flex: 1 }} value={form.shiftStartAmpm} onChange={e => set("shiftStartAmpm", e.target.value)}>
+                        <option>AM</option>
+                        <option>PM</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="crm-form-group">
                     <label className="crm-label">Care Start Date</label>
