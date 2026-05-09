@@ -12,7 +12,7 @@ export interface InvoiceData {
   billCity: string;
   billState: string;
   billPincode: string;
-  billCountry: string;
+  billCountry?: string;
   billPhone: string;
   sameAsShipping: boolean;
   shipLine1?: string;
