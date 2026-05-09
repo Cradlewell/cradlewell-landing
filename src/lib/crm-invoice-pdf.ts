@@ -61,10 +61,12 @@ function amountInWords(amount: number): string {
 async function fetchLogoBase64(): Promise<string | null> {
   try {
     const res = await fetch("/images/cw_logo.png");
+    if (!res.ok) return null;
     const blob = await res.blob();
     return await new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
+      reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
       reader.readAsDataURL(blob);
     });
   } catch {
@@ -93,7 +95,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   const logoY = 6;
   const logoBase64 = await fetchLogoBase64();
   if (logoBase64) {
-    doc.addImage(logoBase64, "PNG", logoX, logoY, logoSize, logoSize);
+    try { doc.addImage(logoBase64, "PNG", logoX, logoY, logoSize, logoSize); } catch { /* skip logo if unsupported */ }
   }
   const textX = logoX + logoSize + 4;
 

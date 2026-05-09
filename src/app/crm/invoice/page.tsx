@@ -20,6 +20,7 @@ const PAYMENT_TERMS = ["Due on Receipt", "Net 7", "Net 15", "Net 30", "Net 45", 
 export default function InvoicePage() {
   const db = useDB();
   const [generating, setGenerating] = useState(false);
+  const [pdfError, setPdfError] = useState("");
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [taxMode, setTaxMode] = useState<"TDS" | "TCS">("TDS");
@@ -90,9 +91,13 @@ export default function InvoicePage() {
   const grandTotal = Math.max(0, subtotal + totalCGST + totalSGST - discountAmt - form.tds + form.adjustment);
 
   const handleDownload = async () => {
+    setPdfError("");
     setGenerating(true);
     try {
       await generateInvoicePdf(form);
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      setPdfError(err instanceof Error ? err.message : "Failed to generate PDF. Please try again.");
     } finally {
       setGenerating(false);
     }
@@ -113,6 +118,12 @@ export default function InvoicePage() {
           <Download size={16} /> {generating ? "Generating…" : "Save & Download PDF"}
         </button>
       </div>
+
+      {pdfError && (
+        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "0.75rem 1rem", color: "#DC2626", fontSize: "0.85rem", marginBottom: "1rem" }}>
+          ⚠ {pdfError}
+        </div>
+      )}
 
       <div className="crm-card" style={{ padding: "1.5rem" }}>
 
