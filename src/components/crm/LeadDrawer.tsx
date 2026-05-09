@@ -1,21 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
-import { X, Phone, MessageCircle, Edit2, Save, Trash2, Plus, Check, Clock } from "lucide-react";
+import { X, Phone, MessageCircle, Edit2, Save, Trash2, Plus, Check, Clock, ChevronDown } from "lucide-react";
 import { api, useDB, isOverdue, isToday } from "@/lib/crm-store";
-import type { Lead, LeadStage, LeadTemperature, FollowupType, LostReason } from "@/lib/crm-types";
+import type { Lead, LeadStage, FollowupType, LostReason } from "@/lib/crm-types";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import StageBadge from "./StageBadge";
-import TempBadge from "./TempBadge";
 import { format } from "date-fns";
 
 const FOLLOWUP_TYPES: FollowupType[] = ["First call", "Call back", "Quotation reminder", "Payment reminder", "Trial decision", "Closure follow-up"];
 const LOST_REASONS: LostReason[] = ["Competitor selected", "Budget issue", "No response", "Trust issue", "Service not available", "Other"];
 
-interface Props {
-  leadId: string | null;
-  onClose: () => void;
-}
-
+interface Props { leadId: string | null; onClose: () => void; }
 type Tab = "profile" | "followups" | "quotations" | "closure" | "activity";
 
 export default function LeadDrawer({ leadId, onClose }: Props) {
@@ -26,19 +21,16 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [draft, setDraft] = useState<Partial<Lead>>({});
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  // Followup form
   const [fuType, setFuType] = useState<FollowupType>("Call back");
   const [fuDue, setFuDue] = useState("");
   const [fuNote, setFuNote] = useState("");
 
-  // Quotation form
   const [qPkg, setQPkg] = useState("Standard 30 days");
   const [qHours, setQHours] = useState("12h");
   const [qPrice, setQPrice] = useState("");
   const [qDiscount, setQDiscount] = useState("0");
   const [qNotes, setQNotes] = useState("");
 
-  // Closure form
   const [closureType, setClosureType] = useState<"Won" | "Lost">("Won");
   const [cPkg, setCPkg] = useState("");
   const [cAmount, setCAmount] = useState("");
@@ -63,30 +55,19 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const leadActivity = db.activity.filter(a => a.leadId === lead.id).reverse();
 
   const initials = lead.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
-
-  const saveEdits = () => {
-    api.updateLead(lead.id, draft);
-    setEditing(false);
-  };
-
-  const handleDelete = () => {
-    api.deleteLead(lead.id);
-    onClose();
-  };
-
+  const saveEdits = () => { api.updateLead(lead.id, draft); setEditing(false); };
+  const handleDelete = () => { api.deleteLead(lead.id); onClose(); };
   const addFollowup = () => {
     if (!fuDue) return;
     api.addFollowup({ leadId: lead.id, type: fuType, dueAt: fuDue, note: fuNote });
     setFuDue(""); setFuNote("");
   };
-
   const addQuotation = () => {
     const p = Number(qPrice); if (!p) return;
     const d = Number(qDiscount) || 0;
     api.addQuotation({ leadId: lead.id, package: qPkg, shiftHours: qHours, quotedPrice: p, discount: d, finalPrice: p - d, date: new Date().toISOString(), notes: qNotes });
     setQPrice(""); setQDiscount("0"); setQNotes("");
   };
-
   const submitClosure = () => {
     if (closureType === "Won") {
       api.closeLead({ leadId: lead.id, type: "Won", finalPackage: cPkg, finalAmount: Number(cAmount) || undefined, advanceReceived: Number(cAdvance) || undefined, paymentStatus: cPayStatus, closureDate: new Date().toISOString() });
@@ -94,73 +75,126 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
       api.closeLead({ leadId: lead.id, type: "Lost", lostReason: cLostReason, competitorName: cCompetitor, notes: cNotes, closureDate: new Date().toISOString() });
     }
   };
-
   const fmtDt = (iso: string) => { try { return format(new Date(iso), "dd MMM, hh:mm a"); } catch { return iso; } };
 
   const Field = ({ label, value, field, type = "text" }: { label: string; value?: string | number; field: keyof Lead; type?: string }) => (
-    <div className="crm-form-group">
-      <label className="crm-label">{label}</label>
+    <div>
+      <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
       {editing ? (
-        <input className="crm-input" type={type} value={(draft[field] as string) ?? ""} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} />
+        <input className="crm-input" type={type} value={(draft[field] as string) ?? ""} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} style={{ fontSize: "0.85rem" }} />
       ) : (
-        <div style={{ fontSize: "0.875rem", color: value ? "var(--crm-text)" : "var(--crm-text-muted)", padding: "0.375rem 0" }}>{value || "—"}</div>
+        <div style={{ fontSize: "0.875rem", color: value ? "var(--crm-text)" : "var(--crm-text-muted)", fontWeight: value ? 500 : 400 }}>{value || "—"}</div>
       )}
     </div>
   );
 
   return (
     <>
-      <div className={`crm-drawer-overlay open`} onClick={onClose} />
+      <div className="crm-drawer-overlay open" onClick={onClose} />
       <aside className="crm-drawer open" role="dialog" aria-label={`Lead: ${lead.name}`}>
-        {/* Header */}
-        <div className="crm-drawer-header">
-          <div className="d-flex align-items-start gap-3">
-            <div className="crm-avatar">{initials}</div>
-            <div className="flex-1 min-w-0">
-              <div style={{ fontSize: "0.72rem", opacity: 0.75, marginBottom: 2 }}>{lead.source} · {lead.id}</div>
-              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>{lead.name}</h3>
-              <div className="d-flex gap-2 mt-1 flex-wrap">
-                <a href={`tel:${lead.phone}`} style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.8rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                  <Phone size={13} />{lead.phone}
+
+        {/* ── Premium Header ── */}
+        <div style={{
+          background: "linear-gradient(135deg, #4F6EF7 0%, #6C3FC5 100%)",
+          padding: "1.5rem 1.25rem 0",
+          position: "relative",
+        }}>
+          {/* Avatar + Name row */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem", marginBottom: "1rem" }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 14,
+              background: "rgba(255,255,255,0.2)",
+              backdropFilter: "blur(8px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "1rem", fontWeight: 700, color: "#fff",
+              flexShrink: 0, border: "1.5px solid rgba(255,255,255,0.3)",
+            }}>{initials}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{lead.name}</h3>
+              <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                <a href={`tel:${lead.phone}`} onClick={e => e.stopPropagation()} style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
+                  color: "#fff", fontSize: "0.78rem", textDecoration: "none",
+                  padding: "4px 10px", borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  fontWeight: 500,
+                }}>
+                  <Phone size={12} />{lead.phone}
                 </a>
                 {lead.whatsapp && (
-                  <a href={`https://wa.me/91${lead.whatsapp}`} target="_blank" rel="noreferrer" style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.8rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                    <MessageCircle size={13} />WhatsApp
+                  <a href={`https://wa.me/91${lead.whatsapp}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    background: "rgba(37,211,102,0.25)", backdropFilter: "blur(8px)",
+                    color: "#fff", fontSize: "0.78rem", textDecoration: "none",
+                    padding: "4px 10px", borderRadius: 999,
+                    border: "1px solid rgba(37,211,102,0.4)",
+                    fontWeight: 500,
+                  }}>
+                    <MessageCircle size={12} />WhatsApp
                   </a>
                 )}
               </div>
             </div>
-            <div className="d-flex gap-2 flex-wrap align-items-start" style={{ flexShrink: 0 }}>
-              {editing ? (
-                <>
-                  <button onClick={saveEdits} className="crm-btn crm-btn-sm" style={{ background: "rgba(255,255,255,0.2)", color: "white", fontSize: "0.75rem" }}>
-                    <Save size={13} /> Save
-                  </button>
-                  <button onClick={() => { setEditing(false); setDraft({ ...lead }); }} className="crm-btn crm-btn-sm" style={{ background: "rgba(255,255,255,0.1)", color: "white", fontSize: "0.75rem" }}>
-                    <X size={13} /> Cancel
-                  </button>
-                </>
-              ) : (
-                <button onClick={() => setEditing(true)} className="crm-btn crm-btn-sm" style={{ background: "rgba(255,255,255,0.2)", color: "white", fontSize: "0.75rem" }}>
-                  <Edit2 size={13} /> Edit
-                </button>
-              )}
-              <button onClick={onClose} className="crm-btn crm-btn-icon crm-btn-sm" style={{ background: "rgba(255,255,255,0.15)", color: "white" }} aria-label="Close">
-                <X size={16} />
-              </button>
-            </div>
           </div>
 
-          {/* Stage selector */}
-          <div className="mt-2">
-            <select
-              className="crm-select"
-              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", fontSize: "0.8rem" }}
-              value={lead.stage}
-              onChange={e => api.moveStage(lead.id, e.target.value as LeadStage)}
-            >
-              {LEAD_STAGES.map(s => <option key={s} value={s} style={{ color: "#1E293B" }}>{s}</option>)}
-            </select>
+          {/* Stage selector + Edit/Close action bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", paddingBottom: "0.875rem" }}>
+            <div style={{ position: "relative", flex: 1 }}>
+              <select
+                value={lead.stage}
+                onChange={e => api.moveStage(lead.id, e.target.value as LeadStage)}
+                style={{
+                  width: "100%", appearance: "none",
+                  background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
+                  color: "#fff", border: "1px solid rgba(255,255,255,0.25)",
+                  borderRadius: 8, padding: "0.45rem 2rem 0.45rem 0.75rem",
+                  fontSize: "0.8rem", fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                {LEAD_STAGES.map(s => <option key={s} value={s} style={{ color: "#1E293B", background: "#fff" }}>{s}</option>)}
+              </select>
+              <ChevronDown size={14} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.7)", pointerEvents: "none" }} />
+            </div>
+
+            {editing ? (
+              <>
+                <button onClick={saveEdits} style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  background: "rgba(255,255,255,0.9)", color: "#4F6EF7",
+                  border: "none", borderRadius: 8, padding: "0.45rem 0.875rem",
+                  fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+                }}>
+                  <Save size={13} /> Save
+                </button>
+                <button onClick={() => { setEditing(false); setDraft({ ...lead }); }} style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  background: "rgba(255,255,255,0.15)", color: "#fff",
+                  border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8,
+                  padding: "0.45rem 0.75rem", fontSize: "0.78rem", cursor: "pointer",
+                }}>
+                  <X size={13} />
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setEditing(true)} style={{
+                display: "flex", alignItems: "center", gap: 5,
+                background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
+                color: "#fff", border: "1px solid rgba(255,255,255,0.25)",
+                borderRadius: 8, padding: "0.45rem 0.875rem",
+                fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+              }}>
+                <Edit2 size={13} /> Edit
+              </button>
+            )}
+            <button onClick={onClose} aria-label="Close" style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
+              color: "#fff", border: "1px solid rgba(255,255,255,0.25)",
+              borderRadius: 8, width: 34, height: 34, cursor: "pointer", flexShrink: 0,
+            }}>
+              <X size={16} />
+            </button>
           </div>
         </div>
 
@@ -178,90 +212,95 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
         {/* Tab content */}
         <div className="crm-drawer-body">
+
           {/* ── Profile ── */}
           {tab === "profile" && (
             <div className="crm-drawer-tab-content">
-              <p className="crm-section-title">Lead Info</p>
-              <div className="crm-grid-2 mb-3">
-                <Field label="Name" value={lead.name} field="name" />
-                <Field label="Phone" value={lead.phone} field="phone" />
-                <Field label="WhatsApp" value={lead.whatsapp} field="whatsapp" />
-                <Field label="Owner" value={lead.owner} field="owner" />
-                <div className="crm-form-group">
-                  <label className="crm-label">Temperature</label>
-                  {editing ? (
-                    <select className="crm-select" value={draft.temperature ?? lead.temperature} onChange={e => setDraft(d => ({ ...d, temperature: e.target.value as LeadTemperature }))}>
-                      <option>Hot</option><option>Warm</option><option>Cold</option>
-                    </select>
-                  ) : <div style={{ padding: "0.375rem 0" }}><TempBadge temp={lead.temperature} /></div>}
-                </div>
-                <div className="crm-form-group">
-                  <label className="crm-label">Closure %</label>
-                  {editing ? (
-                    <input className="crm-input" type="number" min={0} max={100} value={draft.closureProbability ?? lead.closureProbability ?? ""} onChange={e => setDraft(d => ({ ...d, closureProbability: Number(e.target.value) }))} />
-                  ) : <div style={{ padding: "0.375rem 0", fontSize: "0.875rem" }}>{lead.closureProbability != null ? `${lead.closureProbability}%` : "—"}</div>}
+
+              {/* Lead Info */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Lead Info</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <Field label="Name" value={lead.name} field="name" />
+                  <Field label="Phone" value={lead.phone} field="phone" />
+                  <Field label="WhatsApp" value={lead.whatsapp} field="whatsapp" />
+                  <Field label="Owner" value={lead.owner} field="owner" />
                 </div>
               </div>
 
-              <div className="crm-divider" />
-              <p className="crm-section-title">Baby Details</p>
-              <div className="crm-grid-2 mb-3">
-                <Field label="Baby Status" value={lead.babyStatus} field="babyStatus" />
-                <Field label="Hospital" value={lead.hospitalName} field="hospitalName" />
-                <Field label="Birth Stage" value={lead.babyBirthStageStatus} field="babyBirthStageStatus" />
-                <Field label="Baby Age" value={lead.babyAge} field="babyAge" />
-                <Field label="Current Weight" value={lead.currentWeight} field="currentWeight" />
-              </div>
+              <div style={{ height: 1, background: "var(--crm-border)", marginBottom: "1.5rem" }} />
 
-              <div className="crm-divider" />
-              <p className="crm-section-title">Service & Shift</p>
-              <div className="crm-grid-2 mb-3">
-                <Field label="Service" value={lead.serviceRequired} field="serviceRequired" />
-                <Field label="Shift" value={lead.preferredShift} field="preferredShift" />
-                <Field label="Shift Hours" value={lead.shiftHoursCount} field="shiftHoursCount" type="number" />
-                <Field label="Shift Time" value={lead.shiftTime} field="shiftTime" />
-                <Field label="Care Start" value={lead.careStartDate} field="careStartDate" type="date" />
-                <Field label="Service Days" value={lead.serviceDays} field="serviceDays" type="number" />
-                <Field label="Budget (₹)" value={lead.budget} field="budget" type="number" />
-              </div>
-
-              <div className="crm-divider" />
-              <p className="crm-section-title">Location</p>
-              <div className="crm-grid-2 mb-3">
-                <Field label="Area" value={lead.area} field="area" />
-                <Field label="City" value={lead.city} field="city" />
-              </div>
-
-              <div className="crm-divider" />
-              <p className="crm-section-title">Notes</p>
-              <div className="crm-form-group mb-2">
-                <label className="crm-label">Requirement Notes</label>
-                <textarea className="crm-textarea" value={editing ? (draft.notes ?? "") : (lead.notes ?? "")} readOnly={!editing}
-                  onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}
-                  onBlur={e => !editing && api.updateLead(lead.id, { notes: e.target.value })} />
-              </div>
-              <div className="crm-form-group mb-2">
-                <label className="crm-label">Call Notes</label>
-                <textarea className="crm-textarea" defaultValue={lead.callNotes ?? ""}
-                  onBlur={e => api.updateLead(lead.id, { callNotes: e.target.value })} />
-              </div>
-              <div className="crm-form-group mb-3">
-                <label className="crm-label">WhatsApp Notes</label>
-                <textarea className="crm-textarea" defaultValue={lead.whatsappNotes ?? ""}
-                  onBlur={e => api.updateLead(lead.id, { whatsappNotes: e.target.value })} />
-              </div>
-
-              <div className="crm-divider" />
-              <p className="crm-section-title" style={{ color: "#ef4444" }}>Danger Zone</p>
-              {deleteConfirm ? (
-                <div className="d-flex gap-2 align-items-center">
-                  <span style={{ fontSize: "0.8rem", color: "var(--crm-text-muted)" }}>Are you sure? This cannot be undone.</span>
-                  <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={handleDelete}><Trash2 size={14} /> Yes, Delete</button>
-                  <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setDeleteConfirm(false)}>Cancel</button>
+              {/* Baby Details */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Baby Details</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <Field label="Baby Status" value={lead.babyStatus} field="babyStatus" />
+                  <Field label="Hospital" value={lead.hospitalName} field="hospitalName" />
+                  <Field label="Birth Stage" value={lead.babyBirthStageStatus} field="babyBirthStageStatus" />
+                  <Field label="Baby Age" value={lead.babyAge} field="babyAge" />
+                  <Field label="Current Weight" value={lead.currentWeight} field="currentWeight" />
                 </div>
-              ) : (
-                <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={() => setDeleteConfirm(true)}><Trash2 size={14} /> Delete Lead</button>
-              )}
+              </div>
+
+              <div style={{ height: 1, background: "var(--crm-border)", marginBottom: "1.5rem" }} />
+
+              {/* Service & Shift */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Service & Shift</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <Field label="Service" value={lead.serviceRequired} field="serviceRequired" />
+                  <Field label="Shift Type" value={lead.preferredShift} field="preferredShift" />
+                  <Field label="Shift Hours" value={lead.shiftHoursCount} field="shiftHoursCount" type="number" />
+                  <Field label="Shift Time" value={lead.shiftTime} field="shiftTime" />
+                  <Field label="Care Start Date" value={lead.careStartDate} field="careStartDate" type="date" />
+                  <Field label="Service Days" value={lead.serviceDays} field="serviceDays" type="number" />
+                  <Field label="Budget (₹)" value={lead.budget} field="budget" type="number" />
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: "var(--crm-border)", marginBottom: "1.5rem" }} />
+
+              {/* Address */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Location</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <Field label="Area" value={lead.area} field="area" />
+                  <Field label="City" value={lead.city} field="city" />
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <Field label="Address" value={lead.address} field="address" />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: "var(--crm-border)", marginBottom: "1.5rem" }} />
+
+              {/* Call Notes */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Call Notes</div>
+                <textarea
+                  className="crm-textarea"
+                  defaultValue={lead.callNotes ?? ""}
+                  placeholder="Add notes from your call…"
+                  onBlur={e => api.updateLead(lead.id, { callNotes: e.target.value })}
+                  style={{ minHeight: 80, fontSize: "0.875rem" }}
+                />
+              </div>
+
+              <div style={{ height: 1, background: "var(--crm-border)", marginBottom: "1.5rem" }} />
+
+              {/* Danger Zone */}
+              <div>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#EF4444", marginBottom: "0.875rem" }}>Danger Zone</div>
+                {deleteConfirm ? (
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.8rem", color: "var(--crm-text-muted)" }}>This cannot be undone.</span>
+                    <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={handleDelete}><Trash2 size={14} /> Yes, Delete</button>
+                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setDeleteConfirm(false)}>Cancel</button>
+                  </div>
+                ) : (
+                  <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={() => setDeleteConfirm(true)}><Trash2 size={14} /> Delete Lead</button>
+                )}
+              </div>
             </div>
           )}
 
@@ -286,9 +325,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                   <label className="crm-label">Note</label>
                   <input className="crm-input" value={fuNote} onChange={e => setFuNote(e.target.value)} placeholder="What to discuss..." />
                 </div>
-                <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={addFollowup}>
-                  <Plus size={14} /> Add Follow-up
-                </button>
+                <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={addFollowup}><Plus size={14} /> Add Follow-up</button>
               </div>
 
               <p className="crm-section-title">Follow-up History</p>
@@ -299,14 +336,11 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                     <div className="d-flex align-items-start justify-content-between gap-2">
                       <div className="flex-1">
                         <div className="d-flex align-items-center gap-2 flex-wrap mb-1">
-                          <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--crm-text)" }}>{f.type}</span>
-                          {f.completed ? (
-                            <span className="crm-badge" style={{ background: "#F0FDF4", color: "#16A34A" }}><Check size={11} /> Done</span>
-                          ) : isOverdue(f.dueAt) ? (
-                            <span className="crm-badge" style={{ background: "#FEF2F2", color: "#DC2626" }}>Overdue</span>
-                          ) : isToday(f.dueAt) ? (
-                            <span className="crm-badge" style={{ background: "#FFFBEB", color: "#B45309" }}>Today</span>
-                          ) : null}
+                          <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>{f.type}</span>
+                          {f.completed ? <span className="crm-badge" style={{ background: "#F0FDF4", color: "#16A34A" }}><Check size={11} /> Done</span>
+                            : isOverdue(f.dueAt) ? <span className="crm-badge" style={{ background: "#FEF2F2", color: "#DC2626" }}>Overdue</span>
+                            : isToday(f.dueAt) ? <span className="crm-badge" style={{ background: "#FFFBEB", color: "#B45309" }}>Today</span>
+                            : null}
                         </div>
                         <div style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
                           <Clock size={12} />{fmtDt(f.dueAt)}
@@ -315,12 +349,8 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                       </div>
                       {!f.completed && (
                         <div className="d-flex gap-1">
-                          <button className="crm-btn crm-btn-sm" style={{ background: "#F0FDF4", color: "#16A34A" }} onClick={() => api.completeFollowup(f.id)}>
-                            <Check size={13} /> Done
-                          </button>
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => api.rescheduleFollowup(f.id, new Date(new Date(f.dueAt).getTime() + 86400000).toISOString())} title="+1 day">
-                            +1d
-                          </button>
+                          <button className="crm-btn crm-btn-sm" style={{ background: "#F0FDF4", color: "#16A34A" }} onClick={() => api.completeFollowup(f.id)}><Check size={13} /> Done</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => api.rescheduleFollowup(f.id, new Date(new Date(f.dueAt).getTime() + 86400000).toISOString())} title="+1 day">+1d</button>
                         </div>
                       )}
                     </div>
@@ -364,9 +394,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                   <label className="crm-label">Notes</label>
                   <input className="crm-input" value={qNotes} onChange={e => setQNotes(e.target.value)} placeholder="Package details..." />
                 </div>
-                <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={addQuotation}>
-                  <Plus size={14} /> Save Quotation
-                </button>
+                <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={addQuotation}><Plus size={14} /> Save Quotation</button>
               </div>
 
               <p className="crm-section-title">Quotation History</p>
@@ -395,35 +423,31 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
           {tab === "closure" && (
             <div className="crm-drawer-tab-content">
               {leadClosure ? (
-                <div>
-                  <div className="crm-card p-4">
-                    <div className="d-flex align-items-center gap-2 mb-3">
-                      <span className="crm-badge" style={leadClosure.type === "Won" ? { background: "#F0FDF4", color: "#16A34A", fontSize: "0.85rem" } : { background: "#FEF2F2", color: "#DC2626", fontSize: "0.85rem" }}>
-                        {leadClosure.type === "Won" ? "🏆 Closed Won" : "✗ Closed Lost"}
-                      </span>
-                    </div>
-                    {leadClosure.type === "Won" && (
-                      <>
-                        <div className="crm-grid-2">
-                          <div><div className="crm-section-title mb-1">Package</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.finalPackage || "—"}</div></div>
-                          <div><div className="crm-section-title mb-1">Final Amount</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--crm-primary)" }}>{leadClosure.finalAmount ? `₹${leadClosure.finalAmount.toLocaleString("en-IN")}` : "—"}</div></div>
-                          <div><div className="crm-section-title mb-1">Advance</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.advanceReceived ? `₹${leadClosure.advanceReceived.toLocaleString("en-IN")}` : "—"}</div></div>
-                          <div><div className="crm-section-title mb-1">Payment</div>
-                            <span className="crm-badge" style={{ background: leadClosure.paymentStatus === "Paid" ? "#F0FDF4" : leadClosure.paymentStatus === "Partial" ? "#FFFBEB" : "#FEF2F2", color: leadClosure.paymentStatus === "Paid" ? "#16A34A" : leadClosure.paymentStatus === "Partial" ? "#B45309" : "#DC2626" }}>
-                              {leadClosure.paymentStatus}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {leadClosure.type === "Lost" && (
-                      <div className="crm-grid-2">
-                        <div><div className="crm-section-title mb-1">Reason</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.lostReason || "—"}</div></div>
-                        <div><div className="crm-section-title mb-1">Competitor</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.competitorName || "—"}</div></div>
-                        {leadClosure.notes && <div style={{ gridColumn: "1/-1" }}><div className="crm-section-title mb-1">Notes</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.notes}</div></div>}
-                      </div>
-                    )}
+                <div className="crm-card p-4">
+                  <div className="d-flex align-items-center gap-2 mb-3">
+                    <span className="crm-badge" style={leadClosure.type === "Won" ? { background: "#F0FDF4", color: "#16A34A", fontSize: "0.85rem" } : { background: "#FEF2F2", color: "#DC2626", fontSize: "0.85rem" }}>
+                      {leadClosure.type === "Won" ? "🏆 Closed Won" : "✗ Closed Lost"}
+                    </span>
                   </div>
+                  {leadClosure.type === "Won" && (
+                    <div className="crm-grid-2">
+                      <div><div className="crm-section-title mb-1">Package</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.finalPackage || "—"}</div></div>
+                      <div><div className="crm-section-title mb-1">Final Amount</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--crm-primary)" }}>{leadClosure.finalAmount ? `₹${leadClosure.finalAmount.toLocaleString("en-IN")}` : "—"}</div></div>
+                      <div><div className="crm-section-title mb-1">Advance</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.advanceReceived ? `₹${leadClosure.advanceReceived.toLocaleString("en-IN")}` : "—"}</div></div>
+                      <div><div className="crm-section-title mb-1">Payment</div>
+                        <span className="crm-badge" style={{ background: leadClosure.paymentStatus === "Paid" ? "#F0FDF4" : leadClosure.paymentStatus === "Partial" ? "#FFFBEB" : "#FEF2F2", color: leadClosure.paymentStatus === "Paid" ? "#16A34A" : leadClosure.paymentStatus === "Partial" ? "#B45309" : "#DC2626" }}>
+                          {leadClosure.paymentStatus}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {leadClosure.type === "Lost" && (
+                    <div className="crm-grid-2">
+                      <div><div className="crm-section-title mb-1">Reason</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.lostReason || "—"}</div></div>
+                      <div><div className="crm-section-title mb-1">Competitor</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.competitorName || "—"}</div></div>
+                      {leadClosure.notes && <div style={{ gridColumn: "1/-1" }}><div className="crm-section-title mb-1">Notes</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.notes}</div></div>}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
