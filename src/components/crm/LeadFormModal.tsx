@@ -5,7 +5,7 @@ import { api } from "@/lib/crm-store";
 import type { LeadSource, BabyStatus, Shift } from "@/lib/crm-types";
 
 const SOURCES: LeadSource[] = ["Website", "WhatsApp"];
-const SHIFTS: Shift[] = ["Day (12h)", "Night (12h)", "Full Day (24h)", "Custom"];
+const SHIFTS: Shift[] = ["Day", "Night", "24hrs"];
 
 interface Props {
   open: boolean;
@@ -17,7 +17,7 @@ const INIT = {
   serviceRequired: "Newborn Care", babyStatus: "Born" as BabyStatus,
   hospitalName: "", babyBirthStageStatus: "",
   babyAge: "", currentWeight: "", address: "",
-  preferredShift: "Day (12h)" as Shift,
+  preferredShift: "Day" as Shift,
   shiftHoursCount: "" as unknown as number, shiftTime: "",
   careStartDate: "", serviceDays: "" as unknown as number,
   notes: "",

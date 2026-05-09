@@ -14,7 +14,7 @@ export type LeadTemperature = "Cold" | "Warm" | "Hot";
 export type LeadSource = "Website" | "WhatsApp" | "Instagram" | "Facebook" | "Google Ads"
   | "Referral" | "Walk-in" | "Hospital Partner" | "Other";
 export type BabyStatus = "Born" | "Expecting";
-export type Shift = "Day (12h)" | "Night (12h)" | "Full Day (24h)" | "Custom";
+export type Shift = "Day" | "Night" | "24hrs" | "Day (12h)" | "Night (12h)" | "Full Day (24h)" | "Custom";
 export type FollowupType = "First call" | "Call back" | "Quotation reminder"
   | "Payment reminder" | "Trial decision" | "Closure follow-up";
 export type LostReason = "Competitor selected" | "Budget issue" | "No response"
