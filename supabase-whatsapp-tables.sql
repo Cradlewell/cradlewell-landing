@@ -20,14 +20,16 @@ create table if not exists whatsapp_messages (
   wa_phone text not null,
   direction text not null check (direction in ('inbound', 'outbound')),
   message text not null,
+  wa_message_id text unique,
   created_at timestamptz default now()
 );
 
 create index if not exists idx_whatsapp_messages_phone on whatsapp_messages(wa_phone);
 create index if not exists idx_whatsapp_sessions_phone on whatsapp_sessions(wa_phone);
 
--- Run these if table already exists
+-- Run these if tables already exist
 alter table whatsapp_sessions add column if not exists location text;
 alter table whatsapp_sessions add column if not exists due_date text;
 alter table whatsapp_sessions add column if not exists shift text;
 alter table whatsapp_sessions add column if not exists time_slot text;
+alter table whatsapp_messages add column if not exists wa_message_id text unique;
