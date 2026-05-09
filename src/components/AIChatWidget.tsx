@@ -279,7 +279,12 @@ export default function AIChatWidget() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    messages: nextMessages,
+                    // strip OPTIONS tags before sending to API — keep COLLECT_LEAD intact
+                    messages: nextMessages.map((m) =>
+                        m.role === "assistant"
+                            ? { ...m, content: m.content.replace(/\n?\[\[OPTIONS:[^\]]*\]\]/g, "") }
+                            : m
+                    ),
                     pagePath: pathname,
                     pageTitle: document.title,
                 }),
@@ -296,7 +301,8 @@ export default function AIChatWidget() {
             const rawReply = data.reply || "I'm here to help.";
             const shouldCollectLead = rawReply.includes("[[COLLECT_LEAD]]");
 
-            setMessages([...nextMessages, { role: "assistant", content: cleanReply(rawReply) }]);
+            // Store raw reply so parseOptions() can read [[OPTIONS:...]] tags for button rendering
+            setMessages([...nextMessages, { role: "assistant", content: rawReply }]);
             if (shouldCollectLead) setShowLeadForm(true);
         } catch {
             setMessages([
