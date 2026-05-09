@@ -62,6 +62,32 @@ async function sendButtonMessage(
     }
 }
 
+// ── Send native location request message ─────────────────────────────────────
+
+async function sendLocationRequest(to: string, bodyText: string) {
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${ACCESS_TOKEN}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "location_request_message",
+                    body: { text: bodyText },
+                    action: { name: "send_location" },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("Failed to send location request:", err);
+    }
+}
+
 // ── Store message in Supabase ─────────────────────────────────────────────────
 
 async function storeMessage(waPhone: string, direction: "inbound" | "outbound", message: string) {
@@ -88,6 +114,7 @@ async function getSession(waPhone: string) {
         name?: string;
         service?: string;
         baby_status?: string;
+        location?: string;
     } | null;
 }
 
@@ -113,7 +140,13 @@ async function upsertSession(waPhone: string, updates: Record<string, string>) {
 
 // ── Push lead to CRM ──────────────────────────────────────────────────────────
 
-async function pushLeadToCRM(waPhone: string, name: string, service: string, babyStatus: string) {
+async function pushLeadToCRM(
+    waPhone: string,
+    name: string,
+    service: string,
+    babyStatus: string,
+    location?: string
+) {
     const phone = waPhone.replace(/\D/g, "").slice(-10);
     const now = new Date();
 
@@ -127,6 +160,7 @@ async function pushLeadToCRM(waPhone: string, name: string, service: string, bab
             lead_date: now.toISOString(),
             service_required: service,
             baby_status: babyStatus || "Unknown",
+            address: location || null,
             owner: "Unassigned",
             stage: "New Lead",
             temperature: "Cold",
@@ -160,7 +194,6 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // New user or restart after completion
     if (!session || session.step === "completed") {
         if (profileName) {
-            // We already have their name from WhatsApp profile — skip ask_name
             await upsertSession(waPhone, { step: "ask_baby_status", name: profileName });
             const bodyText = `Hi ${profileName}! 🌸 Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nIs your little one already home, or are you still expecting?`;
             await sendButtonMessage(waPhone, bodyText, BABY_STATUS_BUTTONS);
@@ -193,16 +226,31 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         if (/^home$|^1$|baby is home|^born$|arrived|delivered/.test(t)) babyStatus = "Born";
         else if (/^expecting$|^2$|still expecting|pregnant|due/.test(t)) babyStatus = "Expecting";
         else {
-            await sendButtonMessage(
-                waPhone,
-                "Please tap one of the options below:",
-                BABY_STATUS_BUTTONS
-            );
+            await sendButtonMessage(waPhone, "Please tap one of the options below:", BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap one of the options below:");
             return;
         }
 
-        await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_service" });
+        await upsertSession(waPhone, { baby_status: babyStatus });
+
+        if (babyStatus === "Expecting") {
+            await upsertSession(waPhone, { step: "ask_location" });
+            const bodyText =
+                "Wonderful! 🌸 To check caregiver availability near you, please share your current location.";
+            await sendLocationRequest(waPhone, bodyText);
+            await storeMessage(waPhone, "outbound", bodyText);
+        } else {
+            await upsertSession(waPhone, { step: "ask_service" });
+            const bodyText = "Got it! 🌸 What kind of care are you looking for?";
+            await sendButtonMessage(waPhone, bodyText, SERVICE_BUTTONS);
+            await storeMessage(waPhone, "outbound", bodyText);
+        }
+        return;
+    }
+
+    // Step: location received as text (fallback — ideally handled via handleLocation)
+    if (session.step === "ask_location") {
+        await upsertSession(waPhone, { location: text, step: "ask_service" });
         const bodyText = "Got it! 🌸 What kind of care are you looking for?";
         await sendButtonMessage(waPhone, bodyText, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", bodyText);
@@ -218,11 +266,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         else if (/^japa$|^2$|postnatal caregiver|japa|moba|caregiver/.test(t))
             service = "Postnatal Caregiver (Japa/MOBA)";
         else {
-            await sendButtonMessage(
-                waPhone,
-                "Please tap the type of care you need:",
-                SERVICE_BUTTONS
-            );
+            await sendButtonMessage(waPhone, "Please tap the type of care you need:", SERVICE_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap the type of care you need:");
             return;
         }
@@ -232,7 +276,8 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             waPhone,
             session.name || "WhatsApp User",
             service,
-            session.baby_status || ""
+            session.baby_status || "",
+            session.location
         );
 
         const reply = `Thank you, ${session.name}! 🌸 Our care advisor will call you shortly.\n\nFor urgent queries, call us: +91 93638 93639`;
@@ -246,6 +291,33 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         "Our care advisor will contact you very soon! 🌸 For urgent help, call +91 93638 93639.";
     await sendMessage(waPhone, reply);
     await storeMessage(waPhone, "outbound", reply);
+}
+
+// ── Handle incoming location share ───────────────────────────────────────────
+
+async function handleLocation(
+    waPhone: string,
+    latitude: number,
+    longitude: number,
+    name?: string,
+    address?: string
+) {
+    const session = await getSession(waPhone);
+    if (!session || session.step !== "ask_location") return;
+
+    // Build human-readable location string
+    const parts = [name, address].filter(Boolean);
+    const locationText =
+        parts.length > 0
+            ? parts.join(", ")
+            : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+    await storeMessage(waPhone, "inbound", `📍 ${locationText}`);
+    await upsertSession(waPhone, { location: locationText, step: "ask_service" });
+
+    const bodyText = "Got it! 🌸 What kind of care are you looking for?";
+    await sendButtonMessage(waPhone, bodyText, SERVICE_BUTTONS);
+    await storeMessage(waPhone, "outbound", bodyText);
 }
 
 // ── GET — Webhook verification ────────────────────────────────────────────────
@@ -277,6 +349,13 @@ export async function POST(req: NextRequest) {
         // Extract WhatsApp profile name from contacts array
         const contacts = body.entry?.[0]?.changes?.[0]?.value?.contacts;
         const profileName: string | undefined = contacts?.[0]?.profile?.name || undefined;
+
+        // Handle location share
+        if (message.type === "location") {
+            const { latitude, longitude, name, address } = message.location ?? {};
+            await handleLocation(waPhone, latitude, longitude, name, address);
+            return NextResponse.json({ status: "ok" });
+        }
 
         // Extract text from plain message OR interactive button tap
         let text: string | null = null;
