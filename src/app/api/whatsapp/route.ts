@@ -293,6 +293,8 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
     const text = incomingText.trim();
     const session = await getSession(waPhone);
 
+    console.log(`[WA] phone=${waPhone} step=${session?.step ?? "NEW"} text="${text}"`);
+
     await storeMessage(waPhone, "inbound", text, waMessageId);
 
     // ── Main Menu — restart flow from baby status ─────────────────────────────
@@ -520,6 +522,7 @@ export async function POST(req: NextRequest) {
         if (message.type === "text") {
             text = message.text?.body ?? null;
         } else if (message.type === "interactive") {
+            console.log(`[WA] interactive raw:`, JSON.stringify(message.interactive));
             if (message.interactive?.type === "button_reply") {
                 text = message.interactive.button_reply?.id ?? null;
             } else if (message.interactive?.type === "list_reply") {
