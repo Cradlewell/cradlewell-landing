@@ -101,6 +101,39 @@ async function sendDaySlotListMessage(to: string) {
     }
 }
 
+// ── Send due month list (next 9 months, generated dynamically) ───────────────
+
+async function sendDueMonthListMessage(to: string) {
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const now = new Date();
+    const rows = Array.from({ length: 9 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
+        return { id: `due_${d.getFullYear()}_${d.getMonth() + 1}`, title: label };
+    });
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "list",
+                    body: { text: "When is your due date? Please select the month." },
+                    action: {
+                        button: "Select Month",
+                        sections: [{ title: "Due Month", rows }],
+                    },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("sendDueMonthListMessage failed:", err);
+    }
+}
+
 // ── Send hospital selection list ─────────────────────────────────────────────
 
 async function sendHospitalListMessage(to: string) {
@@ -462,11 +495,10 @@ async function afterLocation(waPhone: string, session: Session, locationText: st
         await sendHospitalListMessage(waPhone);
         await storeMessage(waPhone, "outbound", "🏥 Which hospital welcomed your baby?");
     } else {
-        // Expecting — skip hospital/weight, go straight to service
-        await upsertSession(waPhone, { location: locationText, step: "ask_service" });
-        const msg = "Got it. What kind of care are you looking for?";
-        await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
-        await storeMessage(waPhone, "outbound", msg);
+        // Expecting — ask due month before service
+        await upsertSession(waPhone, { location: locationText, step: "ask_due_month" });
+        await sendDueMonthListMessage(waPhone);
+        await storeMessage(waPhone, "outbound", "When is your due date? Please select the month.");
     }
 }
 
@@ -534,6 +566,18 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Collect location (text fallback — GPS share goes via handleLocation) ──
     if (session.step === "ask_location") {
         await afterLocation(waPhone, session, text);
+        return;
+    }
+
+    // ── Collect due month (Expecting path only) ───────────────────────────────
+    if (session.step === "ask_due_month") {
+        const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const match = text.match(/^due_(\d+)_(\d+)$/);
+        const resolved = match ? `${MONTHS[parseInt(match[2]) - 1]} ${match[1]}` : text;
+        await upsertSession(waPhone, { due_date: resolved, step: "ask_service" });
+        const msg = "What kind of care are you looking for?";
+        await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
+        await storeMessage(waPhone, "outbound", msg);
         return;
     }
 
