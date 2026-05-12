@@ -65,7 +65,7 @@ async function sendLocationRequest(to: string, bodyText: string) {
     }
 }
 
-// ── Send day time slot list (with Main Menu) ──────────────────────────────────
+// ── Send day time slot list ───────────────────────────────────────────────────
 
 async function sendDaySlotListMessage(to: string) {
     try {
@@ -119,8 +119,8 @@ async function storeMessage(
         wa_message_id: waMessageId ?? null,
         created_at: new Date().toISOString(),
     });
-    // Unique constraint violation (code 23505) = duplicate message from Meta
     if (error && error.code === "23505") return false;
+    if (error) console.error("storeMessage failed:", error);
     return true;
 }
 
@@ -139,24 +139,31 @@ interface Session {
 }
 
 async function getSession(waPhone: string): Promise<Session | null> {
-    const { data } = await supabase
+    const { data, error } = await supabase
         .from("whatsapp_sessions")
         .select("*")
         .eq("wa_phone", waPhone)
-        .single();
+        .maybeSingle();
+    if (error) {
+        console.error("getSession failed:", error);
+        return null;
+    }
     return data as Session | null;
 }
 
+// Read-then-write is safe here because inbound message dedup (wa_message_id
+// unique constraint) guarantees only one handleMessage call runs per message.
 async function upsertSession(waPhone: string, updates: Record<string, string>) {
-    const existing = await getSession(waPhone);
     const now = new Date().toISOString();
+    const existing = await getSession(waPhone);
     if (existing) {
-        await supabase
+        const { error } = await supabase
             .from("whatsapp_sessions")
             .update({ ...updates, updated_at: now })
             .eq("wa_phone", waPhone);
+        if (error) console.error("upsertSession update failed:", error);
     } else {
-        await supabase.from("whatsapp_sessions").insert({
+        const { error } = await supabase.from("whatsapp_sessions").insert({
             id: crypto.randomUUID(),
             wa_phone: waPhone,
             step: "greeting",
@@ -164,6 +171,7 @@ async function upsertSession(waPhone: string, updates: Record<string, string>) {
             updated_at: now,
             ...updates,
         });
+        if (error) console.error("upsertSession insert failed:", error);
     }
 }
 
@@ -207,7 +215,6 @@ function buildSummary(session: Session): string {
     if (session.name)        lines.push(`👤 Name: ${session.name}`);
     if (session.baby_status) lines.push(`🤰 Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
     if (session.location)    lines.push(`📍 Location: ${session.location}`);
-    if (session.due_date)    lines.push(`🗓 Due Month: ${session.due_date}`);
     if (session.service)     lines.push(`💼 Service: ${session.service}`);
     if (session.shift)       lines.push(`🌅 Shift: ${session.shift}`);
     if (session.time_slot)   lines.push(`⏰ Timing: ${session.time_slot}`);
@@ -236,6 +243,48 @@ const SHIFT_BUTTONS = [
     { id: "main_menu", title: "Main Menu" },
 ];
 
+// ── Match helpers — accept both button IDs and button title text ──────────────
+
+function matchBabyStatus(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "home" || t === "baby is home") return "Born";
+    if (t === "expecting" || t === "still expecting") return "Expecting";
+    if (/^1$|baby.?is.?home|already.?home|^born$|arrived|delivered/.test(t)) return "Born";
+    if (/^2$|still.?expecting|pregnant|^due$/.test(t)) return "Expecting";
+    return "";
+}
+
+function matchService(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "nurse" || t === "certified nurse") return "Nurse";
+    if (t === "japa" || t === "postnatal caregiver") return "Postnatal Caregiver (Japa/MOBA)";
+    if (/^1$|certified.?nurse/.test(t)) return "Nurse";
+    if (/^2$|postnatal|caregiver|moba/.test(t)) return "Postnatal Caregiver (Japa/MOBA)";
+    return "";
+}
+
+function matchShift(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "day" || t === "day care") return "Day";
+    if (t === "night" || t === "night care") return "Night";
+    if (/^day$|day.?care/.test(t)) return "Day";
+    if (/^night$|night.?care/.test(t)) return "Night";
+    return "";
+}
+
+function matchTimeSlot(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "slot_8" || /8\s*am/.test(t)) return "8 AM – 4 PM";
+    if (t === "slot_9" || /9\s*am/.test(t)) return "9 AM – 5 PM";
+    if (t === "slot_10" || /10\s*am/.test(t)) return "10 AM – 6 PM";
+    return "";
+}
+
+function isMainMenu(text: string): boolean {
+    const t = text.trim().toLowerCase();
+    return t === "main_menu" || t === "main menu" || t === "menu";
+}
+
 // ── Bot flow ──────────────────────────────────────────────────────────────────
 
 async function sendMainMenu(waPhone: string, name?: string) {
@@ -251,8 +300,8 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     console.log(`[WA] phone=${waPhone} step=${session?.step ?? "NEW"} text="${text}"`);
 
-    // ── Main Menu — restart flow from baby status ─────────────────────────────
-    if (/^main menu$|^menu$/i.test(text) || text === "main_menu") {
+    // ── Main Menu — restart flow ──────────────────────────────────────────────
+    if (isMainMenu(text)) {
         const name = session?.name || profileName;
         await upsertSession(waPhone, {
             step: "ask_baby_status",
@@ -263,7 +312,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // ── New user or restart ───────────────────────────────────────────────────
+    // ── New user or completed — restart ───────────────────────────────────────
     if (!session || session.step === "completed") {
         if (profileName) {
             await upsertSession(waPhone, { step: "ask_baby_status", name: profileName });
@@ -291,18 +340,13 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     // ── Collect baby status ───────────────────────────────────────────────────
     if (session.step === "ask_baby_status") {
-        const t = text.toLowerCase();
-        let babyStatus = "";
-        if (/^home$|^1$|baby.?is.?home|^born$|arrived|delivered|already.?home/.test(t)) babyStatus = "Born";
-        else if (/^expecting$|^2$|still.?expecting|pregnant|due/.test(t)) babyStatus = "Expecting";
-        else {
+        const babyStatus = matchBabyStatus(text);
+        if (!babyStatus) {
             await sendButtonMessage(waPhone, "Please tap one of the options below:", BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap one of the options below:");
             return;
         }
-
         if (babyStatus === "Expecting") {
-            // Single atomic update — step changes in same call
             await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_location" });
             const msg = "Wonderful! 🌸 To check caregiver availability near you, please share your current location.";
             await sendLocationRequest(waPhone, msg);
@@ -327,11 +371,8 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     // ── Collect service ───────────────────────────────────────────────────────
     if (session.step === "ask_service") {
-        const t = text.toLowerCase();
-        let service = "";
-        if (/^nurse$|^1$|certified.?nurse/.test(t)) service = "Nurse";
-        else if (/^japa$|^2$|postnatal|caregiver|moba/.test(t)) service = "Postnatal Caregiver (Japa/MOBA)";
-        else {
+        const service = matchService(text);
+        if (!service) {
             await sendButtonMessage(waPhone, "Please tap the type of care you need:", SERVICE_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap the type of care you need:");
             return;
@@ -345,16 +386,12 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     // ── Collect shift ─────────────────────────────────────────────────────────
     if (session.step === "ask_shift") {
-        const t = text.toLowerCase();
-        let shift = "";
-        if (/^day$|day.?care/.test(t)) shift = "Day";
-        else if (/^night$|night.?care/.test(t)) shift = "Night";
-        else {
+        const shift = matchShift(text);
+        if (!shift) {
             await sendButtonMessage(waPhone, "Please tap your preferred shift:", SHIFT_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap your preferred shift:");
             return;
         }
-
         if (shift === "Day") {
             await upsertSession(waPhone, { shift, step: "ask_time_slot" });
             await sendDaySlotListMessage(waPhone);
@@ -373,12 +410,8 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     // ── Collect time slot (day shift) ─────────────────────────────────────────
     if (session.step === "ask_time_slot") {
-        const t = text.toLowerCase();
-        let timeSlot = "";
-        if (/8\s*(am|–)|slot_8/.test(t)) timeSlot = "8 AM – 4 PM";
-        else if (/9\s*(am|–)|slot_9/.test(t)) timeSlot = "9 AM – 5 PM";
-        else if (/10\s*(am|–)|slot_10/.test(t)) timeSlot = "10 AM – 6 PM";
-        else {
+        const timeSlot = matchTimeSlot(text);
+        if (!timeSlot) {
             await sendDaySlotListMessage(waPhone);
             await storeMessage(waPhone, "outbound", "Please select your preferred timing:");
             return;
@@ -392,7 +425,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // ── Already completed ─────────────────────────────────────────────────────
+    // ── Already completed / unknown ───────────────────────────────────────────
     const msg = "Our care advisor will contact you very soon! 🌸 For urgent help, call +91 93638 93639.";
     await sendMessage(waPhone, msg);
     await storeMessage(waPhone, "outbound", msg);
@@ -407,7 +440,6 @@ async function handleLocation(waPhone: string, latitude: number, longitude: numb
     const parts = [name, address].filter(Boolean);
     const locationText = parts.length > 0 ? parts.join(", ") : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
 
-    await storeMessage(waPhone, "inbound", `📍 ${locationText}`);
     await upsertSession(waPhone, { location: locationText, step: "ask_service" });
     const msg = "Got it! 🌸 What kind of care are you looking for?";
     await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
@@ -445,9 +477,11 @@ export async function POST(req: NextRequest) {
         // ── Handle GPS location share ─────────────────────────────────────────
         if (message.type === "location") {
             const { latitude, longitude, name, address } = message.location ?? {};
-            // Atomic dedup: if insert fails (duplicate wa_message_id), skip
             const stored = await storeMessage(waPhone, "inbound", "📍 location", waMessageId);
-            if (!stored) return NextResponse.json({ status: "ok" });
+            if (!stored) {
+                console.log(`[WA] duplicate location skipped: ${waMessageId}`);
+                return NextResponse.json({ status: "ok" });
+            }
             await handleLocation(waPhone, latitude, longitude, name, address);
             return NextResponse.json({ status: "ok" });
         }
@@ -459,22 +493,34 @@ export async function POST(req: NextRequest) {
         } else if (message.type === "interactive") {
             console.log(`[WA] interactive raw:`, JSON.stringify(message.interactive));
             if (message.interactive?.type === "button_reply") {
-                text = message.interactive.button_reply?.id ?? message.interactive.button_reply?.title ?? null;
+                const id = message.interactive.button_reply?.id;
+                const title = message.interactive.button_reply?.title;
+                console.log(`[WA] button_reply id="${id}" title="${title}"`);
+                text = id ?? title ?? null;
             } else if (message.interactive?.type === "list_reply") {
-                text = message.interactive.list_reply?.id ?? message.interactive.list_reply?.title ?? null;
+                const id = message.interactive.list_reply?.id;
+                const title = message.interactive.list_reply?.title;
+                console.log(`[WA] list_reply id="${id}" title="${title}"`);
+                text = id ?? title ?? null;
             }
         }
 
-        if (!text) return NextResponse.json({ status: "ok" });
+        if (!text) {
+            console.log(`[WA] no text extracted from message type=${message.type}`);
+            return NextResponse.json({ status: "ok" });
+        }
 
-        // ── Atomic dedup: insert message first — if duplicate, skip ───────────
+        // ── Atomic dedup: if wa_message_id already exists, skip ───────────────
         const stored = await storeMessage(waPhone, "inbound", text, waMessageId);
-        if (!stored) return NextResponse.json({ status: "ok" });
+        if (!stored) {
+            console.log(`[WA] duplicate message skipped: ${waMessageId}`);
+            return NextResponse.json({ status: "ok" });
+        }
 
         await handleMessage(waPhone, text, profileName);
         return NextResponse.json({ status: "ok" });
     } catch (error) {
         console.error("WhatsApp webhook error:", error);
-        return NextResponse.json({ status: "ok" }); // always 200 to Meta
+        return NextResponse.json({ status: "ok" });
     }
 }
