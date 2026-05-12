@@ -301,7 +301,7 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
     if (session.step === "ask_baby_status") {
         const t = text.toLowerCase();
         let babyStatus = "";
-        if (/^home$|^1$|baby.?is.?home|^born$|arrived|delivered/.test(t)) babyStatus = "Born";
+        if (/^home$|^1$|baby.?is.?home|^born$|arrived|delivered|already.?home/.test(t)) babyStatus = "Born";
         else if (/^expecting$|^2$|still.?expecting|pregnant|due/.test(t)) babyStatus = "Expecting";
         else {
             await sendButtonMessage(waPhone, "Please tap one of the options below:", BABY_STATUS_BUTTONS);
@@ -337,8 +337,8 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
     if (session.step === "ask_service") {
         const t = text.toLowerCase();
         let service = "";
-        if (/^nurse$|^1$/.test(t)) service = "Nurse";
-        else if (/^japa$|^2$/.test(t)) service = "Postnatal Caregiver (Japa/MOBA)";
+        if (/^nurse$|^1$|certified.?nurse/.test(t)) service = "Nurse";
+        else if (/^japa$|^2$|postnatal|caregiver|moba/.test(t)) service = "Postnatal Caregiver (Japa/MOBA)";
         else {
             await sendButtonMessage(waPhone, "Please tap the type of care you need:", SERVICE_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap the type of care you need:");
@@ -355,8 +355,8 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
     if (session.step === "ask_shift") {
         const t = text.toLowerCase();
         let shift = "";
-        if (/^day$/.test(t)) shift = "Day";
-        else if (/^night$/.test(t)) shift = "Night";
+        if (/^day$|day.?care/.test(t)) shift = "Day";
+        else if (/^night$|night.?care/.test(t)) shift = "Night";
         else {
             await sendButtonMessage(waPhone, "Please tap your preferred shift:", SHIFT_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap your preferred shift:");
@@ -463,16 +463,17 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Extract text from message, button tap, or list selection ──────────
-        // Use id (not title) for interactive replies — ids are programmatic and reliable
         let text: string | null = null;
         if (message.type === "text") {
             text = message.text?.body ?? null;
         } else if (message.type === "interactive") {
             console.log(`[WA] interactive raw:`, JSON.stringify(message.interactive));
             if (message.interactive?.type === "button_reply") {
-                text = message.interactive.button_reply?.id ?? null;
+                // prefer id, fall back to title
+                text = message.interactive.button_reply?.id ?? message.interactive.button_reply?.title ?? null;
             } else if (message.interactive?.type === "list_reply") {
-                text = message.interactive.list_reply?.id ?? null;
+                // prefer id, fall back to title
+                text = message.interactive.list_reply?.id ?? message.interactive.list_reply?.title ?? null;
             }
         }
 
