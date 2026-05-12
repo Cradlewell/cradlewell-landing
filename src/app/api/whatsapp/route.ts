@@ -65,7 +65,7 @@ async function sendLocationRequest(to: string, bodyText: string) {
     }
 }
 
-// ── Send day time slot list ───────────────────────────────────────────────────
+// ── Send 8-hour day time slot list (Nurse day & Japa 8hr) ────────────────────
 
 async function sendDaySlotListMessage(to: string) {
     try {
@@ -78,15 +78,15 @@ async function sendDaySlotListMessage(to: string) {
                 type: "interactive",
                 interactive: {
                     type: "list",
-                    body: { text: "We have *8-hour* morning shifts. Please select your preferred timing:" },
+                    body: { text: "Please select your preferred start time:" },
                     action: {
                         button: "Select Timing",
                         sections: [
                             {
-                                title: "Morning Shifts",
+                                title: "Morning Shifts (8 hrs)",
                                 rows: [
-                                    { id: "slot_8", title: "8 AM – 4 PM" },
-                                    { id: "slot_9", title: "9 AM – 5 PM" },
+                                    { id: "slot_8",  title: "8 AM – 4 PM" },
+                                    { id: "slot_9",  title: "9 AM – 5 PM" },
                                     { id: "slot_10", title: "10 AM – 6 PM" },
                                 ],
                             },
@@ -98,6 +98,42 @@ async function sendDaySlotListMessage(to: string) {
         });
     } catch (err) {
         console.error("sendDaySlotListMessage failed:", err);
+    }
+}
+
+// ── Send Japa day hours list (8 / 10 / 12 hrs) ───────────────────────────────
+
+async function sendJapaHoursListMessage(to: string) {
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "list",
+                    body: { text: "How many hours of day care do you need?" },
+                    action: {
+                        button: "Select Hours",
+                        sections: [
+                            {
+                                title: "Day Shift Options",
+                                rows: [
+                                    { id: "hours_8",  title: "8 hours",  description: "Choose from 3 time slots" },
+                                    { id: "hours_10", title: "10 hours", description: "9 AM – 7 PM" },
+                                    { id: "hours_12", title: "12 hours", description: "8 AM – 8 PM" },
+                                ],
+                            },
+                            { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
+                        ],
+                    },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("sendJapaHoursListMessage failed:", err);
     }
 }
 
@@ -130,12 +166,15 @@ interface Session {
     wa_phone: string;
     step: string;
     name?: string;
-    service?: string;
     baby_status?: string;
     location?: string;
-    due_date?: string;
+    hospital?: string;
+    baby_weight?: string;
+    service?: string;
     shift?: string;
+    japa_hours?: string;
     time_slot?: string;
+    due_date?: string;
 }
 
 async function getSession(waPhone: string): Promise<Session | null> {
@@ -191,6 +230,8 @@ async function pushLeadToCRM(session: Session, waPhone: string) {
             service_required: session.service || "",
             baby_status: session.baby_status || "Unknown",
             address: session.location || null,
+            hospital_name: session.hospital || null,
+            current_weight: session.baby_weight || null,
             care_start_date: session.due_date || null,
             preferred_shift: session.shift || null,
             shift_time: session.time_slot || null,
@@ -215,6 +256,8 @@ function buildSummary(session: Session): string {
     if (session.name)        lines.push(`👤 Name: ${session.name}`);
     if (session.baby_status) lines.push(`🤰 Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
     if (session.location)    lines.push(`📍 Location: ${session.location}`);
+    if (session.hospital)    lines.push(`🏥 Hospital: ${session.hospital}`);
+    if (session.baby_weight) lines.push(`⚖️ Baby Weight: ${session.baby_weight}`);
     if (session.service)     lines.push(`💼 Service: ${session.service}`);
     if (session.shift)       lines.push(`🌅 Shift: ${session.shift}`);
     if (session.time_slot)   lines.push(`⏰ Timing: ${session.time_slot}`);
@@ -226,20 +269,26 @@ function buildSummary(session: Session): string {
 // ── Button / option constants ─────────────────────────────────────────────────
 
 const BABY_STATUS_BUTTONS = [
-    { id: "home", title: "Baby is home" },
+    { id: "home",      title: "Baby is home" },
     { id: "expecting", title: "Still expecting" },
     { id: "main_menu", title: "Main Menu" },
 ];
 
 const SERVICE_BUTTONS = [
-    { id: "nurse", title: "Certified Nurse" },
-    { id: "japa", title: "Postnatal Caregiver" },
+    { id: "nurse",     title: "Certified Nurse" },
+    { id: "japa",      title: "Postnatal Caregiver" },
     { id: "main_menu", title: "Main Menu" },
 ];
 
-const SHIFT_BUTTONS = [
-    { id: "day", title: "Day care" },
-    { id: "night", title: "Night care" },
+// Nurse gets day + night; Japa only gets day (no night care available)
+const NURSE_SHIFT_BUTTONS = [
+    { id: "day",       title: "Day care" },
+    { id: "night",     title: "Night care" },
+    { id: "main_menu", title: "Main Menu" },
+];
+
+const JAPA_SHIFT_BUTTONS = [
+    { id: "day",       title: "Day care" },
     { id: "main_menu", title: "Main Menu" },
 ];
 
@@ -267,15 +316,23 @@ function matchShift(text: string): string {
     const t = text.trim().toLowerCase();
     if (t === "day" || t === "day care") return "Day";
     if (t === "night" || t === "night care") return "Night";
-    if (/^day$|day.?care/.test(t)) return "Day";
-    if (/^night$|night.?care/.test(t)) return "Night";
+    if (/day.?care/.test(t)) return "Day";
+    if (/night.?care/.test(t)) return "Night";
+    return "";
+}
+
+function matchJapaHours(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "hours_8"  || t === "8 hours"  || /^8$|^8.?hr/.test(t)) return "8";
+    if (t === "hours_10" || t === "10 hours" || /^10$|^10.?hr/.test(t)) return "10";
+    if (t === "hours_12" || t === "12 hours" || /^12$|^12.?hr/.test(t)) return "12";
     return "";
 }
 
 function matchTimeSlot(text: string): string {
     const t = text.trim().toLowerCase();
-    if (t === "slot_8" || /8\s*am/.test(t)) return "8 AM – 4 PM";
-    if (t === "slot_9" || /9\s*am/.test(t)) return "9 AM – 5 PM";
+    if (t === "slot_8"  || /8\s*am/.test(t))  return "8 AM – 4 PM";
+    if (t === "slot_9"  || /9\s*am/.test(t))  return "9 AM – 5 PM";
     if (t === "slot_10" || /10\s*am/.test(t)) return "10 AM – 6 PM";
     return "";
 }
@@ -294,6 +351,14 @@ async function sendMainMenu(waPhone: string, name?: string) {
     await storeMessage(waPhone, "outbound", msg);
 }
 
+// After location is collected, route to the next step based on baby status
+async function afterLocation(waPhone: string, session: Session, locationText: string) {
+    await upsertSession(waPhone, { location: locationText, step: "ask_hospital" });
+    const msg = "Thank you! 🏥 Which hospital welcomed your baby?";
+    await sendMessage(waPhone, msg);
+    await storeMessage(waPhone, "outbound", msg);
+}
+
 async function handleMessage(waPhone: string, incomingText: string, profileName?: string) {
     const text = incomingText.trim();
     const session = await getSession(waPhone);
@@ -306,7 +371,8 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         await upsertSession(waPhone, {
             step: "ask_baby_status",
             ...(name ? { name } : {}),
-            baby_status: "", service: "", location: "", due_date: "", shift: "", time_slot: "",
+            baby_status: "", location: "", hospital: "", baby_weight: "",
+            service: "", shift: "", japa_hours: "", time_slot: "", due_date: "",
         });
         await sendMainMenu(waPhone, name);
         return;
@@ -346,24 +412,33 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please tap one of the options below:");
             return;
         }
-        if (babyStatus === "Expecting") {
-            await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_location" });
-            const msg = "Wonderful! 🌸 To check caregiver availability near you, please share your current location.";
-            await sendLocationRequest(waPhone, msg);
-            await storeMessage(waPhone, "outbound", msg);
-        } else {
-            await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_service" });
-            const msg = "Got it! 🌸 What kind of care are you looking for?";
-            await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
-            await storeMessage(waPhone, "outbound", msg);
-        }
+        // Both paths ask location first
+        await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_location" });
+        const msg = "Wonderful! 🌸 To check caregiver availability near you, please share your current location.";
+        await sendLocationRequest(waPhone, msg);
+        await storeMessage(waPhone, "outbound", msg);
         return;
     }
 
     // ── Collect location (text fallback — GPS share goes via handleLocation) ──
     if (session.step === "ask_location") {
-        await upsertSession(waPhone, { location: text, step: "ask_service" });
-        const msg = "Got it! 🌸 What kind of care are you looking for?";
+        await afterLocation(waPhone, session, text);
+        return;
+    }
+
+    // ── Collect hospital name (Baby is Home path only) ────────────────────────
+    if (session.step === "ask_hospital") {
+        await upsertSession(waPhone, { hospital: text, step: "ask_baby_weight" });
+        const msg = "Got it! ⚖️ What is your baby's current weight? (e.g. 3.2 kg)";
+        await sendMessage(waPhone, msg);
+        await storeMessage(waPhone, "outbound", msg);
+        return;
+    }
+
+    // ── Collect baby weight ───────────────────────────────────────────────────
+    if (session.step === "ask_baby_weight") {
+        await upsertSession(waPhone, { baby_weight: text, step: "ask_service" });
+        const msg = "Perfect! 🌸 What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
         return;
@@ -378,8 +453,11 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             return;
         }
         await upsertSession(waPhone, { service, step: "ask_shift" });
-        const msg = "Great choice! 🌸 Would you need *Day care* or *Night care*?";
-        await sendButtonMessage(waPhone, msg, SHIFT_BUTTONS);
+        const isJapa = service.includes("Japa");
+        const msg = isJapa
+            ? "Great choice! 🌸 Japa care is available as a *Day shift*. Would you like to proceed?"
+            : "Great choice! 🌸 Would you need *Day care* or *Night care*?";
+        await sendButtonMessage(waPhone, msg, isJapa ? JAPA_SHIFT_BUTTONS : NURSE_SHIFT_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
         return;
     }
@@ -388,18 +466,63 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     if (session.step === "ask_shift") {
         const shift = matchShift(text);
         if (!shift) {
-            await sendButtonMessage(waPhone, "Please tap your preferred shift:", SHIFT_BUTTONS);
+            const isJapa = session.service?.includes("Japa");
+            await sendButtonMessage(waPhone, "Please tap your preferred shift:", isJapa ? JAPA_SHIFT_BUTTONS : NURSE_SHIFT_BUTTONS);
             await storeMessage(waPhone, "outbound", "Please tap your preferred shift:");
             return;
         }
-        if (shift === "Day") {
-            await upsertSession(waPhone, { shift, step: "ask_time_slot" });
-            await sendDaySlotListMessage(waPhone);
-            await storeMessage(waPhone, "outbound", "We have 8-hour morning shifts. Please select your preferred timing:");
+
+        const isJapa = session.service?.includes("Japa");
+
+        if (isJapa) {
+            // Japa has no night care
+            if (shift === "Night") {
+                const msg = "Japa/MOBA caregivers are only available for day shifts. 🌸 Please select *Day care* to continue.";
+                await sendButtonMessage(waPhone, msg, JAPA_SHIFT_BUTTONS);
+                await storeMessage(waPhone, "outbound", msg);
+                return;
+            }
+            // Japa + Day → ask hours
+            await upsertSession(waPhone, { shift, step: "ask_japa_hours" });
+            await sendJapaHoursListMessage(waPhone);
+            await storeMessage(waPhone, "outbound", "How many hours of day care do you need?");
         } else {
-            const timeSlot = "9 PM – 6 AM";
-            await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "completed" });
-            const finalSession: Session = { ...session, shift, time_slot: timeSlot };
+            // Nurse
+            if (shift === "Night") {
+                const timeSlot = "9 PM – 6 AM";
+                await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "completed" });
+                const finalSession: Session = { ...session, shift, time_slot: timeSlot };
+                await pushLeadToCRM(finalSession, waPhone);
+                const summary = buildSummary(finalSession);
+                await sendMessage(waPhone, summary);
+                await storeMessage(waPhone, "outbound", summary);
+            } else {
+                // Nurse + Day → time slot
+                await upsertSession(waPhone, { shift, step: "ask_time_slot" });
+                await sendDaySlotListMessage(waPhone);
+                await storeMessage(waPhone, "outbound", "Please select your preferred start time:");
+            }
+        }
+        return;
+    }
+
+    // ── Collect Japa hours (8 / 10 / 12) ─────────────────────────────────────
+    if (session.step === "ask_japa_hours") {
+        const hours = matchJapaHours(text);
+        if (!hours) {
+            await sendJapaHoursListMessage(waPhone);
+            await storeMessage(waPhone, "outbound", "Please select your preferred hours:");
+            return;
+        }
+
+        if (hours === "8") {
+            await upsertSession(waPhone, { japa_hours: hours, step: "ask_time_slot" });
+            await sendDaySlotListMessage(waPhone);
+            await storeMessage(waPhone, "outbound", "Please select your preferred start time:");
+        } else {
+            const timeSlot = hours === "10" ? "9 AM – 7 PM" : "8 AM – 8 PM";
+            await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "completed" });
+            const finalSession: Session = { ...session, japa_hours: hours, time_slot: timeSlot };
             await pushLeadToCRM(finalSession, waPhone);
             const summary = buildSummary(finalSession);
             await sendMessage(waPhone, summary);
@@ -408,7 +531,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // ── Collect time slot (day shift) ─────────────────────────────────────────
+    // ── Collect time slot (Nurse day & Japa 8hr) ──────────────────────────────
     if (session.step === "ask_time_slot") {
         const timeSlot = matchTimeSlot(text);
         if (!timeSlot) {
@@ -440,10 +563,7 @@ async function handleLocation(waPhone: string, latitude: number, longitude: numb
     const parts = [name, address].filter(Boolean);
     const locationText = parts.length > 0 ? parts.join(", ") : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
 
-    await upsertSession(waPhone, { location: locationText, step: "ask_service" });
-    const msg = "Got it! 🌸 What kind of care are you looking for?";
-    await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
-    await storeMessage(waPhone, "outbound", msg);
+    await afterLocation(waPhone, session, locationText);
 }
 
 // ── GET — Webhook verification ────────────────────────────────────────────────
