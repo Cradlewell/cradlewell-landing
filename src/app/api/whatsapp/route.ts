@@ -101,6 +101,83 @@ async function sendDaySlotListMessage(to: string) {
     }
 }
 
+// ── Send hospital selection list ─────────────────────────────────────────────
+
+async function sendHospitalListMessage(to: string) {
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "list",
+                    body: { text: "🏥 Which hospital welcomed your baby?" },
+                    action: {
+                        button: "Select Hospital",
+                        sections: [
+                            {
+                                title: "Hospitals",
+                                rows: [
+                                    { id: "hosp_cloudnine",  title: "Cloudnine" },
+                                    { id: "hosp_motherhood", title: "Motherhood" },
+                                    { id: "hosp_apollo",     title: "Apollo Cradle" },
+                                    { id: "hosp_rainbow",    title: "Rainbow" },
+                                    { id: "hosp_aster",      title: "Aster CMI" },
+                                    { id: "hosp_manipal",    title: "Manipal" },
+                                    { id: "hosp_fortis",     title: "Fortis" },
+                                    { id: "hosp_others",     title: "Others" },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("sendHospitalListMessage failed:", err);
+    }
+}
+
+// ── Send baby weight selection list ──────────────────────────────────────────
+
+async function sendBabyWeightListMessage(to: string) {
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "list",
+                    body: { text: "⚖️ What is your baby's current weight?" },
+                    action: {
+                        button: "Select Weight",
+                        sections: [
+                            {
+                                title: "Weight Range",
+                                rows: [
+                                    { id: "wt_lt2",   title: "Less than 2 kg" },
+                                    { id: "wt_2to25", title: "2 – 2.5 kg" },
+                                    { id: "wt_25to3", title: "2.5 – 3 kg" },
+                                    { id: "wt_3to35", title: "3 – 3.5 kg" },
+                                    { id: "wt_gt35",  title: "More than 3.5 kg" },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("sendBabyWeightListMessage failed:", err);
+    }
+}
+
 // ── Send Japa day hours list (8 / 10 / 12 hrs) ───────────────────────────────
 
 async function sendJapaHoursListMessage(to: string) {
@@ -321,6 +398,29 @@ function matchShift(text: string): string {
     return "";
 }
 
+function matchHospital(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "hosp_cloudnine"  || /cloudnine/.test(t))   return "Cloudnine";
+    if (t === "hosp_motherhood" || /motherhood/.test(t))  return "Motherhood";
+    if (t === "hosp_apollo"     || /apollo/.test(t))      return "Apollo Cradle";
+    if (t === "hosp_rainbow"    || /rainbow/.test(t))     return "Rainbow";
+    if (t === "hosp_aster"      || /aster/.test(t))       return "Aster CMI";
+    if (t === "hosp_manipal"    || /manipal/.test(t))     return "Manipal";
+    if (t === "hosp_fortis"     || /fortis/.test(t))      return "Fortis";
+    if (t === "hosp_others"     || t === "others" || t === "other") return "Others";
+    return text.trim(); // accept free text as-is
+}
+
+function matchBabyWeight(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "wt_lt2"   || /less.?than.?2|<\s*2/.test(t))      return "Less than 2 kg";
+    if (t === "wt_2to25" || /^2\s*[-–]\s*2\.5/.test(t))         return "2 – 2.5 kg";
+    if (t === "wt_25to3" || /^2\.5\s*[-–]\s*3/.test(t))         return "2.5 – 3 kg";
+    if (t === "wt_3to35" || /^3\s*[-–]\s*3\.5/.test(t))         return "3 – 3.5 kg";
+    if (t === "wt_gt35"  || /more.?than.?3\.5|>\s*3\.5/.test(t)) return "More than 3.5 kg";
+    return text.trim(); // accept free text as-is
+}
+
 function matchJapaHours(text: string): string {
     const t = text.trim().toLowerCase();
     if (t === "hours_8"  || t === "8 hours"  || /^8$|^8.?hr/.test(t)) return "8";
@@ -351,12 +451,19 @@ async function sendMainMenu(waPhone: string, name?: string) {
     await storeMessage(waPhone, "outbound", msg);
 }
 
-// After location is collected, route to the next step based on baby status
+// After location is collected, route based on baby status
 async function afterLocation(waPhone: string, session: Session, locationText: string) {
-    await upsertSession(waPhone, { location: locationText, step: "ask_hospital" });
-    const msg = "Thank you! 🏥 Which hospital welcomed your baby?";
-    await sendMessage(waPhone, msg);
-    await storeMessage(waPhone, "outbound", msg);
+    if (session.baby_status === "Born") {
+        await upsertSession(waPhone, { location: locationText, step: "ask_hospital" });
+        await sendHospitalListMessage(waPhone);
+        await storeMessage(waPhone, "outbound", "🏥 Which hospital welcomed your baby?");
+    } else {
+        // Expecting — skip hospital/weight, go straight to service
+        await upsertSession(waPhone, { location: locationText, step: "ask_service" });
+        const msg = "Got it! 🌸 What kind of care are you looking for?";
+        await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
+        await storeMessage(waPhone, "outbound", msg);
+    }
 }
 
 async function handleMessage(waPhone: string, incomingText: string, profileName?: string) {
@@ -428,16 +535,17 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     // ── Collect hospital name (Baby is Home path only) ────────────────────────
     if (session.step === "ask_hospital") {
-        await upsertSession(waPhone, { hospital: text, step: "ask_baby_weight" });
-        const msg = "Got it! ⚖️ What is your baby's current weight? (e.g. 3.2 kg)";
-        await sendMessage(waPhone, msg);
-        await storeMessage(waPhone, "outbound", msg);
+        const hospital = matchHospital(text);
+        await upsertSession(waPhone, { hospital, step: "ask_baby_weight" });
+        await sendBabyWeightListMessage(waPhone);
+        await storeMessage(waPhone, "outbound", "⚖️ What is your baby's current weight?");
         return;
     }
 
     // ── Collect baby weight ───────────────────────────────────────────────────
     if (session.step === "ask_baby_weight") {
-        await upsertSession(waPhone, { baby_weight: text, step: "ask_service" });
+        const baby_weight = matchBabyWeight(text);
+        await upsertSession(waPhone, { baby_weight, step: "ask_service" });
         const msg = "Perfect! 🌸 What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
