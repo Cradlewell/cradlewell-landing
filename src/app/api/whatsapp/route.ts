@@ -101,26 +101,17 @@ async function sendDaySlotListMessage(to: string) {
     }
 }
 
-// ── Deduplication: check if WhatsApp message ID was already processed ─────────
-
-async function isAlreadyProcessed(waMessageId: string): Promise<boolean> {
-    const { data } = await supabase
-        .from("whatsapp_messages")
-        .select("id")
-        .eq("wa_message_id", waMessageId)
-        .maybeSingle();
-    return !!data;
-}
-
 // ── Store message in Supabase ─────────────────────────────────────────────────
+// For inbound messages with a waMessageId, the unique constraint on wa_message_id
+// acts as an atomic dedup lock — returns false if this is a duplicate delivery.
 
 async function storeMessage(
     waPhone: string,
     direction: "inbound" | "outbound",
     message: string,
     waMessageId?: string
-) {
-    await supabase.from("whatsapp_messages").insert({
+): Promise<boolean> {
+    const { error } = await supabase.from("whatsapp_messages").insert({
         id: crypto.randomUUID(),
         wa_phone: waPhone,
         direction,
@@ -128,6 +119,9 @@ async function storeMessage(
         wa_message_id: waMessageId ?? null,
         created_at: new Date().toISOString(),
     });
+    // Unique constraint violation (code 23505) = duplicate message from Meta
+    if (error && error.code === "23505") return false;
+    return true;
 }
 
 // ── Session helpers ───────────────────────────────────────────────────────────
@@ -251,13 +245,11 @@ async function sendMainMenu(waPhone: string, name?: string) {
     await storeMessage(waPhone, "outbound", msg);
 }
 
-async function handleMessage(waPhone: string, incomingText: string, waMessageId: string, profileName?: string) {
+async function handleMessage(waPhone: string, incomingText: string, profileName?: string) {
     const text = incomingText.trim();
     const session = await getSession(waPhone);
 
     console.log(`[WA] phone=${waPhone} step=${session?.step ?? "NEW"} text="${text}"`);
-
-    await storeMessage(waPhone, "inbound", text, waMessageId);
 
     // ── Main Menu — restart flow from baby status ─────────────────────────────
     if (/^main menu$|^menu$/i.test(text) || text === "main_menu") {
@@ -447,17 +439,15 @@ export async function POST(req: NextRequest) {
         const waPhone: string = message.from;
         const waMessageId: string = message.id;
 
-        // ── Dedup: ignore if this message ID was already processed ────────────
-        if (await isAlreadyProcessed(waMessageId)) {
-            return NextResponse.json({ status: "ok" });
-        }
-
         const contacts = body.entry?.[0]?.changes?.[0]?.value?.contacts;
         const profileName: string | undefined = contacts?.[0]?.profile?.name || undefined;
 
         // ── Handle GPS location share ─────────────────────────────────────────
         if (message.type === "location") {
             const { latitude, longitude, name, address } = message.location ?? {};
+            // Atomic dedup: if insert fails (duplicate wa_message_id), skip
+            const stored = await storeMessage(waPhone, "inbound", "📍 location", waMessageId);
+            if (!stored) return NextResponse.json({ status: "ok" });
             await handleLocation(waPhone, latitude, longitude, name, address);
             return NextResponse.json({ status: "ok" });
         }
@@ -469,17 +459,19 @@ export async function POST(req: NextRequest) {
         } else if (message.type === "interactive") {
             console.log(`[WA] interactive raw:`, JSON.stringify(message.interactive));
             if (message.interactive?.type === "button_reply") {
-                // prefer id, fall back to title
                 text = message.interactive.button_reply?.id ?? message.interactive.button_reply?.title ?? null;
             } else if (message.interactive?.type === "list_reply") {
-                // prefer id, fall back to title
                 text = message.interactive.list_reply?.id ?? message.interactive.list_reply?.title ?? null;
             }
         }
 
         if (!text) return NextResponse.json({ status: "ok" });
 
-        await handleMessage(waPhone, text, waMessageId, profileName);
+        // ── Atomic dedup: insert message first — if duplicate, skip ───────────
+        const stored = await storeMessage(waPhone, "inbound", text, waMessageId);
+        if (!stored) return NextResponse.json({ status: "ok" });
+
+        await handleMessage(waPhone, text, profileName);
         return NextResponse.json({ status: "ok" });
     } catch (error) {
         console.error("WhatsApp webhook error:", error);
