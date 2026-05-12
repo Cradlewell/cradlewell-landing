@@ -328,23 +328,20 @@ async function pushLeadToCRM(session: Session, waPhone: string) {
 
 function buildSummary(session: Session): string {
     const rows: string[] = [];
-    if (session.name)        rows.push(`Name          ${session.name}`);
-    if (session.baby_status) rows.push(`Status        ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
-    if (session.location)    rows.push(`Location      ${session.location}`);
-    if (session.hospital)    rows.push(`Hospital      ${session.hospital}`);
-    if (session.baby_weight) rows.push(`Baby Weight   ${session.baby_weight}`);
-    if (session.service)     rows.push(`Service       ${session.service}`);
-    if (session.shift)       rows.push(`Shift         ${session.shift}`);
-    if (session.time_slot)   rows.push(`Timing        ${session.time_slot}`);
+    if (session.name)        rows.push(`Name: ${session.name}`);
+    if (session.baby_status) rows.push(`Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
+    if (session.location)    rows.push(`Location: ${session.location}`);
+    if (session.hospital)    rows.push(`Hospital: ${session.hospital}`);
+    if (session.baby_weight) rows.push(`Baby Weight: ${session.baby_weight}`);
+    if (session.service)     rows.push(`Service: ${session.service}`);
+    if (session.shift)       rows.push(`Shift: ${session.shift}`);
+    if (session.time_slot)   rows.push(`Timing: ${session.time_slot}`);
 
     return [
         `✅ *Care Request Confirmed*`,
         ``,
-        `Thank you, ${session.name}. Here are your details:`,
-        ``,
         ...rows,
         ``,
-        `─────────────────────────`,
         `Our care advisor will call you shortly.`,
         `Urgent? Call +91 93638 93639`,
     ].join("\n");
@@ -360,7 +357,7 @@ const BABY_STATUS_BUTTONS = [
 
 const SERVICE_BUTTONS = [
     { id: "nurse", title: "Certified Nurse" },
-    { id: "japa", title: "Postnatal Caregiver" },
+    { id: "japa", title: "Japa/Moba" },
     { id: "main_menu", title: "Main Menu" },
 ];
 
@@ -390,9 +387,9 @@ function matchBabyStatus(text: string): string {
 function matchService(text: string): string {
     const t = text.trim().toLowerCase();
     if (t === "nurse" || t === "certified nurse") return "Nurse";
-    if (t === "japa" || t === "postnatal caregiver") return "Postnatal Caregiver (Japa/MOBA)";
+    if (t === "japa" || t === "postnatal caregiver") return "Japa/Moba";
     if (/^1$|certified.?nurse/.test(t)) return "Nurse";
-    if (/^2$|postnatal|caregiver|moba/.test(t)) return "Postnatal Caregiver (Japa/MOBA)";
+    if (/^2$|postnatal|caregiver|moba/.test(t)) return "Japa/Moba";
     return "";
 }
 
