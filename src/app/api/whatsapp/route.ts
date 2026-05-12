@@ -364,6 +364,7 @@ function buildSummary(session: Session): string {
     if (session.name)        rows.push(`Name: ${session.name}`);
     if (session.baby_status) rows.push(`Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
     if (session.location)    rows.push(`Location: ${session.location}`);
+    if (session.due_date)    rows.push(`Due Month: ${session.due_date}`);
     if (session.hospital)    rows.push(`Hospital: ${session.hospital}`);
     if (session.baby_weight) rows.push(`Baby Weight: ${session.baby_weight}`);
     if (session.service)     rows.push(`Service: ${session.service}`);
