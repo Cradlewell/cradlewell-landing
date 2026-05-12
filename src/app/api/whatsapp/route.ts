@@ -134,6 +134,40 @@ async function sendDueMonthListMessage(to: string) {
     }
 }
 
+// ── Send baby age list ────────────────────────────────────────────────────────
+
+async function sendBabyAgeListMessage(to: string) {
+    try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "interactive",
+                interactive: {
+                    type: "list",
+                    body: { text: "How old is your baby?" },
+                    action: {
+                        button: "Select Age",
+                        sections: [{
+                            title: "Baby Age",
+                            rows: [
+                                { id: "age_7d",  title: "0-7 days" },
+                                { id: "age_4w",  title: "1-4 weeks" },
+                                { id: "age_3m",  title: "1-3 months" },
+                                { id: "age_3mp", title: "3+ months" },
+                            ],
+                        }],
+                    },
+                },
+            }),
+        });
+    } catch (err) {
+        console.error("sendBabyAgeListMessage failed:", err);
+    }
+}
+
 // ── Send hospital selection list ─────────────────────────────────────────────
 
 async function sendHospitalListMessage(to: string) {
@@ -279,12 +313,15 @@ interface Session {
     baby_status?: string;
     location?: string;
     hospital?: string;
+    birth_stage?: string;
+    baby_age?: string;
     baby_weight?: string;
     service?: string;
     shift?: string;
     japa_hours?: string;
     time_slot?: string;
     due_date?: string;
+    service_days?: string;
 }
 
 async function getSession(waPhone: string): Promise<Session | null> {
@@ -341,10 +378,13 @@ async function pushLeadToCRM(session: Session, waPhone: string) {
             baby_status: session.baby_status || "Unknown",
             address: session.location || null,
             hospital_name: session.hospital || null,
+            baby_birth_stage_status: session.birth_stage || null,
+            baby_age: session.baby_age || null,
             current_weight: session.baby_weight || null,
             care_start_date: session.due_date || null,
             preferred_shift: session.shift || null,
             shift_time: session.time_slot || null,
+            service_days: session.service_days ? parseInt(session.service_days) || null : null,
             owner: "Unassigned",
             stage: "New Lead",
             temperature: "Cold",
@@ -363,13 +403,16 @@ function buildSummary(session: Session): string {
     const rows: string[] = [];
     if (session.name)        rows.push(`Name: ${session.name}`);
     if (session.baby_status) rows.push(`Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
-    if (session.location)    rows.push(`Location: ${session.location}`);
-    if (session.due_date)    rows.push(`Due Month: ${session.due_date}`);
-    if (session.hospital)    rows.push(`Hospital: ${session.hospital}`);
-    if (session.baby_weight) rows.push(`Baby Weight: ${session.baby_weight}`);
-    if (session.service)     rows.push(`Service: ${session.service}`);
-    if (session.shift)       rows.push(`Shift: ${session.shift}`);
-    if (session.time_slot)   rows.push(`Timing: ${session.time_slot}`);
+    if (session.location)     rows.push(`Location: ${session.location}`);
+    if (session.due_date)     rows.push(`Due Month: ${session.due_date}`);
+    if (session.hospital)     rows.push(`Hospital: ${session.hospital}`);
+    if (session.birth_stage)  rows.push(`Birth Stage: ${session.birth_stage}`);
+    if (session.baby_age)     rows.push(`Baby Age: ${session.baby_age}`);
+    if (session.baby_weight)  rows.push(`Baby Weight: ${session.baby_weight}`);
+    if (session.service)      rows.push(`Service: ${session.service}`);
+    if (session.shift)        rows.push(`Shift: ${session.shift}`);
+    if (session.time_slot)    rows.push(`Timing: ${session.time_slot}`);
+    if (session.service_days) rows.push(`Support Days: ${session.service_days}`);
 
     return [
         `✅ *Care Request Confirmed*`,
@@ -393,6 +436,17 @@ const SERVICE_BUTTONS = [
     { id: "nurse", title: "Certified Nurse" },
     { id: "japa", title: "Japa/Moba" },
     { id: "main_menu", title: "Main Menu" },
+];
+
+const BIRTH_STAGE_BUTTONS = [
+    { id: "normal",  title: "Normal" },
+    { id: "preterm", title: "Preterm/Early birth" },
+];
+
+const SERVICE_DAYS_BUTTONS = [
+    { id: "trial",  title: "3 Day Trial" },
+    { id: "days30", title: "30 Days" },
+    { id: "days60", title: "60 Days" },
 ];
 
 // Nurse gets day + night; Japa only gets day (no night care available)
@@ -433,6 +487,30 @@ function matchShift(text: string): string {
     if (t === "night" || t === "night care") return "Night";
     if (/day.?care/.test(t)) return "Day";
     if (/night.?care/.test(t)) return "Night";
+    return "";
+}
+
+function matchBirthStage(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "normal"  || /^normal$/.test(t))                   return "Normal";
+    if (t === "preterm" || /preterm|early.?birth/.test(t))        return "Preterm/Early birth";
+    return "";
+}
+
+function matchBabyAge(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "age_7d"  || /0.?7.?day/.test(t))                  return "0-7 days";
+    if (t === "age_4w"  || /1.?4.?week/.test(t))                 return "1-4 weeks";
+    if (t === "age_3m"  || /1.?3.?month/.test(t))                return "1-3 months";
+    if (t === "age_3mp" || /3\+|three.?plus|3.?plus/.test(t))    return "3+ months";
+    return "";
+}
+
+function matchServiceDays(text: string): string {
+    const t = text.trim().toLowerCase();
+    if (t === "trial"  || /trial|3.?day/.test(t))                return "3 Day Trial";
+    if (t === "days30" || /^30/.test(t))                         return "30 Days";
+    if (t === "days60" || /^60/.test(t))                         return "60 Days";
     return "";
 }
 
@@ -515,8 +593,8 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         await upsertSession(waPhone, {
             step: "ask_baby_status",
             ...(name ? { name } : {}),
-            baby_status: "", location: "", hospital: "", baby_weight: "",
-            service: "", shift: "", japa_hours: "", time_slot: "", due_date: "",
+            baby_status: "", location: "", hospital: "", birth_stage: "", baby_age: "", baby_weight: "",
+            service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", service_days: "",
         });
         await sendMainMenu(waPhone, name);
         return;
@@ -585,7 +663,36 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Collect hospital name (Baby is Home path only) ────────────────────────
     if (session.step === "ask_hospital") {
         const hospital = matchHospital(text);
-        await upsertSession(waPhone, { hospital, step: "ask_baby_weight" });
+        await upsertSession(waPhone, { hospital, step: "ask_birth_stage" });
+        const msg = "What was your baby's birth stage?";
+        await sendButtonMessage(waPhone, msg, BIRTH_STAGE_BUTTONS);
+        await storeMessage(waPhone, "outbound", msg);
+        return;
+    }
+
+    // ── Collect birth stage ───────────────────────────────────────────────────
+    if (session.step === "ask_birth_stage") {
+        const birth_stage = matchBirthStage(text);
+        if (!birth_stage) {
+            await sendButtonMessage(waPhone, "Please select your baby's birth stage:", BIRTH_STAGE_BUTTONS);
+            await storeMessage(waPhone, "outbound", "Please select your baby's birth stage:");
+            return;
+        }
+        await upsertSession(waPhone, { birth_stage, step: "ask_baby_age" });
+        await sendBabyAgeListMessage(waPhone);
+        await storeMessage(waPhone, "outbound", "How old is your baby?");
+        return;
+    }
+
+    // ── Collect baby age ──────────────────────────────────────────────────────
+    if (session.step === "ask_baby_age") {
+        const baby_age = matchBabyAge(text);
+        if (!baby_age) {
+            await sendBabyAgeListMessage(waPhone);
+            await storeMessage(waPhone, "outbound", "Please select your baby's age:");
+            return;
+        }
+        await upsertSession(waPhone, { baby_age, step: "ask_baby_weight" });
         await sendBabyWeightListMessage(waPhone);
         await storeMessage(waPhone, "outbound", "⚖️ What is your baby's current weight?");
         return;
@@ -647,12 +754,10 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             // Nurse
             if (shift === "Night") {
                 const timeSlot = "9 PM – 6 AM";
-                await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "completed" });
-                const finalSession: Session = { ...session, shift, time_slot: timeSlot };
-                await pushLeadToCRM(finalSession, waPhone);
-                const summary = buildSummary(finalSession);
-                await sendMessage(waPhone, summary);
-                await storeMessage(waPhone, "outbound", summary);
+                await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_service_days" });
+                const msg = "How many days of support would you like?";
+                await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
+                await storeMessage(waPhone, "outbound", msg);
             } else {
                 // Nurse + Day → time slot
                 await upsertSession(waPhone, { shift, step: "ask_time_slot" });
@@ -678,12 +783,10 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please select your preferred start time:");
         } else {
             const timeSlot = hours === "10" ? "9 AM – 7 PM" : "8 AM – 8 PM";
-            await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "completed" });
-            const finalSession: Session = { ...session, japa_hours: hours, time_slot: timeSlot };
-            await pushLeadToCRM(finalSession, waPhone);
-            const summary = buildSummary(finalSession);
-            await sendMessage(waPhone, summary);
-            await storeMessage(waPhone, "outbound", summary);
+            await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "ask_service_days" });
+            const msg = "How many days of support would you like?";
+            await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
+            await storeMessage(waPhone, "outbound", msg);
         }
         return;
     }
@@ -696,8 +799,23 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please select your preferred timing:");
             return;
         }
-        await upsertSession(waPhone, { time_slot: timeSlot, step: "completed" });
-        const finalSession: Session = { ...session, time_slot: timeSlot };
+        await upsertSession(waPhone, { time_slot: timeSlot, step: "ask_service_days" });
+        const daysMsg = "How many days of support would you like?";
+        await sendButtonMessage(waPhone, daysMsg, SERVICE_DAYS_BUTTONS);
+        await storeMessage(waPhone, "outbound", daysMsg);
+        return;
+    }
+
+    // ── Collect service days ──────────────────────────────────────────────────
+    if (session.step === "ask_service_days") {
+        const service_days = matchServiceDays(text);
+        if (!service_days) {
+            await sendButtonMessage(waPhone, "Please select your preferred support duration:", SERVICE_DAYS_BUTTONS);
+            await storeMessage(waPhone, "outbound", "Please select your preferred support duration:");
+            return;
+        }
+        await upsertSession(waPhone, { service_days, step: "completed" });
+        const finalSession: Session = { ...session, service_days };
         await pushLeadToCRM(finalSession, waPhone);
         const summary = buildSummary(finalSession);
         await sendMessage(waPhone, summary);
@@ -711,14 +829,30 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     await storeMessage(waPhone, "outbound", msg);
 }
 
+// ── Reverse geocode lat/lon → full address (OpenStreetMap Nominatim) ─────────
+
+async function reverseGeocode(lat: number, lon: number): Promise<string> {
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+            { headers: { "User-Agent": "CradlewellBot/1.0" } }
+        );
+        const data = await res.json();
+        return data.display_name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    } catch {
+        return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    }
+}
+
 // ── Handle incoming GPS location share ───────────────────────────────────────
 
 async function handleLocation(waPhone: string, latitude: number, longitude: number, name?: string, address?: string) {
     const session = await getSession(waPhone);
     if (!session || session.step !== "ask_location") return;
 
-    const parts = [name, address].filter(Boolean);
-    const locationText = parts.length > 0 ? parts.join(", ") : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+    const locationText = (name || address)
+        ? [name, address].filter(Boolean).join(", ")
+        : await reverseGeocode(latitude, longitude);
 
     await afterLocation(waPhone, session, locationText);
 }
