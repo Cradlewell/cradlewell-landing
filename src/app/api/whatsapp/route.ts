@@ -65,44 +65,6 @@ async function sendLocationRequest(to: string, bodyText: string) {
     }
 }
 
-// ── Send due month list (next 9 months + Main Menu) ──────────────────────────
-
-async function sendMonthListMessage(to: string) {
-    const months: Array<{ id: string; title: string }> = [];
-    const now = new Date();
-    for (let i = 0; i < 9; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        months.push({
-            id: `month_${d.getFullYear()}_${d.getMonth() + 1}`,
-            title: d.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-        });
-    }
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "list",
-                    body: { text: "📅 Please select your expected due month:" },
-                    action: {
-                        button: "Select Month",
-                        sections: [
-                            { title: "Due Month", rows: months },
-                            { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
-                        ],
-                    },
-                },
-            }),
-        });
-    } catch (err) {
-        console.error("sendMonthListMessage failed:", err);
-    }
-}
-
 // ── Send day time slot list (with Main Menu) ──────────────────────────────────
 
 async function sendDaySlotListMessage(to: string) {
@@ -364,24 +326,7 @@ async function handleMessage(waPhone: string, incomingText: string, waMessageId:
 
     // ── Collect location (text fallback — GPS share goes via handleLocation) ──
     if (session.step === "ask_location") {
-        await upsertSession(waPhone, { location: text, step: "ask_due_date" });
-        await sendMonthListMessage(waPhone);
-        await storeMessage(waPhone, "outbound", "📅 Please select your expected due month:");
-        return;
-    }
-
-    // ── Collect due month ─────────────────────────────────────────────────────
-    if (session.step === "ask_due_date") {
-        // id format: "month_YYYY_M" (e.g. "month_2026_5")
-        const monthMatch = /^month_(\d{4})_(\d{1,2})$/.exec(text);
-        if (!monthMatch) {
-            await sendMonthListMessage(waPhone);
-            await storeMessage(waPhone, "outbound", "📅 Please select your expected due month:");
-            return;
-        }
-        const d = new Date(parseInt(monthMatch[1]), parseInt(monthMatch[2]) - 1, 1);
-        const dueDate = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-        await upsertSession(waPhone, { due_date: dueDate, step: "ask_service" });
+        await upsertSession(waPhone, { location: text, step: "ask_service" });
         const msg = "Got it! 🌸 What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
@@ -471,9 +416,10 @@ async function handleLocation(waPhone: string, latitude: number, longitude: numb
     const locationText = parts.length > 0 ? parts.join(", ") : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
 
     await storeMessage(waPhone, "inbound", `📍 ${locationText}`);
-    await upsertSession(waPhone, { location: locationText, step: "ask_due_date" });
-    await sendMonthListMessage(waPhone);
-    await storeMessage(waPhone, "outbound", "📅 Please select your expected due month:");
+    await upsertSession(waPhone, { location: locationText, step: "ask_service" });
+    const msg = "Got it! 🌸 What kind of care are you looking for?";
+    await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
+    await storeMessage(waPhone, "outbound", msg);
 }
 
 // ── GET — Webhook verification ────────────────────────────────────────────────
