@@ -85,8 +85,8 @@ async function sendDaySlotListMessage(to: string) {
                             {
                                 title: "Morning Shifts (8 hrs)",
                                 rows: [
-                                    { id: "slot_8",  title: "8 AM – 4 PM" },
-                                    { id: "slot_9",  title: "9 AM – 5 PM" },
+                                    { id: "slot_8", title: "8 AM – 4 PM" },
+                                    { id: "slot_9", title: "9 AM – 5 PM" },
                                     { id: "slot_10", title: "10 AM – 6 PM" },
                                 ],
                             },
@@ -114,21 +114,21 @@ async function sendHospitalListMessage(to: string) {
                 type: "interactive",
                 interactive: {
                     type: "list",
-                    body: { text: "🏥 Which hospital welcomed your baby?" },
+                    body: { text: "Which hospital welcomed your baby?" },
                     action: {
                         button: "Select Hospital",
                         sections: [
                             {
                                 title: "Hospitals",
                                 rows: [
-                                    { id: "hosp_cloudnine",  title: "Cloudnine" },
+                                    { id: "hosp_cloudnine", title: "Cloudnine" },
                                     { id: "hosp_motherhood", title: "Motherhood" },
-                                    { id: "hosp_apollo",     title: "Apollo Cradle" },
-                                    { id: "hosp_rainbow",    title: "Rainbow" },
-                                    { id: "hosp_aster",      title: "Aster CMI" },
-                                    { id: "hosp_manipal",    title: "Manipal" },
-                                    { id: "hosp_fortis",     title: "Fortis" },
-                                    { id: "hosp_others",     title: "Others" },
+                                    { id: "hosp_apollo", title: "Apollo Cradle" },
+                                    { id: "hosp_rainbow", title: "Rainbow" },
+                                    { id: "hosp_aster", title: "Aster CMI" },
+                                    { id: "hosp_manipal", title: "Manipal" },
+                                    { id: "hosp_fortis", title: "Fortis" },
+                                    { id: "hosp_others", title: "Others" },
                                 ],
                             },
                         ],
@@ -154,18 +154,18 @@ async function sendBabyWeightListMessage(to: string) {
                 type: "interactive",
                 interactive: {
                     type: "list",
-                    body: { text: "⚖️ What is your baby's current weight?" },
+                    body: { text: "What is your baby's current weight?" },
                     action: {
                         button: "Select Weight",
                         sections: [
                             {
                                 title: "Weight Range",
                                 rows: [
-                                    { id: "wt_lt2",   title: "Less than 2 kg" },
+                                    { id: "wt_lt2", title: "Less than 2 kg" },
                                     { id: "wt_2to25", title: "2 – 2.5 kg" },
                                     { id: "wt_25to3", title: "2.5 – 3 kg" },
                                     { id: "wt_3to35", title: "3 – 3.5 kg" },
-                                    { id: "wt_gt35",  title: "More than 3.5 kg" },
+                                    { id: "wt_gt35", title: "More than 3.5 kg" },
                                 ],
                             },
                         ],
@@ -198,7 +198,7 @@ async function sendJapaHoursListMessage(to: string) {
                             {
                                 title: "Day Shift Options",
                                 rows: [
-                                    { id: "hours_8",  title: "8 hours",  description: "Choose from 3 time slots" },
+                                    { id: "hours_8", title: "8 hours", description: "Choose from 3 time slots" },
                                     { id: "hours_10", title: "10 hours", description: "9 AM – 7 PM" },
                                     { id: "hours_12", title: "12 hours", description: "8 AM – 8 PM" },
                                 ],
@@ -327,45 +327,52 @@ async function pushLeadToCRM(session: Session, waPhone: string) {
 // ── Build summary thank-you message ──────────────────────────────────────────
 
 function buildSummary(session: Session): string {
-    const lines: string[] = [
-        `Thank you, ${session.name}! 🌸 Here's a summary of your care request:\n`,
-    ];
-    if (session.name)        lines.push(`👤 Name: ${session.name}`);
-    if (session.baby_status) lines.push(`🤰 Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
-    if (session.location)    lines.push(`📍 Location: ${session.location}`);
-    if (session.hospital)    lines.push(`🏥 Hospital: ${session.hospital}`);
-    if (session.baby_weight) lines.push(`⚖️ Baby Weight: ${session.baby_weight}`);
-    if (session.service)     lines.push(`💼 Service: ${session.service}`);
-    if (session.shift)       lines.push(`🌅 Shift: ${session.shift}`);
-    if (session.time_slot)   lines.push(`⏰ Timing: ${session.time_slot}`);
-    lines.push(`\nOur care advisor will call you shortly to confirm availability.`);
-    lines.push(`For urgent help, call: +91 93638 93639`);
-    return lines.join("\n");
+    const rows: string[] = [];
+    if (session.name)        rows.push(`Name          ${session.name}`);
+    if (session.baby_status) rows.push(`Status        ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
+    if (session.location)    rows.push(`Location      ${session.location}`);
+    if (session.hospital)    rows.push(`Hospital      ${session.hospital}`);
+    if (session.baby_weight) rows.push(`Baby Weight   ${session.baby_weight}`);
+    if (session.service)     rows.push(`Service       ${session.service}`);
+    if (session.shift)       rows.push(`Shift         ${session.shift}`);
+    if (session.time_slot)   rows.push(`Timing        ${session.time_slot}`);
+
+    return [
+        `✅ *Care Request Confirmed*`,
+        ``,
+        `Thank you, ${session.name}. Here are your details:`,
+        ``,
+        ...rows,
+        ``,
+        `─────────────────────────`,
+        `Our care advisor will call you shortly.`,
+        `Urgent? Call +91 93638 93639`,
+    ].join("\n");
 }
 
 // ── Button / option constants ─────────────────────────────────────────────────
 
 const BABY_STATUS_BUTTONS = [
-    { id: "home",      title: "Baby is home" },
+    { id: "home", title: "Baby is home" },
     { id: "expecting", title: "Still expecting" },
     { id: "main_menu", title: "Main Menu" },
 ];
 
 const SERVICE_BUTTONS = [
-    { id: "nurse",     title: "Certified Nurse" },
-    { id: "japa",      title: "Postnatal Caregiver" },
+    { id: "nurse", title: "Certified Nurse" },
+    { id: "japa", title: "Postnatal Caregiver" },
     { id: "main_menu", title: "Main Menu" },
 ];
 
 // Nurse gets day + night; Japa only gets day (no night care available)
 const NURSE_SHIFT_BUTTONS = [
-    { id: "day",       title: "Day care" },
-    { id: "night",     title: "Night care" },
+    { id: "day", title: "Day care" },
+    { id: "night", title: "Night care" },
     { id: "main_menu", title: "Main Menu" },
 ];
 
 const JAPA_SHIFT_BUTTONS = [
-    { id: "day",       title: "Day care" },
+    { id: "day", title: "Day care" },
     { id: "main_menu", title: "Main Menu" },
 ];
 
@@ -400,30 +407,30 @@ function matchShift(text: string): string {
 
 function matchHospital(text: string): string {
     const t = text.trim().toLowerCase();
-    if (t === "hosp_cloudnine"  || /cloudnine/.test(t))   return "Cloudnine";
-    if (t === "hosp_motherhood" || /motherhood/.test(t))  return "Motherhood";
-    if (t === "hosp_apollo"     || /apollo/.test(t))      return "Apollo Cradle";
-    if (t === "hosp_rainbow"    || /rainbow/.test(t))     return "Rainbow";
-    if (t === "hosp_aster"      || /aster/.test(t))       return "Aster CMI";
-    if (t === "hosp_manipal"    || /manipal/.test(t))     return "Manipal";
-    if (t === "hosp_fortis"     || /fortis/.test(t))      return "Fortis";
-    if (t === "hosp_others"     || t === "others" || t === "other") return "Others";
+    if (t === "hosp_cloudnine" || /cloudnine/.test(t)) return "Cloudnine";
+    if (t === "hosp_motherhood" || /motherhood/.test(t)) return "Motherhood";
+    if (t === "hosp_apollo" || /apollo/.test(t)) return "Apollo Cradle";
+    if (t === "hosp_rainbow" || /rainbow/.test(t)) return "Rainbow";
+    if (t === "hosp_aster" || /aster/.test(t)) return "Aster CMI";
+    if (t === "hosp_manipal" || /manipal/.test(t)) return "Manipal";
+    if (t === "hosp_fortis" || /fortis/.test(t)) return "Fortis";
+    if (t === "hosp_others" || t === "others" || t === "other") return "Others";
     return text.trim(); // accept free text as-is
 }
 
 function matchBabyWeight(text: string): string {
     const t = text.trim().toLowerCase();
-    if (t === "wt_lt2"   || /less.?than.?2|<\s*2/.test(t))      return "Less than 2 kg";
-    if (t === "wt_2to25" || /^2\s*[-–]\s*2\.5/.test(t))         return "2 – 2.5 kg";
-    if (t === "wt_25to3" || /^2\.5\s*[-–]\s*3/.test(t))         return "2.5 – 3 kg";
-    if (t === "wt_3to35" || /^3\s*[-–]\s*3\.5/.test(t))         return "3 – 3.5 kg";
-    if (t === "wt_gt35"  || /more.?than.?3\.5|>\s*3\.5/.test(t)) return "More than 3.5 kg";
+    if (t === "wt_lt2" || /less.?than.?2|<\s*2/.test(t)) return "Less than 2 kg";
+    if (t === "wt_2to25" || /^2\s*[-–]\s*2\.5/.test(t)) return "2 – 2.5 kg";
+    if (t === "wt_25to3" || /^2\.5\s*[-–]\s*3/.test(t)) return "2.5 – 3 kg";
+    if (t === "wt_3to35" || /^3\s*[-–]\s*3\.5/.test(t)) return "3 – 3.5 kg";
+    if (t === "wt_gt35" || /more.?than.?3\.5|>\s*3\.5/.test(t)) return "More than 3.5 kg";
     return text.trim(); // accept free text as-is
 }
 
 function matchJapaHours(text: string): string {
     const t = text.trim().toLowerCase();
-    if (t === "hours_8"  || t === "8 hours"  || /^8$|^8.?hr/.test(t)) return "8";
+    if (t === "hours_8" || t === "8 hours" || /^8$|^8.?hr/.test(t)) return "8";
     if (t === "hours_10" || t === "10 hours" || /^10$|^10.?hr/.test(t)) return "10";
     if (t === "hours_12" || t === "12 hours" || /^12$|^12.?hr/.test(t)) return "12";
     return "";
@@ -431,8 +438,8 @@ function matchJapaHours(text: string): string {
 
 function matchTimeSlot(text: string): string {
     const t = text.trim().toLowerCase();
-    if (t === "slot_8"  || /8\s*am/.test(t))  return "8 AM – 4 PM";
-    if (t === "slot_9"  || /9\s*am/.test(t))  return "9 AM – 5 PM";
+    if (t === "slot_8" || /8\s*am/.test(t)) return "8 AM – 4 PM";
+    if (t === "slot_9" || /9\s*am/.test(t)) return "9 AM – 5 PM";
     if (t === "slot_10" || /10\s*am/.test(t)) return "10 AM – 6 PM";
     return "";
 }
@@ -445,7 +452,7 @@ function isMainMenu(text: string): boolean {
 // ── Bot flow ──────────────────────────────────────────────────────────────────
 
 async function sendMainMenu(waPhone: string, name?: string) {
-    const greeting = name ? `Welcome back, ${name}! 🌸` : "Welcome back! 🌸";
+    const greeting = name ? `Welcome back, ${name}!` : "Welcome back!";
     const msg = `${greeting}\n\nIs your little one already home, or are you still expecting?`;
     await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
     await storeMessage(waPhone, "outbound", msg);
@@ -460,7 +467,7 @@ async function afterLocation(waPhone: string, session: Session, locationText: st
     } else {
         // Expecting — skip hospital/weight, go straight to service
         await upsertSession(waPhone, { location: locationText, step: "ask_service" });
-        const msg = "Got it! 🌸 What kind of care are you looking for?";
+        const msg = "Got it. What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
     }
@@ -489,12 +496,12 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     if (!session || session.step === "completed") {
         if (profileName) {
             await upsertSession(waPhone, { step: "ask_baby_status", name: profileName });
-            const msg = `Hi ${profileName}! 🌸 Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nIs your little one already home, or are you still expecting?`;
+            const msg = `Hi ${profileName}! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nIs your little one already home, or are you still expecting?`;
             await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", msg);
         } else {
             await upsertSession(waPhone, { step: "ask_name" });
-            const msg = "Hi! 🌸 Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nMay I know your name?";
+            const msg = "Hi! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nMay I know your name?";
             await sendMessage(waPhone, msg);
             await storeMessage(waPhone, "outbound", msg);
         }
@@ -505,7 +512,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     if (session.step === "ask_name") {
         const name = profileName || text;
         await upsertSession(waPhone, { name, step: "ask_baby_status" });
-        const msg = `Nice to meet you, ${name}! 🌸\n\nIs your little one already home, or are you still expecting?`;
+        const msg = `Nice to meet you, ${name}.\n\nIs your little one already home, or are you still expecting?`;
         await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
         return;
@@ -521,7 +528,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         }
         // Both paths ask location first
         await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_location" });
-        const msg = "Wonderful! 🌸 To check caregiver availability near you, please share your current location.";
+        const msg = "To check caregiver availability near you, please share your current location.";
         await sendLocationRequest(waPhone, msg);
         await storeMessage(waPhone, "outbound", msg);
         return;
@@ -546,7 +553,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     if (session.step === "ask_baby_weight") {
         const baby_weight = matchBabyWeight(text);
         await upsertSession(waPhone, { baby_weight, step: "ask_service" });
-        const msg = "Perfect! 🌸 What kind of care are you looking for?";
+        const msg = "What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
         return;
@@ -563,8 +570,8 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         await upsertSession(waPhone, { service, step: "ask_shift" });
         const isJapa = service.includes("Japa");
         const msg = isJapa
-            ? "Great choice! 🌸 Japa care is available as a *Day shift*. Would you like to proceed?"
-            : "Great choice! 🌸 Would you need *Day care* or *Night care*?";
+            ? "Japa care is available as a *Day shift*. Would you like to proceed?"
+            : "Would you need *Day care* or *Night care*?";
         await sendButtonMessage(waPhone, msg, isJapa ? JAPA_SHIFT_BUTTONS : NURSE_SHIFT_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
         return;
@@ -585,7 +592,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         if (isJapa) {
             // Japa has no night care
             if (shift === "Night") {
-                const msg = "Japa/MOBA caregivers are only available for day shifts. 🌸 Please select *Day care* to continue.";
+                const msg = "Japa/MOBA caregivers are only available for day shifts. Please select *Day care* to continue.";
                 await sendButtonMessage(waPhone, msg, JAPA_SHIFT_BUTTONS);
                 await storeMessage(waPhone, "outbound", msg);
                 return;
@@ -657,7 +664,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     }
 
     // ── Already completed / unknown ───────────────────────────────────────────
-    const msg = "Our care advisor will contact you very soon! 🌸 For urgent help, call +91 93638 93639.";
+    const msg = "Our care advisor will contact you very soon. For urgent help, call +91 93638 93639.";
     await sendMessage(waPhone, msg);
     await storeMessage(waPhone, "outbound", msg);
 }
