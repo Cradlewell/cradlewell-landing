@@ -1,11 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabase, dbToLead, dbToFollowup, dbToQuotation, dbToClosure, dbToActivity, isAuthed } from "@/lib/supabase-server";
+import { NextResponse } from "next/server";
+import { supabase, dbToLead, dbToFollowup, dbToQuotation, dbToClosure, dbToActivity } from "@/lib/supabase-server";
 
-export async function GET(req: NextRequest) {
-  if (!(await isAuthed(req.cookies.get("crm_auth")?.value))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function GET() {
   const [leadsRes, followupsRes, quotationsRes, closuresRes, activityRes] = await Promise.all([
     supabase.from("leads").select("*").order("created_at", { ascending: false }),
     supabase.from("followups").select("*").order("created_at", { ascending: false }),

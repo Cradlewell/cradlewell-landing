@@ -4,9 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/crm") && !pathname.startsWith("/crm/login")) {
+  const isCrmPage = pathname.startsWith("/crm") && !pathname.startsWith("/crm/login");
+  const isCrmApi = pathname.startsWith("/api/crm") && !pathname.startsWith("/api/crm/auth");
+
+  if (isCrmPage || isCrmApi) {
     const token = request.cookies.get("crm_auth")?.value;
     if (!token) {
+      if (isCrmApi) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       return NextResponse.redirect(new URL("/crm/login", request.url));
     }
 
@@ -16,6 +20,7 @@ export async function middleware(request: NextRequest) {
     );
     const { error } = await supabase.auth.getUser(token);
     if (error) {
+      if (isCrmApi) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       return NextResponse.redirect(new URL("/crm/login", request.url));
     }
   }
@@ -24,5 +29,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/crm/:path*"],
+  matcher: ["/crm/:path*", "/api/crm/:path*"],
 };
