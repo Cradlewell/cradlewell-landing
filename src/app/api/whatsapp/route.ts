@@ -361,7 +361,8 @@ async function getSession(waPhone: string): Promise<Session | null> {
 
 // Read-then-write is safe here because inbound message dedup (wa_message_id
 // unique constraint) guarantees only one handleMessage call runs per message.
-async function upsertSession(waPhone: string, updates: Record<string, string>) {
+// Returns true on success, false on DB error (callers should abort if false).
+async function upsertSession(waPhone: string, updates: Record<string, string>): Promise<boolean> {
     const now = new Date().toISOString();
     const existing = await getSession(waPhone);
     if (existing) {
@@ -369,7 +370,7 @@ async function upsertSession(waPhone: string, updates: Record<string, string>) {
             .from("whatsapp_sessions")
             .update({ ...updates, updated_at: now })
             .eq("wa_phone", waPhone);
-        if (error) console.error("upsertSession update failed:", error);
+        if (error) { console.error("upsertSession update failed:", error); return false; }
     } else {
         const { error } = await supabase.from("whatsapp_sessions").insert({
             id: crypto.randomUUID(),
@@ -379,8 +380,9 @@ async function upsertSession(waPhone: string, updates: Record<string, string>) {
             updated_at: now,
             ...updates,
         });
-        if (error) console.error("upsertSession insert failed:", error);
+        if (error) { console.error("upsertSession insert failed:", error); return false; }
     }
+    return true;
 }
 
 // ── Push lead to CRM ──────────────────────────────────────────────────────────
@@ -742,7 +744,8 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", msg);
             return;
         }
-        await upsertSession(waPhone, { care_start_date: text, step: "ask_service_days" });
+        const saved = await upsertSession(waPhone, { care_start_date: text, step: "ask_service_days" });
+        if (!saved) return; // DB error — don't advance; user will retry
         const msg = "How many days of support would you like?";
         await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
