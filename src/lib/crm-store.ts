@@ -24,7 +24,9 @@ async function syncAll() {
       _db = await res.json();
       _initialized = true;
     } else if (res.status === 401) {
-      window.location.href = "/crm/login";
+      if (!window.location.pathname.startsWith("/crm/login")) {
+        window.location.href = "/crm/login";
+      }
       return;
     } else {
       _initialized = true; // show empty CRM rather than infinite spinner
