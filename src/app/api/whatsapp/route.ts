@@ -638,10 +638,35 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     console.log(`[WA] phone=${waPhone} step=${session?.step ?? "NEW"} text="${text}"`);
 
-    // ── Agent takeover — skip bot, message already stored ─────────────────────
+    // ── Agent takeover — notify once, then stay silent ───────────────────────
     if (session?.agent_active) {
-        console.log(`[WA] agent active for ${waPhone}, skipping bot`);
+        if (session.step !== "agent_handoff") {
+            await upsertSession(waPhone, { step: "agent_handoff" });
+            const msg = "You're now connected with our care advisor. They'll respond shortly.\n\nFor urgent help, call *+91 93638 93639*.";
+            await sendMessage(waPhone, msg);
+            await storeMessage(waPhone, "outbound", msg);
+        }
         return;
+    }
+
+    // ── Opt-out: STOP and variants ────────────────────────────────────────────
+    const STOP_WORDS = ["stop", "unsubscribe", "opt out", "optout", "cancel", "don't contact", "do not contact"];
+    if (STOP_WORDS.some(w => text.toLowerCase().includes(w))) {
+        await upsertSession(waPhone, { step: "opted_out" });
+        const msg = "You've been unsubscribed from Cradlewell messages. We won't contact you again.\n\nReply *START* anytime to re-subscribe.";
+        await sendMessage(waPhone, msg);
+        await storeMessage(waPhone, "outbound", msg);
+        return;
+    }
+
+    // ── Opted-out users: block all except START/Hi ────────────────────────────
+    if (session?.step === "opted_out") {
+        if (/^(start|hi|hello|hey)$/i.test(text.trim())) {
+            // Re-subscribe: fall through to new-user / restart logic below
+            await upsertSession(waPhone, { step: "completed" }); // treat as fresh
+        } else {
+            return; // silently ignore all other messages
+        }
     }
 
     // ── Main Menu — restart flow ──────────────────────────────────────────────
@@ -665,12 +690,12 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     if (!session || session.step === "completed") {
         if (profileName) {
             await upsertSession(waPhone, { step: "ask_baby_status", name: profileName, ...CLEAR_FIELDS });
-            const msg = `Hi ${profileName}! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nIs your little one already home, or are you still expecting?`;
+            const msg = `Hi ${profileName}! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nBy continuing, you agree to receive care-related messages from us. Reply *STOP* anytime to unsubscribe.\n\nIs your little one already home, or are you still expecting?`;
             await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", msg);
         } else {
             await upsertSession(waPhone, { step: "ask_name", ...CLEAR_FIELDS });
-            const msg = "Hi! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nMay I know your name?";
+            const msg = "Hi! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nBy continuing, you agree to receive care-related messages from us. Reply *STOP* anytime to unsubscribe.\n\nMay I know your name?";
             await sendMessage(waPhone, msg);
             await storeMessage(waPhone, "outbound", msg);
         }
@@ -1005,6 +1030,24 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
+
+        // ── account_update: Meta policy violation / restriction alerts ────────
+        const changeField = body.entry?.[0]?.changes?.[0]?.field;
+        if (changeField === "account_update") {
+            const value = body.entry[0].changes[0].value;
+            console.error("[WA] ⚠️ account_update event from Meta:", JSON.stringify(value));
+            // Store in Supabase for visibility
+            await supabase.from("whatsapp_events").insert({
+                id: crypto.randomUUID(),
+                event_type: "account_update",
+                payload: value,
+                created_at: new Date().toISOString(),
+            }).then(({ error }) => {
+                if (error) console.error("[WA] Failed to store account_update:", error.message);
+            });
+            return NextResponse.json({ status: "ok" });
+        }
+
         const messages = body.entry?.[0]?.changes?.[0]?.value?.messages;
         if (!messages?.length) return NextResponse.json({ status: "ok" });
 
