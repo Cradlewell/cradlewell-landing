@@ -76,13 +76,17 @@ export const api = {
       createdAt: now(),
       lastActivityAt: now(),
     };
+    const act: ActivityLog = { id: uid(), leadId: id, type: "created", message: `Lead created from ${input.source}`, at: now() };
     _db.leads.unshift(lead);
-    _db.activity.unshift({ id: uid(), leadId: id, type: "created", message: `Lead created from ${input.source}`, at: now() });
+    _db.activity.unshift(act);
     notify();
-    apiPost("/api/crm/leads", lead).catch(() => {
-      _db.leads = _db.leads.filter((l) => l.id !== id);
-      notify();
-    });
+    apiPost("/api/crm/leads", lead)
+      .then(() => apiPost("/api/crm/activity", act).catch(console.error))
+      .catch(() => {
+        _db.leads = _db.leads.filter((l) => l.id !== id);
+        _db.activity = _db.activity.filter((a) => a.id !== act.id);
+        notify();
+      });
   },
 
   updateLead(id: string, patch: Partial<Lead>) {
@@ -123,8 +127,10 @@ export const api = {
     const prevStage = lead.stage;
     lead.stage = stage;
     lead.lastActivityAt = now();
+    const actAt = now();
     const actId = uid();
-    _db.activity.unshift({ id: actId, leadId: id, type: "stage", message: `Stage changed to "${stage}"`, at: now() });
+    const actMsg = `Stage changed to "${stage}"`;
+    _db.activity.unshift({ id: actId, leadId: id, type: "stage", message: actMsg, at: actAt });
     let newFollowup: Followup | null = null;
     if (stage === "Negotiation") {
       newFollowup = {
@@ -139,7 +145,9 @@ export const api = {
     Promise.all([
       apiPut(`/api/crm/leads/${id}`, { stage, lastActivityAt: now() }),
       newFollowup ? apiPost("/api/crm/followups", newFollowup) : Promise.resolve(),
-    ]).catch(() => {
+    ]).then(() =>
+      apiPost("/api/crm/activity", { id: actId, leadId: id, type: "stage", message: actMsg, at: actAt }).catch(console.error)
+    ).catch(() => {
       lead.stage = prevStage;
       _db.activity = _db.activity.filter((a) => a.id !== actId);
       if (newFollowup) _db.followups = _db.followups.filter((f) => f.id !== newFollowup!.id);
@@ -195,11 +203,16 @@ export const api = {
       lead.lastActivityAt = now();
       if (lead.stage !== "Closed Won" && lead.stage !== "Closed Lost") lead.stage = "Negotiation";
     }
+    const act: ActivityLog = { id: uid(), leadId: q.leadId, type: "quotation", message: `Quotation: ${q.package} — ₹${q.finalPrice.toLocaleString("en-IN")}`, at: now() };
+    _db.activity.unshift(act);
     notify();
-    apiPost("/api/crm/quotations", quotation).catch(() => {
-      _db.quotations = _db.quotations.filter((qt) => qt.id !== quotation.id);
-      notify();
-    });
+    apiPost("/api/crm/quotations", quotation)
+      .then(() => apiPost("/api/crm/activity", act).catch(console.error))
+      .catch(() => {
+        _db.quotations = _db.quotations.filter((qt) => qt.id !== quotation.id);
+        _db.activity = _db.activity.filter((a) => a.id !== act.id);
+        notify();
+      });
   },
 
   closeLead(c: Omit<Closure, "id">) {
@@ -208,11 +221,19 @@ export const api = {
     const stage = c.type === "Won" ? "Closed Won" : "Closed Lost";
     const lead = _db.leads.find((l) => l.id === c.leadId);
     if (lead) { lead.stage = stage; lead.lastActivityAt = now(); }
+    const actMsg = c.type === "Won"
+      ? `Closed Won${c.finalAmount ? ` — ₹${c.finalAmount.toLocaleString("en-IN")}` : ""}`
+      : `Closed Lost — ${c.lostReason ?? ""}`;
+    const act: ActivityLog = { id: uid(), leadId: c.leadId, type: "closure", message: actMsg, at: now() };
+    _db.activity.unshift(act);
     notify();
-    apiPost("/api/crm/closures", closure).catch(() => {
-      _db.closures = _db.closures.filter((cl) => cl.id !== closure.id);
-      notify();
-    });
+    apiPost("/api/crm/closures", closure)
+      .then(() => apiPost("/api/crm/activity", act).catch(console.error))
+      .catch(() => {
+        _db.closures = _db.closures.filter((cl) => cl.id !== closure.id);
+        _db.activity = _db.activity.filter((a) => a.id !== act.id);
+        notify();
+      });
   },
 
   importLeads(rows: Lead[]) {

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-server";
+import { supabase, isAuthed } from "@/lib/supabase-server";
 
 // Sessions that should NOT appear as importable leads
 const DONE_STEPS = ["completed", "opted_out", "agent_handoff"];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!await isAuthed(req.cookies.get("crm_auth")?.value)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { data, error } = await supabase
     .from("whatsapp_sessions")
     .select("*")
@@ -42,6 +45,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!await isAuthed(req.cookies.get("crm_auth")?.value)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { wa_phone } = await req.json();
 
   const { data: session, error: sessionError } = await supabase

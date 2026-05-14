@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-server";
+import { supabase, isAuthed } from "@/lib/supabase-server";
 
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!;
 const ACCESS_TOKEN    = process.env.WHATSAPP_ACCESS_TOKEN!;
 const WINDOW_MS       = 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
+    if (!await isAuthed(req.cookies.get("crm_auth")?.value)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { action, phone, message } = await req.json();
 
     if (action === "takeover") {
@@ -75,6 +78,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+    if (!await isAuthed(req.cookies.get("crm_auth")?.value)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
     const phone = searchParams.get("phone");

@@ -54,7 +54,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const leadClosure = db.closures.find(c => c.leadId === lead.id);
   const leadActivity = db.activity.filter(a => a.leadId === lead.id).reverse();
 
-  const initials = lead.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  const initials = (lead.name || "U").split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   const saveEdits = () => { api.updateLead(lead.id, draft); setEditing(false); };
   const handleDelete = () => { api.deleteLead(lead.id); onClose(); };
   const addFollowup = () => {
@@ -279,6 +279,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               <div style={{ marginBottom: "1.5rem" }}>
                 <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Call Notes</div>
                 <textarea
+                  key={lead.id}
                   className="crm-textarea"
                   defaultValue={lead.callNotes ?? ""}
                   placeholder="Add notes from your call…"
