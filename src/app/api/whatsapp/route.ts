@@ -690,12 +690,18 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     if (!session || session.step === "completed") {
         if (profileName) {
             await upsertSession(waPhone, { step: "ask_baby_status", name: profileName, ...CLEAR_FIELDS });
-            const msg = `Hi ${profileName}! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nBy continuing, you agree to receive care-related messages from us. Reply *STOP* anytime to unsubscribe.\n\nIs your little one already home, or are you still expecting?`;
+            const greet = `Hi ${profileName}! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.`;
+            await sendMessage(waPhone, greet);
+            await storeMessage(waPhone, "outbound", greet);
+            const msg = `We'll send you care-related updates via WhatsApp. Reply *STOP* anytime to unsubscribe.\n\nIs your little one already home, or are you still expecting?`;
             await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", msg);
         } else {
             await upsertSession(waPhone, { step: "ask_name", ...CLEAR_FIELDS });
-            const msg = "Hi! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nBy continuing, you agree to receive care-related messages from us. Reply *STOP* anytime to unsubscribe.\n\nMay I know your name?";
+            const greet = "Hi! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.";
+            await sendMessage(waPhone, greet);
+            await storeMessage(waPhone, "outbound", greet);
+            const msg = "We'll send you care-related updates via WhatsApp. Reply *STOP* anytime to unsubscribe.\n\nMay I know your name?";
             await sendMessage(waPhone, msg);
             await storeMessage(waPhone, "outbound", msg);
         }
