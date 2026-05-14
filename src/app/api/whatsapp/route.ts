@@ -626,7 +626,7 @@ async function afterLocation(waPhone: string, session: Session, locationText: st
     } else {
         // Expecting — ask due date via date picker flow
         await upsertSession(waPhone, { location: locationText, step: "ask_due_date" });
-        const msg = "When is your baby due? Tap *Pick Due Date* → tap the date field → choose date → tap *Confirm Date*.";
+        const msg = "When is your baby due?";
         await sendFlowMessage(waPhone, FLOW_DUE_DATE_ID, msg, "Pick Due Date");
         await storeMessage(waPhone, "outbound", msg);
     }
@@ -848,7 +848,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
                 const timeSlot = "9 PM – 6 AM";
                 if (session.baby_status === "Born") {
                     await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_care_date" });
-                    const msg = "When would you like care to start? Tap *Pick Start Date* → tap the date field → choose date → tap *Confirm Date*.";
+                    const msg = "When would you like care to start?";
                     await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
                     await storeMessage(waPhone, "outbound", msg);
                 } else {
