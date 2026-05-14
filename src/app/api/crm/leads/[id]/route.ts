@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase, dbToLead, leadToDb, isAuthed } from "@/lib/supabase-server";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!isAuthed(req.cookies.get("crm_auth")?.value)) {
+  if (!(await isAuthed(req.cookies.get("crm_auth")?.value))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
@@ -13,7 +13,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!isAuthed(req.cookies.get("crm_auth")?.value)) {
+  if (!(await isAuthed(req.cookies.get("crm_auth")?.value))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;

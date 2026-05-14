@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/crm") && !pathname.startsWith("/crm/login")) {
-    const session = request.cookies.get("crm_auth");
-    if (session?.value !== process.env.CRM_SESSION_TOKEN) {
-      const loginUrl = new URL("/crm/login", request.url);
-      return NextResponse.redirect(loginUrl);
+    const token = request.cookies.get("crm_auth")?.value;
+    if (!token) {
+      return NextResponse.redirect(new URL("/crm/login", request.url));
+    }
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!
+    );
+    const { error } = await supabase.auth.getUser(token);
+    if (error) {
+      return NextResponse.redirect(new URL("/crm/login", request.url));
     }
   }
 

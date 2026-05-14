@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase, dbToLead, dbToFollowup, dbToQuotation, dbToClosure, dbToActivity, isAuthed } from "@/lib/supabase-server";
 
 export async function GET(req: NextRequest) {
-  if (!isAuthed(req.cookies.get("crm_auth")?.value)) {
+  if (!(await isAuthed(req.cookies.get("crm_auth")?.value))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

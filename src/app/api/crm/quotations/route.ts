@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase, dbToQuotation, quotationToDb, isAuthed } from "@/lib/supabase-server";
 
 export async function GET(req: NextRequest) {
-  if (!isAuthed(req.cookies.get("crm_auth")?.value)) {
+  if (!(await isAuthed(req.cookies.get("crm_auth")?.value))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { data, error } = await supabase.from("quotations").select("*").order("date", { ascending: false });
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthed(req.cookies.get("crm_auth")?.value)) {
+  if (!(await isAuthed(req.cookies.get("crm_auth")?.value))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json();

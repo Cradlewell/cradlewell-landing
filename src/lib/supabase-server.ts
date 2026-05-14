@@ -193,6 +193,8 @@ export function activityToDb(a: Partial<ActivityLog>): Record<string, unknown> {
   return r;
 }
 
-export function isAuthed(token: string | undefined): boolean {
-  return token === process.env.CRM_SESSION_TOKEN;
+export async function isAuthed(token: string | undefined): Promise<boolean> {
+  if (!token) return false;
+  const { error } = await supabase.auth.getUser(token);
+  return !error;
 }

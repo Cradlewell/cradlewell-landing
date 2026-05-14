@@ -3,7 +3,7 @@ import { supabase, leadToDb, isAuthed } from "@/lib/supabase-server";
 import type { Lead } from "@/lib/crm-types";
 
 export async function POST(req: NextRequest) {
-  if (!isAuthed(req.cookies.get("crm_auth")?.value)) {
+  if (!(await isAuthed(req.cookies.get("crm_auth")?.value))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const rows: Lead[] = await req.json();
