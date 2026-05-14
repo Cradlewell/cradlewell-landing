@@ -718,9 +718,11 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             return;
         }
         if (isDateInPast(text)) {
-            const msg = "Please select a future due date — past dates aren't valid. Tap below to try again.";
-            await sendFlowMessage(waPhone, FLOW_DUE_DATE_ID, msg, "Pick Due Date");
-            await storeMessage(waPhone, "outbound", msg);
+            await sendMessage(waPhone, "❌ That date has already passed. Please select a future due date.");
+            await storeMessage(waPhone, "outbound", "❌ That date has already passed. Please select a future due date.");
+            const retry = "When is your baby due?";
+            await sendFlowMessage(waPhone, FLOW_DUE_DATE_ID, retry, "Pick Due Date");
+            await storeMessage(waPhone, "outbound", retry);
             return;
         }
         await upsertSession(waPhone, { due_date: text, step: "ask_service" });
@@ -739,9 +741,11 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             return;
         }
         if (isDateInPast(text)) {
-            const msg = "Please select today or a future date for care to start. Tap below to try again.";
-            await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
-            await storeMessage(waPhone, "outbound", msg);
+            await sendMessage(waPhone, "❌ That date has already passed. Please select today or a future date.");
+            await storeMessage(waPhone, "outbound", "❌ That date has already passed. Please select today or a future date.");
+            const retry = "When would you like care to start?";
+            await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, retry, "Pick Start Date");
+            await storeMessage(waPhone, "outbound", retry);
             return;
         }
         const saved = await upsertSession(waPhone, { care_start_date: text, step: "ask_service_days" });
