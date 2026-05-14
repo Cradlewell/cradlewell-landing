@@ -19,6 +19,11 @@ function fmtTime(iso: string) {
 function fmtDay(iso: string) {
   return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "long" }).format(new Date(iso));
 }
+function fmtCareDate(iso: string | null | undefined) {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  return `${d}-${m}-${y}`;
+}
 
 export default function LeadsPage() {
   const db = useDB();
@@ -46,7 +51,7 @@ export default function LeadsPage() {
   }, [db.leads, search, filterStage, filterSource]);
 
   const exportCSV = () => {
-    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage", "Owner"].join(",");
+    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage"].join(",");
     const rows = filtered.map(l => [
       `"${l.name}"`,
       l.phone,
@@ -64,10 +69,9 @@ export default function LeadsPage() {
       l.preferredShift ?? "",
       l.shiftHoursCount ?? "",
       l.shiftTime ?? "",
-      l.careStartDate ?? "",
+      fmtCareDate(l.careStartDate),
       l.serviceDays ?? "",
       l.stage,
-      l.owner,
     ].join(","));
     const csv = [headers, ...rows].join("\n");
     const a = document.createElement("a");
@@ -142,10 +146,9 @@ export default function LeadsPage() {
                 <th>Shift Type</th>
                 <th>Shift Hours</th>
                 <th>Shift Time</th>
-                <th>Care Start</th>
+                <th>Care Start Date</th>
                 <th>Days</th>
                 <th>Stage</th>
-                <th>Owner</th>
                 <th></th>
               </tr>
             </thead>
@@ -174,10 +177,9 @@ export default function LeadsPage() {
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.preferredShift || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.shiftHoursCount ? `${l.shiftHoursCount} hrs` : "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.shiftTime || "—"}</td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.careStartDate || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtCareDate(l.careStartDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.serviceDays ? `${l.serviceDays} days` : "—"}</td>
                   <td><StageBadge stage={l.stage} /></td>
-                  <td style={{ fontSize: "0.8rem" }}>{l.owner}</td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <button
                       onClick={e => handleDelete(e, l.id, l.name)}
