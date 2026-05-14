@@ -224,6 +224,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                   <Field label="Name" value={lead.name} field="name" />
                   <Field label="Phone" value={lead.phone} field="phone" />
                   <Field label="WhatsApp" value={lead.whatsapp} field="whatsapp" />
+                  <Field label="Source" value={lead.source} field="source" />
                   <Field label="Owner" value={lead.owner} field="owner" />
                 </div>
               </div>

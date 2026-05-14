@@ -8,7 +8,7 @@ import { Plus, Search, Download, Trash2 } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadSource, LeadStage } from "@/lib/crm-types";
 
-const SOURCES: LeadSource[] = ["Website", "Aria Chat", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
+const SOURCES: LeadSource[] = ["Website", "WhatsApp", "Aria Chat", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
 
 function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso));
@@ -46,13 +46,14 @@ export default function LeadsPage() {
   }, [db.leads, search, filterStage, filterSource]);
 
   const exportCSV = () => {
-    const headers = ["Name", "Phone", "Date", "Time", "Day", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage", "Owner"].join(",");
+    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage", "Owner"].join(",");
     const rows = filtered.map(l => [
       `"${l.name}"`,
       l.phone,
       fmtDate(l.leadDate),
       fmtTime(l.leadDate),
       fmtDay(l.leadDate),
+      l.source ?? "",
       l.serviceRequired ?? "",
       l.babyStatus ?? "",
       l.hospitalName ?? "",
@@ -130,6 +131,7 @@ export default function LeadsPage() {
                 <th>Date</th>
                 <th>Time</th>
                 <th>Day</th>
+                <th>Source</th>
                 <th>Service</th>
                 <th>Baby Status</th>
                 <th>Hospital</th>
@@ -161,6 +163,7 @@ export default function LeadsPage() {
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtDate(l.leadDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtTime(l.leadDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtDay(l.leadDate)}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.source || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.875rem" }}>{l.serviceRequired || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.babyStatus || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.hospitalName || "—"}</td>
