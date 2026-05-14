@@ -898,9 +898,11 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Extract text from message, button tap, or list selection ──────────
-        let text: string | null = null;
+        let text: string | null = null;       // ID used for bot logic
+        let displayText: string | null = null; // Human-readable label stored in DB
         if (message.type === "text") {
             text = message.text?.body ?? null;
+            displayText = text;
         } else if (message.type === "interactive") {
             console.log(`[WA] interactive raw:`, JSON.stringify(message.interactive));
             if (message.interactive?.type === "button_reply") {
@@ -908,11 +910,13 @@ export async function POST(req: NextRequest) {
                 const title = message.interactive.button_reply?.title;
                 console.log(`[WA] button_reply id="${id}" title="${title}"`);
                 text = id ?? title ?? null;
+                displayText = title ?? id ?? null;
             } else if (message.interactive?.type === "list_reply") {
                 const id = message.interactive.list_reply?.id;
                 const title = message.interactive.list_reply?.title;
                 console.log(`[WA] list_reply id="${id}" title="${title}"`);
                 text = id ?? title ?? null;
+                displayText = title ?? id ?? null;
             }
         }
 
@@ -922,7 +926,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Atomic dedup: if wa_message_id already exists, skip ───────────────
-        const stored = await storeMessage(waPhone, "inbound", text, waMessageId);
+        const stored = await storeMessage(waPhone, "inbound", displayText ?? text, waMessageId);
         if (!stored) {
             console.log(`[WA] duplicate message skipped: ${waMessageId}`);
             return NextResponse.json({ status: "ok" });

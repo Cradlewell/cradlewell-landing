@@ -52,6 +52,54 @@ function stepLabel(step: string) {
     return step.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
+const PAYLOAD_LABELS: Record<string, string> = {
+    home: "Baby is home",
+    expecting: "Still expecting",
+    main_menu: "Main Menu",
+    nurse: "Certified Nurse",
+    japa: "Japa/Moba",
+    normal: "Normal",
+    preterm: "Preterm/Early birth",
+    trial: "3 Day Trial",
+    days30: "30 Days",
+    days60: "60 Days",
+    day: "Day care",
+    night: "Night care",
+    age_7d: "0–7 days",
+    age_4w: "1–4 weeks",
+    age_3m: "1–3 months",
+    age_3mp: "3+ months",
+    wt_lt2: "Less than 2 kg",
+    wt_2to25: "2 – 2.5 kg",
+    wt_25to3: "2.5 – 3 kg",
+    wt_3to35: "3 – 3.5 kg",
+    wt_gt35: "More than 3.5 kg",
+    hosp_cloudnine: "Cloudnine",
+    hosp_motherhood: "Motherhood",
+    hosp_apollo: "Apollo Cradle",
+    hosp_rainbow: "Rainbow",
+    hosp_aster: "Aster CMI",
+    hosp_manipal: "Manipal",
+    hosp_fortis: "Fortis",
+    hosp_others: "Others",
+    hours_8: "8 hours",
+    hours_10: "10 hours",
+    hours_12: "12 hours",
+    slot_8: "8 AM – 4 PM",
+    slot_9: "9 AM – 5 PM",
+    slot_10: "10 AM – 6 PM",
+};
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function decodePayload(msg: string): string {
+    if (PAYLOAD_LABELS[msg]) return PAYLOAD_LABELS[msg];
+    // due_YYYY_M → "Month YYYY"
+    const due = msg.match(/^due_(\d{4})_(\d{1,2})$/);
+    if (due) return `${MONTHS[parseInt(due[2]) - 1] ?? ""} ${due[1]}`.trim();
+    return msg;
+}
+
 function Avatar({ name, phone, size = 40 }: { name?: string; phone: string; size?: number }) {
     const letter = (name ?? phone).slice(0, 1).toUpperCase();
     return (
@@ -239,8 +287,13 @@ export default function WhatsAppPage() {
                                             {c.lastMessage.direction === "outbound" && (
                                                 <span style={{ color: "#128C7E", fontWeight: 600 }}>Bot: </span>
                                             )}
-                                            {c.lastMessage.message.replace(/\n/g, " ").slice(0, 55)}
-                                            {c.lastMessage.message.length > 55 ? "…" : ""}
+                                            {(() => {
+                                                const txt = c.lastMessage.direction === "inbound"
+                                                    ? decodePayload(c.lastMessage.message)
+                                                    : c.lastMessage.message;
+                                                const flat = txt.replace(/\n/g, " ");
+                                                return flat.slice(0, 55) + (flat.length > 55 ? "…" : "");
+                                            })()}
                                         </>
                                     ) : (
                                         <span style={{ fontStyle: "italic" }}>No messages</span>
@@ -358,7 +411,7 @@ export default function WhatsAppPage() {
                                             boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
                                         }}>
                                             <div style={{ fontSize: "0.855rem", whiteSpace: "pre-wrap", lineHeight: 1.45, color: "#1a1a1a", wordBreak: "break-word" }}>
-                                                {msg.message}
+                                                {!isOut ? decodePayload(msg.message) : msg.message}
                                             </div>
                                             <div style={{ fontSize: "0.68rem", color: "#8a8a8a", textAlign: "right", marginTop: 2, lineHeight: 1 }}>
                                                 {fmtTime(msg.created_at)}
