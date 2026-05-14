@@ -23,9 +23,14 @@ async function syncAll() {
     if (res.ok) {
       _db = await res.json();
       _initialized = true;
+    } else if (res.status === 401) {
+      window.location.href = "/crm/login";
+      return;
+    } else {
+      _initialized = true; // show empty CRM rather than infinite spinner
     }
   } catch {
-    // ignore — UI stays with last known state
+    _initialized = true; // network failure — show empty state
   } finally {
     _fetching = false;
     notify();

@@ -195,6 +195,10 @@ export function activityToDb(a: Partial<ActivityLog>): Record<string, unknown> {
 
 export async function isAuthed(token: string | undefined): Promise<boolean> {
   if (!token) return false;
-  const { error } = await supabase.auth.getUser(token);
+  const client = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!
+  );
+  const { error } = await client.auth.getUser(token);
   return !error;
 }
