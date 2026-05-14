@@ -364,6 +364,27 @@ async function upsertSession(waPhone: string, updates: Record<string, string>) {
 
 // ── Push lead to CRM ──────────────────────────────────────────────────────────
 
+// Convert "May 2025" → "2025-05-01" for date columns
+function parseDueDate(dueDate?: string): string | null {
+    if (!dueDate) return null;
+    const MONTHS_MAP: Record<string, string> = {
+        January: "01", February: "02", March: "03", April: "04",
+        May: "05", June: "06", July: "07", August: "08",
+        September: "09", October: "10", November: "11", December: "12",
+    };
+    const m = dueDate.match(/^(\w+)\s+(\d{4})$/);
+    if (m && MONTHS_MAP[m[1]]) return `${m[2]}-${MONTHS_MAP[m[1]]}-01`;
+    return null;
+}
+
+// Derive shift hours from service/shift/japa_hours
+function deriveShiftHours(session: Session): number | null {
+    if (session.japa_hours) return parseInt(session.japa_hours) || null;
+    if (session.shift === "Night") return 9; // 9 PM – 6 AM
+    if (session.shift === "Day")   return 8; // all day slots are 8h
+    return null;
+}
+
 async function pushLeadToCRM(session: Session, waPhone: string) {
     const phone = waPhone.replace(/\D/g, "").slice(-10);
     const now = new Date();
@@ -382,8 +403,9 @@ async function pushLeadToCRM(session: Session, waPhone: string) {
             baby_birth_stage_status: session.birth_stage || null,
             baby_age: session.baby_age || null,
             current_weight: session.baby_weight || null,
-            care_start_date: session.due_date || null,
+            care_start_date: parseDueDate(session.due_date),
             preferred_shift: session.shift || null,
+            shift_hours_count: deriveShiftHours(session),
             shift_time: session.time_slot || null,
             service_days: session.service_days ? parseInt(session.service_days) || null : null,
             owner: "Unassigned",
@@ -405,7 +427,8 @@ function buildSummary(session: Session): string {
     if (session.name)        rows.push(`Name: ${session.name}`);
     if (session.baby_status) rows.push(`Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
     if (session.location)     rows.push(`Location: ${session.location}`);
-    if (session.due_date)     rows.push(`Due Month: ${session.due_date}`);
+    // Only show due date for Expecting moms
+    if (session.baby_status === "Expecting" && session.due_date) rows.push(`Due Month: ${session.due_date}`);
     if (session.hospital)     rows.push(`Hospital: ${session.hospital}`);
     if (session.birth_stage)  rows.push(`Birth Stage: ${session.birth_stage}`);
     if (session.baby_age)     rows.push(`Baby Age: ${session.baby_age}`);
@@ -608,14 +631,18 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     }
 
     // ── New user or completed — restart ───────────────────────────────────────
+    const CLEAR_FIELDS = {
+        baby_status: "", location: "", hospital: "", birth_stage: "", baby_age: "", baby_weight: "",
+        service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", service_days: "",
+    };
     if (!session || session.step === "completed") {
         if (profileName) {
-            await upsertSession(waPhone, { step: "ask_baby_status", name: profileName });
+            await upsertSession(waPhone, { step: "ask_baby_status", name: profileName, ...CLEAR_FIELDS });
             const msg = `Hi ${profileName}! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nIs your little one already home, or are you still expecting?`;
             await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", msg);
         } else {
-            await upsertSession(waPhone, { step: "ask_name" });
+            await upsertSession(waPhone, { step: "ask_name", ...CLEAR_FIELDS });
             const msg = "Hi! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.\n\nMay I know your name?";
             await sendMessage(waPhone, msg);
             await storeMessage(waPhone, "outbound", msg);
