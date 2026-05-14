@@ -136,6 +136,13 @@ async function sendFlowMessage(to: string, flowId: string, bodyText: string, cta
     }
 }
 
+// Returns true if isoDate is strictly before today (server local midnight)
+function isDateInPast(isoDate: string): boolean {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return new Date(isoDate + "T00:00:00") < today;
+}
+
 // Format ISO date "2026-06-14" → "14 June 2026" for display
 function formatDateDisplay(isoDate: string): string {
     try {
@@ -651,7 +658,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── New user or completed — restart ───────────────────────────────────────
     const CLEAR_FIELDS = {
         baby_status: "", location: "", hospital: "", birth_stage: "", baby_age: "", baby_weight: "",
-        service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", service_days: "",
+        service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", care_start_date: "", service_days: "",
     };
     if (!session || session.step === "completed") {
         if (profileName) {
@@ -708,6 +715,12 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", msg);
             return;
         }
+        if (isDateInPast(text)) {
+            const msg = "Please select a future due date — past dates aren't valid. Tap below to try again.";
+            await sendFlowMessage(waPhone, FLOW_DUE_DATE_ID, msg, "Pick Due Date");
+            await storeMessage(waPhone, "outbound", msg);
+            return;
+        }
         await upsertSession(waPhone, { due_date: text, step: "ask_service" });
         const msg = "What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
@@ -719,6 +732,12 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     if (session.step === "ask_care_date") {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
             const msg = "Please tap the button below to select when you'd like care to start.";
+            await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
+            await storeMessage(waPhone, "outbound", msg);
+            return;
+        }
+        if (isDateInPast(text)) {
+            const msg = "Please select today or a future date for care to start. Tap below to try again.";
             await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
             await storeMessage(waPhone, "outbound", msg);
             return;
@@ -899,6 +918,14 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     // ── Collect service days ──────────────────────────────────────────────────
     if (session.step === "ask_service_days") {
+        // Guard: Born users must have care_start_date before reaching this step
+        if (session.baby_status === "Born" && !session.care_start_date) {
+            await upsertSession(waPhone, { step: "ask_care_date" });
+            const msg = "When would you like care to start?";
+            await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
+            await storeMessage(waPhone, "outbound", msg);
+            return;
+        }
         const service_days = matchServiceDays(text);
         if (!service_days) {
             await sendButtonMessage(waPhone, "Please select your preferred support duration:", SERVICE_DAYS_BUTTONS);
