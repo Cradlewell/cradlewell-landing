@@ -479,7 +479,6 @@ function buildSummary(session: Session): string {
 const BABY_STATUS_BUTTONS = [
     { id: "home", title: "Baby is home" },
     { id: "expecting", title: "Still expecting" },
-    { id: "main_menu", title: "Main Menu" },
 ];
 
 const SERVICE_BUTTONS = [
