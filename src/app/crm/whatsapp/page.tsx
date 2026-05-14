@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageCircle, Search, RefreshCw } from "lucide-react";
+import { MessageCircle, Search, RefreshCw, Send, UserCheck, Bot } from "lucide-react";
 
 interface Contact {
     wa_phone: string;
@@ -9,6 +9,7 @@ interface Contact {
     baby_status?: string;
     service?: string;
     updated_at: string;
+    agent_active?: boolean;
     lastMessage?: { message: string; direction: string; created_at: string } | null;
 }
 
@@ -46,6 +47,13 @@ function fmtContactTime(iso: string) {
         return new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true }).format(d);
     }
     return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short" }).format(d);
+}
+
+function fmtWindowLeft(ms: number): string {
+    const h = Math.floor(ms / 3_600_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
 }
 
 function stepLabel(step: string) {
@@ -94,7 +102,6 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 
 function decodePayload(msg: string): string {
     if (PAYLOAD_LABELS[msg]) return PAYLOAD_LABELS[msg];
-    // due_YYYY_M → "Month YYYY"
     const due = msg.match(/^due_(\d{4})_(\d{1,2})$/);
     if (due) return `${MONTHS[parseInt(due[2]) - 1] ?? ""} ${due[1]}`.trim();
     return msg;
@@ -117,27 +124,38 @@ function Avatar({ name, phone, size = 40 }: { name?: string; phone: string; size
 
 const MESSAGES_POLL_MS = 3000;
 const CONTACTS_POLL_MS = 10000;
+const WINDOW_MS        = 24 * 60 * 60 * 1000;
 
 export default function WhatsAppPage() {
-    const [contacts, setContacts] = useState<Contact[]>([]);
-    const [selected, setSelected] = useState<string | null>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [search, setSearch] = useState("");
+    const [contacts, setContacts]           = useState<Contact[]>([]);
+    const [selected, setSelected]           = useState<string | null>(null);
+    const [messages, setMessages]           = useState<Message[]>([]);
+    const [search, setSearch]               = useState("");
     const [loadingContacts, setLoadingContacts] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
-    const [live, setLive] = useState(false);
+    const [live, setLive]                   = useState(false);
+    const [replyText, setReplyText]         = useState("");
+    const [sending, setSending]             = useState(false);
+    const [now, setNow]                     = useState(() => Date.now());
 
-    const bottomRef = useRef<HTMLDivElement>(null);
-    const msgCountRef = useRef(0);
-    const selectedRef = useRef<string | null>(null);
+    const bottomRef    = useRef<HTMLDivElement>(null);
+    const msgCountRef  = useRef(0);
+    const selectedRef  = useRef<string | null>(null);
+    const inputRef     = useRef<HTMLTextAreaElement>(null);
 
     selectedRef.current = selected;
 
-    // ── Contacts: initial load + poll every 10s ───────────────────────────────
+    // Tick every 10s to keep window countdown fresh
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 10_000);
+        return () => clearInterval(id);
+    }, []);
+
+    // ── Contacts ──────────────────────────────────────────────────────────────
     const fetchContacts = useCallback(async (silent = false) => {
         if (!silent) setLoadingContacts(true);
         try {
-            const res = await fetch("/api/crm/whatsapp-chat?type=contacts");
+            const res  = await fetch("/api/crm/whatsapp-chat?type=contacts");
             const data = await res.json();
             setContacts(data.contacts ?? []);
         } finally {
@@ -151,15 +169,14 @@ export default function WhatsAppPage() {
         return () => clearInterval(id);
     }, [fetchContacts]);
 
-    // ── Messages: load on select + poll every 3s ──────────────────────────────
+    // ── Messages ──────────────────────────────────────────────────────────────
     const fetchMessages = useCallback(async (phone: string, initial = false) => {
         if (initial) setLoadingMessages(true);
         try {
-            const res = await fetch(`/api/crm/whatsapp-chat?type=messages&phone=${encodeURIComponent(phone)}`);
-            const data = await res.json();
+            const res      = await fetch(`/api/crm/whatsapp-chat?type=messages&phone=${encodeURIComponent(phone)}`);
+            const data     = await res.json();
             const incoming: Message[] = data.messages ?? [];
             setMessages(prev => {
-                // Only update if count changed (avoids unnecessary re-renders)
                 if (!initial && prev.length === incoming.length) return prev;
                 return incoming;
             });
@@ -168,7 +185,6 @@ export default function WhatsAppPage() {
         }
     }, []);
 
-    // Reset + start polling when contact changes
     useEffect(() => {
         if (!selected) { setMessages([]); msgCountRef.current = 0; setLive(false); return; }
         msgCountRef.current = 0;
@@ -180,7 +196,7 @@ export default function WhatsAppPage() {
         return () => { clearInterval(id); setLive(false); };
     }, [selected, fetchMessages]);
 
-    // Scroll to bottom only when new messages arrive
+    // Scroll to bottom only on new messages
     useEffect(() => {
         if (messages.length > msgCountRef.current) {
             msgCountRef.current = messages.length;
@@ -188,12 +204,70 @@ export default function WhatsAppPage() {
         }
     }, [messages]);
 
+    // ── Window calculation ────────────────────────────────────────────────────
+    const lastInbound   = [...messages].reverse().find(m => m.direction === "inbound");
+    const windowMsLeft  = lastInbound ? Math.max(0, WINDOW_MS - (now - new Date(lastInbound.created_at).getTime())) : 0;
+    const windowOpen    = windowMsLeft > 0;
+
+    // ── Selected contact ──────────────────────────────────────────────────────
+    const selectedContact = contacts.find(c => c.wa_phone === selected);
+    const agentActive     = selectedContact?.agent_active ?? false;
+    const isCompleted     = selectedContact?.step === "completed";
+
+    // ── Takeover / handback ───────────────────────────────────────────────────
+    async function handleTakeover() {
+        if (!selected) return;
+        await fetch("/api/crm/whatsapp-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "takeover", phone: selected }),
+        });
+        setContacts(prev => prev.map(c => c.wa_phone === selected ? { ...c, agent_active: true } : c));
+        setTimeout(() => inputRef.current?.focus(), 50);
+    }
+
+    async function handleHandback() {
+        if (!selected) return;
+        await fetch("/api/crm/whatsapp-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "handback", phone: selected }),
+        });
+        setContacts(prev => prev.map(c => c.wa_phone === selected ? { ...c, agent_active: false } : c));
+        setReplyText("");
+    }
+
+    // ── Send reply ────────────────────────────────────────────────────────────
+    async function handleSend() {
+        const text = replyText.trim();
+        if (!text || !selected || !windowOpen || sending) return;
+        setSending(true);
+        try {
+            const res = await fetch("/api/crm/whatsapp-chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "send", phone: selected, message: text }),
+            });
+            if (res.ok) {
+                setReplyText("");
+                fetchMessages(selected, false);
+            }
+        } finally {
+            setSending(false);
+        }
+    }
+
+    function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    }
+
     const filtered = contacts.filter(c => {
         const q = search.toLowerCase();
         return !q || (c.name ?? "").toLowerCase().includes(q) || c.wa_phone.includes(q);
     });
-
-    const selectedContact = contacts.find(c => c.wa_phone === selected);
 
     return (
         <div style={{
@@ -255,7 +329,7 @@ export default function WhatsAppPage() {
                     ) : filtered.map(c => (
                         <button
                             key={c.wa_phone}
-                            onClick={() => setSelected(c.wa_phone)}
+                            onClick={() => { setSelected(c.wa_phone); setReplyText(""); }}
                             style={{
                                 width: "100%",
                                 background: selected === c.wa_phone ? "#f0f9f4" : "transparent",
@@ -285,7 +359,9 @@ export default function WhatsAppPage() {
                                     {c.lastMessage ? (
                                         <>
                                             {c.lastMessage.direction === "outbound" && (
-                                                <span style={{ color: "#128C7E", fontWeight: 600 }}>Bot: </span>
+                                                <span style={{ color: "#128C7E", fontWeight: 600 }}>
+                                                    {c.agent_active ? "Agent: " : "Bot: "}
+                                                </span>
                                             )}
                                             {(() => {
                                                 const txt = c.lastMessage.direction === "inbound"
@@ -299,17 +375,30 @@ export default function WhatsAppPage() {
                                         <span style={{ fontStyle: "italic" }}>No messages</span>
                                     )}
                                 </div>
-                                <span style={{
-                                    fontSize: "0.65rem",
-                                    background: "#EEF9F2",
-                                    color: "#128C7E",
-                                    borderRadius: 4,
-                                    padding: "1px 6px",
-                                    fontWeight: 600,
-                                    display: "inline-block",
-                                }}>
-                                    {stepLabel(c.step)}
-                                </span>
+                                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                    <span style={{
+                                        fontSize: "0.65rem",
+                                        background: "#EEF9F2",
+                                        color: "#128C7E",
+                                        borderRadius: 4,
+                                        padding: "1px 6px",
+                                        fontWeight: 600,
+                                    }}>
+                                        {stepLabel(c.step)}
+                                    </span>
+                                    {c.agent_active && (
+                                        <span style={{
+                                            fontSize: "0.65rem",
+                                            background: "#FFF3CD",
+                                            color: "#856404",
+                                            borderRadius: 4,
+                                            padding: "1px 6px",
+                                            fontWeight: 600,
+                                        }}>
+                                            Agent
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </button>
                     ))}
@@ -338,27 +427,74 @@ export default function WhatsAppPage() {
                         boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                     }}>
                         <Avatar name={selectedContact?.name} phone={selected} size={38} />
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--crm-text)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--crm-text)", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                                 {selectedContact?.name || selected.slice(-10)}
-                                {live && selectedContact?.step !== "completed" && (
+                                {live && !isCompleted && (
                                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#25D366", fontWeight: 500 }}>
                                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#25D366", display: "inline-block", animation: "crm-pulse 1.5s infinite" }} />
                                         Live
                                     </span>
                                 )}
+                                {/* 24hr window badge */}
+                                {lastInbound && (
+                                    windowOpen ? (
+                                        <span style={{ fontSize: "0.68rem", background: "#E8F5E9", color: "#2E7D32", borderRadius: 99, padding: "1px 8px", fontWeight: 500 }}>
+                                            Window open · {fmtWindowLeft(windowMsLeft)} left
+                                        </span>
+                                    ) : (
+                                        <span style={{ fontSize: "0.68rem", background: "#FEECEC", color: "#C62828", borderRadius: 99, padding: "1px 8px", fontWeight: 500 }}>
+                                            Window closed
+                                        </span>
+                                    )
+                                )}
                             </div>
-                            <div style={{ fontSize: "0.74rem", color: "var(--crm-text-muted)" }}>
+                            <div style={{ fontSize: "0.74rem", color: "var(--crm-text-muted)", marginTop: 1 }}>
                                 {selected}
                                 {selectedContact?.service && <span style={{ marginLeft: 8 }}>· {selectedContact.service}</span>}
-                                {selectedContact?.baby_status && <span style={{ marginLeft: 8 }}>· {selectedContact.baby_status}</span>}
                                 <span style={{ marginLeft: 8 }}>· Step: {stepLabel(selectedContact?.step ?? "")}</span>
                             </div>
                         </div>
+
+                        {/* Takeover / Hand back button */}
+                        {agentActive ? (
+                            <button
+                                onClick={handleHandback}
+                                title="Hand back to bot"
+                                style={{
+                                    display: "flex", alignItems: "center", gap: 6,
+                                    background: "#FFF3CD", color: "#856404",
+                                    border: "1px solid #FFDBA0",
+                                    borderRadius: 8, padding: "5px 12px",
+                                    fontSize: "0.78rem", fontWeight: 600, cursor: "pointer",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                <Bot size={13} />
+                                Hand Back to Bot
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleTakeover}
+                                title="Take over conversation"
+                                style={{
+                                    display: "flex", alignItems: "center", gap: 6,
+                                    background: "#E8F5E9", color: "#2E7D32",
+                                    border: "1px solid #A5D6A7",
+                                    borderRadius: 8, padding: "5px 12px",
+                                    fontSize: "0.78rem", fontWeight: 600, cursor: "pointer",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                <UserCheck size={13} />
+                                Take Over
+                            </button>
+                        )}
+
                         <button
                             onClick={() => fetchMessages(selected, true)}
                             title="Refresh messages"
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--crm-text-muted)", padding: 6, borderRadius: 6, display: "flex" }}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--crm-text-muted)", padding: 6, borderRadius: 6, display: "flex", flexShrink: 0 }}
                         >
                             <RefreshCw size={15} />
                         </button>
@@ -383,7 +519,7 @@ export default function WhatsAppPage() {
                                 No messages found
                             </div>
                         ) : messages.map((msg, i) => {
-                            const isOut = msg.direction === "outbound";
+                            const isOut   = msg.direction === "outbound";
                             const prevMsg = i > 0 ? messages[i - 1] : null;
                             const showDate = !prevMsg || fmtDateLabel(prevMsg.created_at) !== fmtDateLabel(msg.created_at);
                             return (
@@ -426,26 +562,92 @@ export default function WhatsAppPage() {
                     </div>
 
                     {/* Footer */}
-                    <div style={{
-                        padding: "0.75rem 1.25rem",
-                        background: "#f0f2f5",
-                        borderTop: "1px solid var(--crm-border)",
-                    }}>
-                        <div style={{
-                            background: "#fff",
-                            borderRadius: 24,
-                            padding: "0.6rem 1rem",
-                            fontSize: "0.85rem",
-                            color: "var(--crm-text-muted)",
-                            border: "1px solid var(--crm-border)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                        }}>
-                            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#25D366", flexShrink: 0, display: "inline-block" }} />
-                            Bot is handling this conversation automatically
+                    {agentActive ? (
+                        windowOpen ? (
+                            /* Agent reply box */
+                            <div style={{
+                                padding: "0.75rem 1.25rem",
+                                background: "#f0f2f5",
+                                borderTop: "1px solid var(--crm-border)",
+                                display: "flex",
+                                gap: "0.75rem",
+                                alignItems: "flex-end",
+                            }}>
+                                <textarea
+                                    ref={inputRef}
+                                    rows={1}
+                                    value={replyText}
+                                    onChange={e => setReplyText(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
+                                    style={{
+                                        flex: 1,
+                                        resize: "none",
+                                        border: "1px solid var(--crm-border)",
+                                        borderRadius: 20,
+                                        padding: "0.6rem 1rem",
+                                        fontSize: "0.875rem",
+                                        outline: "none",
+                                        background: "#fff",
+                                        maxHeight: 120,
+                                        overflowY: "auto",
+                                        lineHeight: 1.4,
+                                        fontFamily: "inherit",
+                                    }}
+                                />
+                                <button
+                                    onClick={handleSend}
+                                    disabled={!replyText.trim() || sending}
+                                    style={{
+                                        width: 42, height: 42,
+                                        borderRadius: "50%",
+                                        background: replyText.trim() && !sending ? "#25D366" : "#ccc",
+                                        border: "none",
+                                        cursor: replyText.trim() && !sending ? "pointer" : "not-allowed",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        flexShrink: 0,
+                                        transition: "background 0.15s",
+                                    }}
+                                >
+                                    <Send size={17} color="#fff" />
+                                </button>
+                            </div>
+                        ) : (
+                            /* Window closed — agent active but can't reply */
+                            <div style={{ padding: "0.75rem 1.25rem", background: "#f0f2f5", borderTop: "1px solid var(--crm-border)" }}>
+                                <div style={{
+                                    background: "#FEECEC",
+                                    borderRadius: 12,
+                                    padding: "0.6rem 1rem",
+                                    fontSize: "0.82rem",
+                                    color: "#C62828",
+                                    border: "1px solid #FFCDD2",
+                                    display: "flex", alignItems: "center", gap: "0.5rem",
+                                }}>
+                                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#C62828", flexShrink: 0, display: "inline-block" }} />
+                                    24-hour window closed — cannot send messages until customer replies
+                                </div>
+                            </div>
+                        )
+                    ) : (
+                        /* Bot is handling */
+                        <div style={{ padding: "0.75rem 1.25rem", background: "#f0f2f5", borderTop: "1px solid var(--crm-border)" }}>
+                            <div style={{
+                                background: "#fff",
+                                borderRadius: 24,
+                                padding: "0.6rem 1rem",
+                                fontSize: "0.85rem",
+                                color: "var(--crm-text-muted)",
+                                border: "1px solid var(--crm-border)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                            }}>
+                                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#25D366", flexShrink: 0, display: "inline-block" }} />
+                                Bot is handling this conversation — click <strong style={{ color: "var(--crm-text)", margin: "0 3px" }}>Take Over</strong> to reply manually
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
         </div>

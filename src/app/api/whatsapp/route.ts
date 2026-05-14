@@ -322,6 +322,7 @@ interface Session {
     time_slot?: string;
     due_date?: string;
     service_days?: string;
+    agent_active?: boolean;
 }
 
 async function getSession(waPhone: string): Promise<Session | null> {
@@ -586,6 +587,12 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     const session = await getSession(waPhone);
 
     console.log(`[WA] phone=${waPhone} step=${session?.step ?? "NEW"} text="${text}"`);
+
+    // ── Agent takeover — skip bot, message already stored ─────────────────────
+    if (session?.agent_active) {
+        console.log(`[WA] agent active for ${waPhone}, skipping bot`);
+        return;
+    }
 
     // ── Main Menu — restart flow ──────────────────────────────────────────────
     if (isMainMenu(text)) {
