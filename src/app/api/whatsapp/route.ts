@@ -371,16 +371,23 @@ async function upsertSession(waPhone: string, updates: Record<string, string>): 
             .update({ ...updates, updated_at: now })
             .eq("wa_phone", waPhone);
         if (error) { console.error("upsertSession update failed:", error); return false; }
+        syncLeadFromSession({ ...existing, ...updates }, waPhone).catch(err =>
+            console.error("syncLeadFromSession failed:", err)
+        );
     } else {
-        const { error } = await supabase.from("whatsapp_sessions").insert({
+        const newSession = {
             id: crypto.randomUUID(),
             wa_phone: waPhone,
             step: "greeting",
             created_at: now,
             updated_at: now,
             ...updates,
-        });
+        };
+        const { error } = await supabase.from("whatsapp_sessions").insert(newSession);
         if (error) { console.error("upsertSession insert failed:", error); return false; }
+        syncLeadFromSession(newSession as unknown as Session, waPhone).catch(err =>
+            console.error("syncLeadFromSession failed:", err)
+        );
     }
     return true;
 }
@@ -409,40 +416,71 @@ function deriveShiftHours(session: Session): number | null {
     return null;
 }
 
-async function pushLeadToCRM(session: Session, waPhone: string) {
+// ── Sync session data → leads table (upsert on phone) ────────────────────────
+// Creates the lead on first contact, then updates it as each step completes.
+
+async function syncLeadFromSession(session: Partial<Session> & { wa_phone: string; step: string }, waPhone: string) {
     const phone = waPhone.replace(/\D/g, "").slice(-10);
-    const now = new Date();
+    if (!phone) return;
+    const now = new Date().toISOString();
     try {
-        const { error } = await supabase.from("leads").insert({
-            id: crypto.randomUUID(),
-            name: session.name || "WhatsApp User",
-            phone,
-            whatsapp: phone,
-            source: "WhatsApp",
-            lead_date: now.toISOString(),
-            service_required: session.service || "",
-            baby_status: session.baby_status || "Unknown",
-            address: session.location || null,
-            hospital_name: session.hospital || null,
-            baby_birth_stage_status: session.birth_stage || null,
-            baby_age: session.baby_age || null,
-            current_weight: session.baby_weight || null,
-            care_start_date: session.baby_status === "Born"
+        const { data: existing } = await supabase
+            .from("leads")
+            .select("id")
+            .eq("phone", phone)
+            .maybeSingle();
+
+        if (existing) {
+            const patch: Record<string, unknown> = { last_activity_at: now };
+            if (session.name)        patch.name = session.name;
+            if (session.baby_status) patch.baby_status = session.baby_status;
+            if (session.location)    patch.address = session.location;
+            if (session.hospital)    patch.hospital_name = session.hospital;
+            if (session.birth_stage) patch.baby_birth_stage_status = session.birth_stage;
+            if (session.baby_age)    patch.baby_age = session.baby_age;
+            if (session.baby_weight) patch.current_weight = session.baby_weight;
+            if (session.service)     patch.service_required = session.service;
+            if (session.shift)       patch.preferred_shift = session.shift;
+            const hrs = deriveShiftHours(session as Session);
+            if (hrs !== null)        patch.shift_hours_count = hrs;
+            if (session.time_slot)   patch.shift_time = session.time_slot;
+            const careDate = session.baby_status === "Born"
                 ? (session.care_start_date || null)
-                : parseDueDate(session.due_date),
-            preferred_shift: session.shift || null,
-            shift_hours_count: deriveShiftHours(session),
-            shift_time: session.time_slot || null,
-            service_days: session.service_days ? parseInt(session.service_days) || null : null,
-            owner: "Unassigned",
-            stage: "New Lead",
-            temperature: "Cold",
-            last_activity_at: now.toISOString(),
-            created_at: now.toISOString(),
-        });
-        if (error) console.error("Supabase lead insert error:", error.message);
+                : parseDueDate(session.due_date);
+            if (careDate)            patch.care_start_date = careDate;
+            if (session.service_days) patch.service_days = parseInt(session.service_days) || null;
+            await supabase.from("leads").update(patch).eq("id", existing.id);
+        } else {
+            await supabase.from("leads").insert({
+                id: crypto.randomUUID(),
+                name: session.name || "WhatsApp User",
+                phone,
+                whatsapp: phone,
+                source: "WhatsApp",
+                lead_date: now,
+                service_required: session.service || "",
+                baby_status: session.baby_status || null,
+                address: session.location || null,
+                hospital_name: session.hospital || null,
+                baby_birth_stage_status: session.birth_stage || null,
+                baby_age: session.baby_age || null,
+                current_weight: session.baby_weight || null,
+                care_start_date: session.baby_status === "Born"
+                    ? (session.care_start_date || null)
+                    : parseDueDate(session.due_date),
+                preferred_shift: session.shift || null,
+                shift_hours_count: deriveShiftHours(session as Session),
+                shift_time: session.time_slot || null,
+                service_days: session.service_days ? parseInt(session.service_days) || null : null,
+                owner: "Unassigned",
+                stage: "New Lead",
+                temperature: "Cold",
+                last_activity_at: now,
+                created_at: now,
+            });
+        }
     } catch (err) {
-        console.error("Lead push failed:", err);
+        console.error("syncLeadFromSession failed:", err);
     }
 }
 
@@ -976,7 +1014,6 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         }
         await upsertSession(waPhone, { service_days, step: "completed" });
         const finalSession: Session = { ...session, service_days };
-        await pushLeadToCRM(finalSession, waPhone);
         const summary = buildSummary(finalSession);
         await sendMessage(waPhone, summary);
         await storeMessage(waPhone, "outbound", summary);

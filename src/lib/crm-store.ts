@@ -232,6 +232,12 @@ export const api = {
   },
 };
 
+export function refreshStore() {
+  _initialized = false;
+  _fetching = false;
+  syncAll();
+}
+
 // ─── React hook ───────────────────────────────────────────────────────────────
 export function useDB() {
   const [db, setDb] = useState<CRMDb>(_db);

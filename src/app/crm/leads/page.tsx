@@ -1,10 +1,11 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useDB, api } from "@/lib/crm-store";
+import { useDB, api, refreshStore } from "@/lib/crm-store";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
-import { Plus, Search, Download, Trash2 } from "lucide-react";
+import WhatsAppImportModal from "@/components/crm/WhatsAppImportModal";
+import { Plus, Search, Download, Trash2, MessageSquare } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadSource, LeadStage } from "@/lib/crm-types";
 
@@ -29,6 +30,7 @@ export default function LeadsPage() {
   const db = useDB();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
+  const [showWAImport, setShowWAImport] = useState(false);
 
   const handleDelete = (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -83,6 +85,11 @@ export default function LeadsPage() {
   return (
     <>
       <LeadFormModal open={showNewLead} onClose={() => setShowNewLead(false)} />
+      <WhatsAppImportModal
+        open={showWAImport}
+        onClose={() => setShowWAImport(false)}
+        onImported={() => refreshStore()}
+      />
       <LeadDrawer leadId={selectedLead} onClose={() => setSelectedLead(null)} />
 
       <div className="crm-page-header">
@@ -93,6 +100,9 @@ export default function LeadsPage() {
         <div className="d-flex gap-2">
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={exportCSV}>
             <Download size={15} /> Export
+          </button>
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowWAImport(true)} style={{ color: "#16A34A" }}>
+            <MessageSquare size={15} /> Import WhatsApp
           </button>
           <button className="crm-btn crm-btn-primary" onClick={() => setShowNewLead(true)}>
             <Plus size={16} /> New Lead
