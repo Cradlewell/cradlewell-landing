@@ -285,9 +285,9 @@ async function sendJapaHoursListMessage(to: string) {
                             {
                                 title: "Day Shift Options",
                                 rows: [
-                                    { id: "hours_8", title: "8 hours", description: "Choose from 3 time slots" },
-                                    { id: "hours_10", title: "10 hours", description: "9 AM – 7 PM" },
-                                    { id: "hours_12", title: "12 hours", description: "8 AM – 8 PM" },
+                                    { id: "hours_8", title: "8 hours" },
+                                    { id: "hours_10", title: "10 hours" },
+                                    { id: "hours_12", title: "12 hours" },
                                 ],
                             },
                             { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
