@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-server";
 
-const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!;
-const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN!;
-const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN!;
+const PHONE_NUMBER_ID     = process.env.WHATSAPP_PHONE_NUMBER_ID!;
+const ACCESS_TOKEN        = process.env.WHATSAPP_ACCESS_TOKEN!;
+const VERIFY_TOKEN        = process.env.WHATSAPP_VERIFY_TOKEN!;
+const FLOW_DUE_DATE_ID    = process.env.WHATSAPP_FLOW_DUE_DATE_ID!;
+const FLOW_CARE_DATE_ID   = process.env.WHATSAPP_FLOW_CARE_DATE_ID!;
 
 // ── Send plain text message ───────────────────────────────────────────────────
 
@@ -101,16 +103,9 @@ async function sendDaySlotListMessage(to: string) {
     }
 }
 
-// ── Send due month list (next 9 months, generated dynamically) ───────────────
+// ── Send WhatsApp Flow (date picker) ─────────────────────────────────────────
 
-async function sendDueMonthListMessage(to: string) {
-    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    const now = new Date();
-    const rows = Array.from({ length: 9 }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
-        return { id: `due_${d.getFullYear()}_${d.getMonth() + 1}`, title: label };
-    });
+async function sendFlowMessage(to: string, flowId: string, bodyText: string, ctaText: string) {
     try {
         await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
             method: "POST",
@@ -120,17 +115,35 @@ async function sendDueMonthListMessage(to: string) {
                 to,
                 type: "interactive",
                 interactive: {
-                    type: "list",
-                    body: { text: "When is your due date? Please select the month." },
+                    type: "flow",
+                    body: { text: bodyText },
                     action: {
-                        button: "Select Month",
-                        sections: [{ title: "Due Month", rows }],
+                        name: "flow",
+                        parameters: {
+                            flow_message_version: "3",
+                            flow_action: "navigate",
+                            flow_token: "unused",
+                            flow_id: flowId,
+                            flow_cta: ctaText,
+                            flow_action_payload: { screen: "MAIN" },
+                        },
                     },
                 },
             }),
         });
     } catch (err) {
-        console.error("sendDueMonthListMessage failed:", err);
+        console.error("sendFlowMessage failed:", err);
+    }
+}
+
+// Format ISO date "2026-06-14" → "14 June 2026" for display
+function formatDateDisplay(isoDate: string): string {
+    try {
+        return new Date(isoDate + "T00:00:00").toLocaleDateString("en-IN", {
+            day: "numeric", month: "long", year: "numeric",
+        });
+    } catch {
+        return isoDate;
     }
 }
 
@@ -321,6 +334,7 @@ interface Session {
     japa_hours?: string;
     time_slot?: string;
     due_date?: string;
+    care_start_date?: string;
     service_days?: string;
     agent_active?: boolean;
 }
@@ -364,9 +378,10 @@ async function upsertSession(waPhone: string, updates: Record<string, string>) {
 
 // ── Push lead to CRM ──────────────────────────────────────────────────────────
 
-// Convert "May 2025" → "2025-05-01" for date columns
+// Convert due date to ISO for date columns. Flow returns ISO directly; fallback handles "May 2025" text.
 function parseDueDate(dueDate?: string): string | null {
     if (!dueDate) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return dueDate;
     const MONTHS_MAP: Record<string, string> = {
         January: "01", February: "02", March: "03", April: "04",
         May: "05", June: "06", July: "07", August: "08",
@@ -403,7 +418,9 @@ async function pushLeadToCRM(session: Session, waPhone: string) {
             baby_birth_stage_status: session.birth_stage || null,
             baby_age: session.baby_age || null,
             current_weight: session.baby_weight || null,
-            care_start_date: parseDueDate(session.due_date),
+            care_start_date: session.baby_status === "Born"
+                ? (session.care_start_date || null)
+                : parseDueDate(session.due_date),
             preferred_shift: session.shift || null,
             shift_hours_count: deriveShiftHours(session),
             shift_time: session.time_slot || null,
@@ -427,8 +444,8 @@ function buildSummary(session: Session): string {
     if (session.name)        rows.push(`Name: ${session.name}`);
     if (session.baby_status) rows.push(`Status: ${session.baby_status === "Expecting" ? "Expecting" : "Baby at Home"}`);
     if (session.location)     rows.push(`Location: ${session.location}`);
-    // Only show due date for Expecting moms
-    if (session.baby_status === "Expecting" && session.due_date) rows.push(`Due Month: ${session.due_date}`);
+    if (session.baby_status === "Expecting" && session.due_date) rows.push(`Due Date: ${formatDateDisplay(session.due_date)}`);
+    if (session.baby_status === "Born" && session.care_start_date) rows.push(`Care Start: ${formatDateDisplay(session.care_start_date)}`);
     if (session.hospital)     rows.push(`Hospital: ${session.hospital}`);
     if (session.birth_stage)  rows.push(`Birth Stage: ${session.birth_stage}`);
     if (session.baby_age)     rows.push(`Baby Age: ${session.baby_age}`);
@@ -598,10 +615,11 @@ async function afterLocation(waPhone: string, session: Session, locationText: st
         await sendHospitalListMessage(waPhone);
         await storeMessage(waPhone, "outbound", "🏥 Which hospital welcomed your baby?");
     } else {
-        // Expecting — ask due month before service
-        await upsertSession(waPhone, { location: locationText, step: "ask_due_month" });
-        await sendDueMonthListMessage(waPhone);
-        await storeMessage(waPhone, "outbound", "When is your due date? Please select the month.");
+        // Expecting — ask due date via date picker flow
+        await upsertSession(waPhone, { location: locationText, step: "ask_due_date" });
+        const msg = "When is your baby due? Please tap below to pick your expected due date.";
+        await sendFlowMessage(waPhone, FLOW_DUE_DATE_ID, msg, "Pick Due Date");
+        await storeMessage(waPhone, "outbound", msg);
     }
 }
 
@@ -624,7 +642,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             step: "ask_baby_status",
             ...(name ? { name } : {}),
             baby_status: "", location: "", hospital: "", birth_stage: "", baby_age: "", baby_weight: "",
-            service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", service_days: "",
+            service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", care_start_date: "", service_days: "",
         });
         await sendMainMenu(waPhone, name);
         return;
@@ -682,14 +700,32 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // ── Collect due month (Expecting path only) ───────────────────────────────
-    if (session.step === "ask_due_month") {
-        const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-        const match = text.match(/^due_(\d+)_(\d+)$/);
-        const resolved = match ? `${MONTHS[parseInt(match[2]) - 1]} ${match[1]}` : text;
-        await upsertSession(waPhone, { due_date: resolved, step: "ask_service" });
+    // ── Collect due date from flow (Expecting path only) ─────────────────────
+    if (session.step === "ask_due_date") {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+            const msg = "Please tap the button below to select your due date.";
+            await sendFlowMessage(waPhone, FLOW_DUE_DATE_ID, msg, "Pick Due Date");
+            await storeMessage(waPhone, "outbound", msg);
+            return;
+        }
+        await upsertSession(waPhone, { due_date: text, step: "ask_service" });
         const msg = "What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
+        await storeMessage(waPhone, "outbound", msg);
+        return;
+    }
+
+    // ── Collect care start date from flow (Born path only) ───────────────────
+    if (session.step === "ask_care_date") {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+            const msg = "Please tap the button below to select when you'd like care to start.";
+            await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
+            await storeMessage(waPhone, "outbound", msg);
+            return;
+        }
+        await upsertSession(waPhone, { care_start_date: text, step: "ask_service_days" });
+        const msg = "How many days of support would you like?";
+        await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
         return;
     }
@@ -788,10 +824,17 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             // Nurse
             if (shift === "Night") {
                 const timeSlot = "9 PM – 6 AM";
-                await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_service_days" });
-                const msg = "How many days of support would you like?";
-                await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
-                await storeMessage(waPhone, "outbound", msg);
+                if (session.baby_status === "Born") {
+                    await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_care_date" });
+                    const msg = "When would you like care to start?";
+                    await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
+                    await storeMessage(waPhone, "outbound", msg);
+                } else {
+                    await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_service_days" });
+                    const msg = "How many days of support would you like?";
+                    await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
+                    await storeMessage(waPhone, "outbound", msg);
+                }
             } else {
                 // Nurse + Day → time slot
                 await upsertSession(waPhone, { shift, step: "ask_time_slot" });
@@ -817,10 +860,17 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please select your preferred start time:");
         } else {
             const timeSlot = hours === "10" ? "9 AM – 7 PM" : "8 AM – 8 PM";
-            await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "ask_service_days" });
-            const msg = "How many days of support would you like?";
-            await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
-            await storeMessage(waPhone, "outbound", msg);
+            if (session.baby_status === "Born") {
+                await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "ask_care_date" });
+                const msg = "When would you like care to start?";
+                await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
+                await storeMessage(waPhone, "outbound", msg);
+            } else {
+                await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "ask_service_days" });
+                const msg = "How many days of support would you like?";
+                await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
+                await storeMessage(waPhone, "outbound", msg);
+            }
         }
         return;
     }
@@ -833,10 +883,17 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please select your preferred timing:");
             return;
         }
-        await upsertSession(waPhone, { time_slot: timeSlot, step: "ask_service_days" });
-        const daysMsg = "How many days of support would you like?";
-        await sendButtonMessage(waPhone, daysMsg, SERVICE_DAYS_BUTTONS);
-        await storeMessage(waPhone, "outbound", daysMsg);
+        if (session.baby_status === "Born") {
+            await upsertSession(waPhone, { time_slot: timeSlot, step: "ask_care_date" });
+            const msg = "When would you like care to start?";
+            await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
+            await storeMessage(waPhone, "outbound", msg);
+        } else {
+            await upsertSession(waPhone, { time_slot: timeSlot, step: "ask_service_days" });
+            const daysMsg = "How many days of support would you like?";
+            await sendButtonMessage(waPhone, daysMsg, SERVICE_DAYS_BUTTONS);
+            await storeMessage(waPhone, "outbound", daysMsg);
+        }
         return;
     }
 
@@ -951,6 +1008,19 @@ export async function POST(req: NextRequest) {
                 console.log(`[WA] list_reply id="${id}" title="${title}"`);
                 text = id ?? title ?? null;
                 displayText = title ?? id ?? null;
+            } else if (message.interactive?.type === "nfm_reply") {
+                const responseJson = message.interactive.nfm_reply?.response_json;
+                console.log(`[WA] nfm_reply response_json="${responseJson}"`);
+                if (responseJson) {
+                    try {
+                        const data = JSON.parse(responseJson);
+                        const isoDate: string | undefined = data.due_date || data.care_start_date;
+                        if (isoDate) {
+                            text = isoDate;
+                            displayText = formatDateDisplay(isoDate);
+                        }
+                    } catch {}
+                }
             }
         }
 
