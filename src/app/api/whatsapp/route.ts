@@ -812,13 +812,18 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please tap the type of care you need:");
             return;
         }
-        await upsertSession(waPhone, { service, step: "ask_shift" });
         const isJapa = service.includes("Japa");
-        const msg = isJapa
-            ? "Japa care is available as a *Day shift*. Would you like to proceed?"
-            : "Would you need *Day care* or *Night care*?";
-        await sendButtonMessage(waPhone, msg, isJapa ? JAPA_SHIFT_BUTTONS : NURSE_SHIFT_BUTTONS);
-        await storeMessage(waPhone, "outbound", msg);
+        if (isJapa) {
+            // Japa is day-only — skip shift question, go straight to hours
+            await upsertSession(waPhone, { service, shift: "Day", step: "ask_japa_hours" });
+            await sendJapaHoursListMessage(waPhone);
+            await storeMessage(waPhone, "outbound", "How many hours of day care do you need?");
+        } else {
+            await upsertSession(waPhone, { service, step: "ask_shift" });
+            const msg = "Would you need *Day care* or *Night care*?";
+            await sendButtonMessage(waPhone, msg, NURSE_SHIFT_BUTTONS);
+            await storeMessage(waPhone, "outbound", msg);
+        }
         return;
     }
 
