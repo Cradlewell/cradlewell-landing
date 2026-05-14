@@ -341,7 +341,7 @@ export default function WhatsAppPage() {
                         <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--crm-text)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 {selectedContact?.name || selected.slice(-10)}
-                                {live && (
+                                {live && selectedContact?.step !== "completed" && (
                                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#25D366", fontWeight: 500 }}>
                                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#25D366", display: "inline-block", animation: "crm-pulse 1.5s infinite" }} />
                                         Live
