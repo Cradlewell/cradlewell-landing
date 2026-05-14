@@ -67,6 +67,9 @@ function Avatar({ name, phone, size = 40 }: { name?: string; phone: string; size
     );
 }
 
+const MESSAGES_POLL_MS = 3000;
+const CONTACTS_POLL_MS = 10000;
+
 export default function WhatsAppPage() {
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [selected, setSelected] = useState<string | null>(null);
@@ -74,39 +77,67 @@ export default function WhatsAppPage() {
     const [search, setSearch] = useState("");
     const [loadingContacts, setLoadingContacts] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
-    const bottomRef = useRef<HTMLDivElement>(null);
+    const [live, setLive] = useState(false);
 
-    const fetchContacts = useCallback(async () => {
-        setLoadingContacts(true);
+    const bottomRef = useRef<HTMLDivElement>(null);
+    const msgCountRef = useRef(0);
+    const selectedRef = useRef<string | null>(null);
+
+    selectedRef.current = selected;
+
+    // ── Contacts: initial load + poll every 10s ───────────────────────────────
+    const fetchContacts = useCallback(async (silent = false) => {
+        if (!silent) setLoadingContacts(true);
         try {
             const res = await fetch("/api/crm/whatsapp-chat?type=contacts");
             const data = await res.json();
             setContacts(data.contacts ?? []);
         } finally {
-            setLoadingContacts(false);
+            if (!silent) setLoadingContacts(false);
         }
     }, []);
 
-    const fetchMessages = useCallback(async (phone: string) => {
-        setLoadingMessages(true);
+    useEffect(() => {
+        fetchContacts();
+        const id = setInterval(() => fetchContacts(true), CONTACTS_POLL_MS);
+        return () => clearInterval(id);
+    }, [fetchContacts]);
+
+    // ── Messages: load on select + poll every 3s ──────────────────────────────
+    const fetchMessages = useCallback(async (phone: string, initial = false) => {
+        if (initial) setLoadingMessages(true);
         try {
             const res = await fetch(`/api/crm/whatsapp-chat?type=messages&phone=${encodeURIComponent(phone)}`);
             const data = await res.json();
-            setMessages(data.messages ?? []);
+            const incoming: Message[] = data.messages ?? [];
+            setMessages(prev => {
+                // Only update if count changed (avoids unnecessary re-renders)
+                if (!initial && prev.length === incoming.length) return prev;
+                return incoming;
+            });
         } finally {
-            setLoadingMessages(false);
+            if (initial) setLoadingMessages(false);
         }
     }, []);
 
-    useEffect(() => { fetchContacts(); }, [fetchContacts]);
-
+    // Reset + start polling when contact changes
     useEffect(() => {
-        if (selected) fetchMessages(selected);
-        else setMessages([]);
+        if (!selected) { setMessages([]); msgCountRef.current = 0; setLive(false); return; }
+        msgCountRef.current = 0;
+        fetchMessages(selected, true);
+        setLive(true);
+        const id = setInterval(() => {
+            if (selectedRef.current) fetchMessages(selectedRef.current);
+        }, MESSAGES_POLL_MS);
+        return () => { clearInterval(id); setLive(false); };
     }, [selected, fetchMessages]);
 
+    // Scroll to bottom only when new messages arrive
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (messages.length > msgCountRef.current) {
+            msgCountRef.current = messages.length;
+            bottomRef.current?.scrollIntoView({ behavior: messages.length <= 1 ? "instant" : "smooth" });
+        }
     }, [messages]);
 
     const filtered = contacts.filter(c => {
@@ -133,8 +164,7 @@ export default function WhatsAppPage() {
                 display: "flex",
                 flexDirection: "column",
             }}>
-                {/* Header */}
-                <div style={{ padding: "1rem", borderBottom: "1px solid var(--crm-border)", background: "#fff" }}>
+                <div style={{ padding: "1rem", borderBottom: "1px solid var(--crm-border)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                             <MessageCircle size={20} color="#25D366" />
@@ -143,7 +173,7 @@ export default function WhatsAppPage() {
                             </h2>
                         </div>
                         <button
-                            onClick={fetchContacts}
+                            onClick={() => fetchContacts()}
                             title="Refresh"
                             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--crm-text-muted)", padding: 4, borderRadius: 6, display: "flex" }}
                         >
@@ -165,7 +195,6 @@ export default function WhatsAppPage() {
                     </div>
                 </div>
 
-                {/* List */}
                 <div style={{ flex: 1, overflowY: "auto" }}>
                     {loadingContacts ? (
                         <div style={{ padding: "2rem", textAlign: "center", color: "var(--crm-text-muted)", fontSize: "0.85rem" }}>
@@ -236,7 +265,7 @@ export default function WhatsAppPage() {
 
             {/* ── Right: Chat window ─────────────────────────────────────────── */}
             {!selected ? (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "1rem", color: "var(--crm-text-muted)" }}>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "1rem" }}>
                     <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#E9FBF0", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <MessageCircle size={36} color="#25D366" strokeWidth={1.5} />
                     </div>
@@ -257,8 +286,14 @@ export default function WhatsAppPage() {
                     }}>
                         <Avatar name={selectedContact?.name} phone={selected} size={38} />
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--crm-text)" }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--crm-text)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 {selectedContact?.name || selected.slice(-10)}
+                                {live && (
+                                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#25D366", fontWeight: 500 }}>
+                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#25D366", display: "inline-block", animation: "crm-pulse 1.5s infinite" }} />
+                                        Live
+                                    </span>
+                                )}
                             </div>
                             <div style={{ fontSize: "0.74rem", color: "var(--crm-text-muted)" }}>
                                 {selected}
@@ -268,7 +303,7 @@ export default function WhatsAppPage() {
                             </div>
                         </div>
                         <button
-                            onClick={() => fetchMessages(selected)}
+                            onClick={() => fetchMessages(selected, true)}
                             title="Refresh messages"
                             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--crm-text-muted)", padding: 6, borderRadius: 6, display: "flex" }}
                         >
@@ -276,7 +311,7 @@ export default function WhatsAppPage() {
                         </button>
                     </div>
 
-                    {/* Messages area */}
+                    {/* Messages */}
                     <div style={{
                         flex: 1,
                         overflowY: "auto",
@@ -298,7 +333,6 @@ export default function WhatsAppPage() {
                             const isOut = msg.direction === "outbound";
                             const prevMsg = i > 0 ? messages[i - 1] : null;
                             const showDate = !prevMsg || fmtDateLabel(prevMsg.created_at) !== fmtDateLabel(msg.created_at);
-
                             return (
                                 <div key={msg.id}>
                                     {showDate && (
@@ -315,35 +349,18 @@ export default function WhatsAppPage() {
                                             </span>
                                         </div>
                                     )}
-                                    <div style={{
-                                        display: "flex",
-                                        justifyContent: isOut ? "flex-end" : "flex-start",
-                                        marginBottom: 2,
-                                    }}>
+                                    <div style={{ display: "flex", justifyContent: isOut ? "flex-end" : "flex-start", marginBottom: 2 }}>
                                         <div style={{
                                             maxWidth: "68%",
                                             background: isOut ? "#dcf8c6" : "#fff",
                                             borderRadius: isOut ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                                             padding: "0.45rem 0.7rem 0.35rem",
                                             boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
-                                            position: "relative",
                                         }}>
-                                            <div style={{
-                                                fontSize: "0.855rem",
-                                                whiteSpace: "pre-wrap",
-                                                lineHeight: 1.45,
-                                                color: "#1a1a1a",
-                                                wordBreak: "break-word",
-                                            }}>
+                                            <div style={{ fontSize: "0.855rem", whiteSpace: "pre-wrap", lineHeight: 1.45, color: "#1a1a1a", wordBreak: "break-word" }}>
                                                 {msg.message}
                                             </div>
-                                            <div style={{
-                                                fontSize: "0.68rem",
-                                                color: "#8a8a8a",
-                                                textAlign: "right",
-                                                marginTop: 2,
-                                                lineHeight: 1,
-                                            }}>
+                                            <div style={{ fontSize: "0.68rem", color: "#8a8a8a", textAlign: "right", marginTop: 2, lineHeight: 1 }}>
                                                 {fmtTime(msg.created_at)}
                                                 {isOut && <span style={{ marginLeft: 3, color: "#53bdeb" }}>✓✓</span>}
                                             </div>
@@ -355,25 +372,25 @@ export default function WhatsAppPage() {
                         <div ref={bottomRef} />
                     </div>
 
-                    {/* Read-only footer */}
+                    {/* Footer */}
                     <div style={{
                         padding: "0.75rem 1.25rem",
                         background: "#f0f2f5",
                         borderTop: "1px solid var(--crm-border)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
                     }}>
                         <div style={{
-                            flex: 1,
                             background: "#fff",
                             borderRadius: 24,
                             padding: "0.6rem 1rem",
                             fontSize: "0.85rem",
                             color: "var(--crm-text-muted)",
                             border: "1px solid var(--crm-border)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
                         }}>
-                            Read-only — bot handles replies automatically
+                            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#25D366", flexShrink: 0, display: "inline-block" }} />
+                            Bot is handling this conversation automatically
                         </div>
                     </div>
                 </div>
