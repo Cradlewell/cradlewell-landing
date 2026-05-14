@@ -26,11 +26,14 @@ function fmtCareDate(iso: string | null | undefined) {
   return `${d}-${m}-${y}`;
 }
 
+const PAGE_SIZE = 50;
+
 export default function LeadsPage() {
   const db = useDB();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
   const [showWAImport, setShowWAImport] = useState(false);
+  const [page, setPage] = useState(1);
 
   const handleDelete = (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -51,6 +54,13 @@ export default function LeadsPage() {
       return true;
     });
   }, [db.leads, search, filterStage, filterSource]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset to page 1 when filters change
+  useMemo(() => { setPage(1); }, [search, filterStage, filterSource]);
 
   const exportCSV = () => {
     const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage"].join(",");
@@ -163,7 +173,7 @@ export default function LeadsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(l => (
+              {paginated.map(l => (
                 <tr key={l.id} onClick={() => setSelectedLead(l.id)}>
                   <td className="sticky-col" style={{ minWidth: 160 }}>
                     <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{l.name}</span>
@@ -207,6 +217,50 @@ export default function LeadsPage() {
           </table>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "16px 0" }}>
+          <button
+            className="crm-btn crm-btn-ghost crm-btn-sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={safePage === 1}
+          >
+            ← Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+            .reduce<(number | "…")[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) =>
+              p === "…" ? (
+                <span key={`ellipsis-${i}`} style={{ color: "var(--crm-text-muted)", padding: "0 4px" }}>…</span>
+              ) : (
+                <button
+                  key={p}
+                  className="crm-btn crm-btn-sm"
+                  style={p === safePage ? { background: "var(--crm-primary)", color: "#fff", borderColor: "var(--crm-primary)" } : { background: "none" }}
+                  onClick={() => setPage(p as number)}
+                >
+                  {p}
+                </button>
+              )
+            )}
+          <button
+            className="crm-btn crm-btn-ghost crm-btn-sm"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={safePage === totalPages}
+          >
+            Next →
+          </button>
+          <span style={{ color: "var(--crm-text-muted)", fontSize: "0.8rem", marginLeft: 8 }}>
+            Page {safePage} of {totalPages} · {filtered.length} total
+          </span>
+        </div>
+      )}
     </>
   );
 }

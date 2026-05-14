@@ -5,10 +5,10 @@ export async function GET(req: NextRequest) {
   const token = req.cookies.get("crm_auth")?.value;
   if (!await isAuthed(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const [leadsRes, followupsRes, quotationsRes, closuresRes, activityRes] = await Promise.all([
-    supabase.from("leads").select("*").order("created_at", { ascending: false }),
-    supabase.from("followups").select("*").order("created_at", { ascending: false }),
-    supabase.from("quotations").select("*").order("date", { ascending: false }),
-    supabase.from("closures").select("*").order("closure_date", { ascending: false }),
+    supabase.from("leads").select("*").order("created_at", { ascending: false }).range(0, 9999),
+    supabase.from("followups").select("*").order("created_at", { ascending: false }).range(0, 9999),
+    supabase.from("quotations").select("*").order("date", { ascending: false }).range(0, 4999),
+    supabase.from("closures").select("*").order("closure_date", { ascending: false }).range(0, 4999),
     supabase.from("activity_logs").select("*").order("at", { ascending: false }).limit(500),
   ]);
 
