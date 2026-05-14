@@ -371,9 +371,7 @@ async function upsertSession(waPhone: string, updates: Record<string, string>): 
             .update({ ...updates, updated_at: now })
             .eq("wa_phone", waPhone);
         if (error) { console.error("upsertSession update failed:", error); return false; }
-        syncLeadFromSession({ ...existing, ...updates }, waPhone).catch(err =>
-            console.error("syncLeadFromSession failed:", err)
-        );
+        await syncLeadFromSession({ ...existing, ...updates }, waPhone);
     } else {
         const newSession = {
             id: crypto.randomUUID(),
@@ -385,9 +383,7 @@ async function upsertSession(waPhone: string, updates: Record<string, string>): 
         };
         const { error } = await supabase.from("whatsapp_sessions").insert(newSession);
         if (error) { console.error("upsertSession insert failed:", error); return false; }
-        syncLeadFromSession(newSession as unknown as Session, waPhone).catch(err =>
-            console.error("syncLeadFromSession failed:", err)
-        );
+        await syncLeadFromSession(newSession as unknown as Session, waPhone);
     }
     return true;
 }
