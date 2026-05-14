@@ -4,7 +4,7 @@ import { X, UserPlus } from "lucide-react";
 import { api } from "@/lib/crm-store";
 import type { LeadSource, BabyStatus, Shift } from "@/lib/crm-types";
 
-const SOURCES: LeadSource[] = ["Website", "WhatsApp"];
+const SOURCES: LeadSource[] = ["Website", "WhatsApp", "Aria Chat", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
 const SHIFTS: Shift[] = ["Day", "Night", "24hrs"];
 
 interface Props {
