@@ -25,7 +25,7 @@ const BASE = "https://graph.facebook.com/v21.0";
 
 function makeDatePickerScreen(fieldName, label) {
   return {
-    version: "3.1",
+    version: "6.0",
     screens: [
       {
         id: "MAIN",
