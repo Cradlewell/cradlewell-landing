@@ -250,7 +250,15 @@ export function useDBReady() {
   const [ready, setReady] = useState(_initialized);
   useEffect(() => {
     if (_initialized) { setReady(true); return; }
-    const cb = () => { if (_initialized) setReady(true); };
+    const cb = () => {
+      if (_initialized) {
+        setReady(true);
+      } else if (!_fetching) {
+        // Previous fetch finished (e.g. 401 on login page) but we're now
+        // authenticated — retry immediately.
+        syncAll();
+      }
+    };
     listeners.add(cb);
     if (!_fetching) syncAll();
     return () => { listeners.delete(cb); };
