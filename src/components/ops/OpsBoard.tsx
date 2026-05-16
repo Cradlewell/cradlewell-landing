@@ -236,46 +236,78 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`group relative text-left rounded-[24px] p-6 transition-all flex flex-col justify-between min-h-[140px] hover:shadow-lg hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
+      className={`group relative text-left rounded-2xl flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
         backgroundColor: "#ffffff",
         border: selected ? "1.5px solid #5F47FF" : "1px solid #e2e8f0",
         boxShadow: selected
-          ? "0 0 0 4px rgba(95,71,255,0.12), 0 4px 16px rgba(95,71,255,0.12)"
-          : "0 2px 8px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)",
+          ? "0 0 0 4px rgba(95,71,255,0.10), 0 8px 24px rgba(95,71,255,0.14)"
+          : "0 1px 3px rgba(15,23,42,0.06), 0 4px 14px rgba(15,23,42,0.05)",
       }}
     >
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="min-w-0">
-          <div className="text-[#1e293b] font-bold text-[16px] leading-tight truncate">{displayName(c.name)}</div>
-          <div className="text-[11px] mt-1 font-medium" style={{ color: "#94a3b8" }}>{c.area}</div>
-        </div>
-        <span
-          className={`w-3 h-3 rounded-full mt-1 shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`}
-          style={{ backgroundColor: dot, boxShadow: `0 0 0 4px ${dot}1a` }}
-        />
-      </div>
+      {/* Left status stripe */}
+      <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: dot }} />
 
-      <div className="flex items-end justify-between gap-3">
-        <div className="flex items-center -space-x-2">
-          {c.staff.length === 0 ? (
-            <span className="text-[11px] font-medium" style={{ color: "#94a3b8" }}>No staff assigned</span>
-          ) : (
-            c.staff.map((s) => <Avatar key={s.id} s={s} ring />)
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
+      <div className="pl-5 pr-4 pt-4 pb-4 flex flex-col gap-3 flex-1">
+        {/* Name + status badge */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-bold leading-tight truncate" style={{ color: "#0f172a" }}>
+              {displayName(c.name)}
+            </div>
+            <div className="flex items-center gap-1 mt-1">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: "#94a3b8", flexShrink: 0 }}>
+                <path d="M5 1C3.34 1 2 2.34 2 4c0 2.5 3 5 3 5s3-2.5 3-5c0-1.66-1.34-3-3-3z"/>
+                <circle cx="5" cy="4" r="1"/>
+              </svg>
+              <span className="text-[11px] font-medium truncate" style={{ color: "#64748b" }}>{c.area}</span>
+            </div>
+          </div>
           <span
-            className="text-[11px] rounded-full px-3 py-1.5 font-bold uppercase tracking-[0.12em]"
-            style={{
-              backgroundColor: `${dot}14`,
-              color: dot,
-              border: `1px solid ${dot}33`,
-            }}
+            className="shrink-0 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full mt-0.5"
+            style={{ backgroundColor: `${dot}18`, color: dot, border: `1px solid ${dot}30` }}
           >
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`}
+              style={{ backgroundColor: dot }}
+            />
             {cs.label}
           </span>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, backgroundColor: "#f1f5f9" }} />
+
+        {/* Staff row */}
+        <div className="flex items-center gap-2">
+          {c.staff.length === 0 ? (
+            <div className="flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: "#cbd5e1" }}>
+                <circle cx="6" cy="4" r="2.5"/>
+                <path d="M1 11c0-2.76 2.24-5 5-5s5 2.24 5 5"/>
+              </svg>
+              <span className="text-[11px]" style={{ color: "#cbd5e1" }}>No staff assigned</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center -space-x-1.5">
+                {c.staff.slice(0, 3).map((s) => <Avatar key={s.id} s={s} size={26} ring />)}
+                {c.staff.length > 3 && (
+                  <div
+                    className="flex items-center justify-center rounded-full text-[9px] font-bold"
+                    style={{ width: 26, height: 26, backgroundColor: "#f1f5f9", color: "#64748b", boxShadow: "0 0 0 2px #ffffff" }}
+                  >
+                    +{c.staff.length - 3}
+                  </div>
+                )}
+              </div>
+              {c.staff.length === 1 && (
+                <span className="text-[11px] font-medium" style={{ color: "#64748b" }}>
+                  {c.staff[0].name.split(" ")[0]}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </button>
