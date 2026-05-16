@@ -236,57 +236,47 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`text-left rounded-2xl flex flex-col gap-3 transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
+      className={`group relative text-left rounded-[24px] p-6 transition-shadow flex flex-col justify-between min-h-[140px] hover:shadow-md ${isWide ? "sm:col-span-2" : ""}`}
       style={{
-        padding: "18px 20px",
-        background: selected ? "linear-gradient(135deg,#fdfcff,#f0eeff)" : "linear-gradient(135deg,#ffffff,#f8fafc)",
-        border: selected ? "1.5px solid #5F47FF" : "1px solid #e2e8f0",
-        boxShadow: "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
+        backgroundColor: "#ffffff",
+        border: selected ? "1.5px solid #6366f1" : "1px solid #f1f5f9",
+        boxShadow: selected
+          ? "0 0 0 4px rgba(99,102,241,0.12)"
+          : "0 1px 2px rgba(15,23,42,0.04)",
       }}
     >
-      {/* Name + status badge */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-bold leading-snug truncate" style={{ color: selected ? "#5F47FF" : "#0f172a" }}>
-            {displayName(c.name)}
-          </div>
-          <div className="text-[11px] mt-0.5 font-semibold uppercase tracking-wider truncate" style={{ color: "#94a3b8" }}>
-            {c.area}
-          </div>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="min-w-0">
+          <div className="text-[#1e293b] font-bold text-[16px] leading-tight truncate">{displayName(c.name)}</div>
+          <div className="text-[11px] mt-1 font-medium" style={{ color: "#94a3b8" }}>{c.area}</div>
         </div>
         <span
-          className="shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] px-2.5 py-1 rounded-full"
-          style={{ backgroundColor: `${dot}18`, color: dot }}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`} style={{ backgroundColor: dot }} />
-          {cs.label}
-        </span>
+          className="w-3 h-3 rounded-full mt-1 shrink-0"
+          style={{ backgroundColor: dot, boxShadow: `0 0 0 4px ${dot}1a` }}
+        />
       </div>
 
-      {/* Staff row */}
-      <div className="flex items-center gap-2 pt-2.5" style={{ borderTop: "1px solid #f1f5f9" }}>
-        {c.staff.length === 0 ? (
-          <span className="text-[11px]" style={{ color: "#cbd5e1" }}>No staff assigned</span>
-        ) : (
-          <>
-            <div className="flex items-center -space-x-1.5">
-              {c.staff.slice(0, 3).map((s) => <Avatar key={s.id} s={s} size={24} ring />)}
-              {c.staff.length > 3 && (
-                <div
-                  className="flex items-center justify-center rounded-full text-[9px] font-bold"
-                  style={{ width: 24, height: 24, backgroundColor: "#f1f5f9", color: "#64748b", boxShadow: "0 0 0 2px #ffffff" }}
-                >
-                  +{c.staff.length - 3}
-                </div>
-              )}
-            </div>
-            {c.staff.length === 1 && (
-              <span className="text-[11px] font-medium" style={{ color: "#64748b" }}>
-                {c.staff[0].name.split(" ")[0]}
-              </span>
-            )}
-          </>
-        )}
+      <div className="flex items-end justify-between gap-3">
+        <div className="flex items-center -space-x-2">
+          {c.staff.length === 0 ? (
+            <span className="text-[11px] font-medium" style={{ color: "#94a3b8" }}>No staff assigned</span>
+          ) : (
+            c.staff.map((s) => <Avatar key={s.id} s={s} ring />)
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className="text-[10px] rounded-full px-3 py-1.5 font-bold uppercase tracking-[0.12em]"
+            style={{
+              backgroundColor: `${dot}14`,
+              color: dot,
+              border: `1px solid ${dot}33`,
+            }}
+          >
+            {cs.label}
+          </span>
+        </div>
       </div>
     </button>
   );
