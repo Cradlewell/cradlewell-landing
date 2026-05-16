@@ -1,2 +1,2 @@
-/* Tailwind v4 — utilities only (no preflight/base reset to preserve Bootstrap on other routes) */
-@import "tailwindcss/utilities" source("../../../components/ops");
+/* Tailwind v4 utilities only — no preflight to preserve Bootstrap on other routes */
+@import "tailwindcss/utilities";
