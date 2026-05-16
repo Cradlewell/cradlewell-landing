@@ -8,8 +8,9 @@ import AIChatWidget from "@/components/AIChatWidget";
 export default function LandingShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isCRM = pathname.startsWith("/crm");
+  const isOps = pathname.startsWith("/operations");
 
-  if (isCRM) {
+  if (isCRM || isOps) {
     return <>{children}</>;
   }
 
