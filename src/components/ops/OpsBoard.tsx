@@ -236,44 +236,65 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`group relative text-left rounded-[24px] p-6 transition-shadow flex flex-col justify-between min-h-[140px] hover:shadow-md ${isWide ? "sm:col-span-2" : ""}`}
+      className={`relative text-left flex overflow-hidden transition-all duration-200 ease-out hover:-translate-y-1 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
-        backgroundColor: "#ffffff",
-        border: selected ? "1.5px solid #6366f1" : "1px solid #f1f5f9",
+        borderRadius: 16,
+        minHeight: 116,
+        background: selected ? "linear-gradient(160deg,#fdfcff 0%,#f5f3ff 100%)" : "#ffffff",
+        border: selected ? "1.5px solid #5F47FF" : "1px solid #e8edf2",
         boxShadow: selected
-          ? "0 0 0 4px rgba(99,102,241,0.12)"
-          : "0 1px 2px rgba(15,23,42,0.04)",
+          ? "0 0 0 3px rgba(95,71,255,0.12), 0 8px 24px rgba(95,71,255,0.10)"
+          : "0 1px 3px rgba(15,23,42,0.05), 0 6px 18px rgba(15,23,42,0.06)",
       }}
     >
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="min-w-0">
-          <div className="text-[#1e293b] font-bold text-[16px] leading-tight truncate">{displayName(c.name)}</div>
-          <div className="text-[11px] mt-1 font-medium" style={{ color: "#94a3b8" }}>{c.area}</div>
-        </div>
-        <span
-          className="w-3 h-3 rounded-full mt-1 shrink-0"
-          style={{ backgroundColor: dot, boxShadow: `0 0 0 4px ${dot}1a` }}
-        />
-      </div>
+      {/* Left status stripe */}
+      <div style={{ width: 4, flexShrink: 0, backgroundColor: dot }} />
 
-      <div className="flex items-end justify-between gap-3">
-        <div className="flex items-center -space-x-2">
-          {c.staff.length === 0 ? (
-            <span className="text-[11px] font-medium" style={{ color: "#94a3b8" }}>No staff assigned</span>
-          ) : (
-            c.staff.map((s) => <Avatar key={s.id} s={s} ring />)
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <span
-            className="text-[10px] rounded-full px-3 py-1.5 font-bold uppercase tracking-[0.12em]"
-            style={{
-              backgroundColor: `${dot}14`,
-              color: dot,
-              border: `1px solid ${dot}33`,
-            }}
+      {/* Card body */}
+      <div className="flex flex-col justify-between flex-1 px-4 py-4">
+        {/* Name + area */}
+        <div>
+          <div
+            className="text-[14px] font-bold leading-tight truncate"
+            style={{ color: selected ? "#5F47FF" : "#0f172a", letterSpacing: "-0.01em" }}
           >
+            {displayName(c.name)}
+          </div>
+          <div className="flex items-center gap-1 mt-1">
+            <svg width="9" height="9" viewBox="0 0 10 13" fill="currentColor" style={{ color: "#c8d3df", flexShrink: 0 }}>
+              <path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.8A1.8 1.8 0 1 1 5 3.2a1.8 1.8 0 0 1 0 3.6z"/>
+            </svg>
+            <span className="text-[11px] font-medium truncate" style={{ color: "#94a3b8" }}>{c.area}</span>
+          </div>
+        </div>
+
+        {/* Staff avatars + status pill */}
+        <div className="flex items-center justify-between gap-2 mt-3.5">
+          <div className="flex items-center -space-x-1.5">
+            {c.staff.length === 0 ? (
+              <span className="text-[10px] font-medium" style={{ color: "#c8d3df" }}>No staff</span>
+            ) : (
+              <>
+                {c.staff.slice(0, 3).map((s) => <Avatar key={s.id} s={s} size={24} ring />)}
+                {c.staff.length > 3 && (
+                  <div
+                    className="flex items-center justify-center rounded-full text-[9px] font-bold"
+                    style={{ width: 24, height: 24, backgroundColor: "#f1f5f9", color: "#64748b", boxShadow: "0 0 0 2px #ffffff" }}
+                  >
+                    +{c.staff.length - 3}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <span
+            className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full shrink-0"
+            style={{ backgroundColor: `${dot}15`, color: dot, border: `1px solid ${dot}30` }}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`}
+              style={{ backgroundColor: dot }}
+            />
             {cs.label}
           </span>
         </div>
