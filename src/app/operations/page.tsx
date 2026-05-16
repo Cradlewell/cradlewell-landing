@@ -2,5 +2,9 @@
 import { OpsBoard } from "@/components/ops/OpsBoard";
 
 export default function OperationsPage() {
-  return <OpsBoard />;
+  return (
+    <div className="ops-shell">
+      <OpsBoard />
+    </div>
+  );
 }
