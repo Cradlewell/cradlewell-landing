@@ -239,7 +239,7 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
       className={`relative text-left flex overflow-hidden transition-all duration-200 ease-out hover:-translate-y-1 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
         borderRadius: 16,
-        minHeight: 116,
+        minHeight: 130,
         background: selected ? "linear-gradient(160deg,#fdfcff 0%,#f5f3ff 100%)" : "#ffffff",
         border: selected ? "1.5px solid #5F47FF" : "1px solid #e8edf2",
         boxShadow: selected
@@ -252,7 +252,7 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
 
       {/* Card body */}
       <div className="flex flex-col justify-between flex-1 px-4 py-4">
-        {/* Name + area */}
+        {/* Name + area + badge */}
         <div>
           <div
             className="text-[14px] font-bold leading-tight truncate"
@@ -266,6 +266,14 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
             </svg>
             <span className="text-[11px] font-medium truncate" style={{ color: "#94a3b8" }}>{c.area}</span>
           </div>
+          {c.badge && (
+            <div className="mt-2">
+              <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full inline-block truncate max-w-full"
+                style={{ backgroundColor: "#f1f5f9", color: "#64748b", border: "1px solid #e8edf2" }}>
+                {c.badge}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Staff avatars + status pill */}
@@ -341,19 +349,31 @@ function SelectField({ label, value, onChange, children }: {
   );
 }
 
-function StatTile({ value, label, accent }: { value: number | string; label: string; accent?: string }) {
+function StatTile({ value, label, accent, icon }: { value: number | string; label: string; accent?: string; icon?: React.ReactNode }) {
   const isAccent = !!accent;
   return (
     <div
-      className="rounded-2xl px-6 py-3 min-w-[140px] flex flex-col justify-center"
+      className="rounded-2xl px-5 py-4 min-w-[148px] flex items-center gap-3.5"
       style={{
-        background: isAccent ? "linear-gradient(135deg,#fff1f2,#ffe4e6)" : "linear-gradient(135deg,#ffffff,#f8fafc)",
-        border: `1px solid ${isAccent ? "#fecdd3" : "#e2e8f0"}`,
-        boxShadow: "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
+        background: isAccent ? "linear-gradient(135deg,#fff1f2,#ffe4e6)" : "#ffffff",
+        border: `1px solid ${isAccent ? "#fecdd3" : "#e8edf2"}`,
+        boxShadow: isAccent
+          ? "0 2px 12px rgba(239,68,68,0.10), 0 1px 3px rgba(15,23,42,0.04)"
+          : "0 1px 3px rgba(15,23,42,0.05), 0 8px 20px rgba(15,23,42,0.06)",
       }}
     >
-      <div className="text-[24px] font-bold leading-none" style={{ color: isAccent ? "#e11d48" : "#0f172a" }}>{value}</div>
-      <div className="text-[11px] mt-1.5 font-semibold uppercase tracking-wider" style={{ color: isAccent ? "#fb7185" : "#94a3b8" }}>{label}</div>
+      {icon && (
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: isAccent ? "rgba(239,68,68,0.09)" : "rgba(95,71,255,0.08)" }}
+        >
+          <span style={{ color: isAccent ? "#e11d48" : "#5F47FF" }}>{icon}</span>
+        </div>
+      )}
+      <div>
+        <div className="text-[22px] font-bold leading-none" style={{ color: isAccent ? "#e11d48" : "#0f172a", letterSpacing: "-0.02em" }}>{value}</div>
+        <div className="text-[10px] mt-1.5 font-semibold uppercase tracking-wider" style={{ color: isAccent ? "#fb7185" : "#94a3b8" }}>{label}</div>
+      </div>
     </div>
   );
 }
@@ -364,19 +384,19 @@ function ZoneSection({ zone, customers, now, selectedId, onSelect }: { zone: Zon
   return (
     <section className="mb-12">
       <div className="flex items-center gap-4 mb-6">
-        <div className="flex items-center gap-2.5">
-          <div className="w-1 h-5 rounded-full shrink-0" style={{ backgroundColor: zoneColor }} />
-          <h2 className="text-[12px] font-bold uppercase tracking-[0.2em]" style={{ color: "#475569" }}>{zone}</h2>
+        <div className="flex items-center gap-3">
+          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: zoneColor, boxShadow: `0 0 10px ${zoneColor}99` }} />
+          <h2 className="text-[13px] font-bold uppercase tracking-[0.1em]" style={{ color: "#1e293b" }}>{zone}</h2>
         </div>
-        <div className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
+        <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, ${zoneColor}40, #e2e8f0 60%)` }} />
         <span
-          className="text-[11px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider"
-          style={{ backgroundColor: `${zoneColor}14`, color: zoneColor, border: `1px solid ${zoneColor}33` }}
+          className="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider"
+          style={{ backgroundColor: `${zoneColor}12`, color: zoneColor, border: `1px solid ${zoneColor}28` }}
         >
           {customers.length} {customers.length === 1 ? "Client" : "Clients"}
         </span>
       </div>
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {customers.map((c) => (
           <CustomerCard key={c.id} c={c} now={now} selected={selectedId === c.id} onSelect={() => onSelect(c.id)} />
         ))}
@@ -486,11 +506,27 @@ function DetailDialog({
           boxShadow: "0 24px 60px rgba(15,17,21,0.12), 0 4px 12px rgba(15,17,21,0.04)",
         }}
       >
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-5">
           <div>
-            <div className="text-[11px] uppercase tracking-wider" style={{ color: "#5F47FF" }}>{customer.zone}</div>
-            <h3 className="text-[#0f1115] text-[18px] font-semibold mt-1">{displayName(customer.name)}</h3>
-            <div className="text-[12px]" style={{ color: "#7a7a86" }}>{customer.area}</div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: `${ZONE_COLORS[customer.zone]}14`, color: ZONE_COLORS[customer.zone] }}>
+                {customer.zone}
+              </span>
+              {(() => { const cs = cardStatus(customer); return (
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: `${cs.color}12`, color: cs.color }}>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`}
+                    style={{ backgroundColor: cs.color }} />
+                  {cs.label}
+                </span>
+              ); })()}
+            </div>
+            <h3 className="text-[#0f1115] text-[20px] font-bold" style={{ letterSpacing: "-0.02em" }}>{displayName(customer.name)}</h3>
+            <div className="text-[12px] flex items-center gap-1.5 mt-1" style={{ color: "#7a7a86" }}>
+              <svg width="9" height="9" viewBox="0 0 10 13" fill="currentColor" style={{ color: "#c8d3df", flexShrink: 0 }}><path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.8A1.8 1.8 0 1 1 5 3.2a1.8 1.8 0 0 1 0 3.6z"/></svg>
+              {customer.area}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -505,16 +541,16 @@ function DetailDialog({
         </div>
 
         <div
-          className="rounded-[12px] p-3 mb-4 flex items-center justify-between"
-          style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}
+          className="rounded-[12px] p-4 mb-5 grid grid-cols-2 gap-4"
+          style={{ backgroundColor: "#f8fafc", border: "1px solid #e8edf2" }}
         >
           <div>
-            <div className="text-[11px]" style={{ color: "#7a7a86" }}>Status</div>
-            <div className="text-[#0f1115] text-[13px] font-medium mt-0.5">{cardStatus(customer).label}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.1em] mb-1" style={{ color: "#94a3b8" }}>Shift</div>
+            <div className="text-[#0f1115] text-[13px] font-semibold">{customer.shiftTime ?? "—"}</div>
           </div>
-          <div className="text-right">
-            <div className="text-[11px]" style={{ color: "#7a7a86" }}>Service</div>
-            <div className="text-[#0f1115] text-[13px] font-medium mt-0.5">{customer.badge}</div>
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.1em] mb-1" style={{ color: "#94a3b8" }}>Service</div>
+            <div className="text-[#0f1115] text-[13px] font-semibold">{customer.badge}</div>
           </div>
         </div>
 
@@ -1004,7 +1040,7 @@ function StaffView({
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#5F47FF", boxShadow: "0 0 8px #5F47FF" }} />
             <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#5F47FF" }}>Roster</span>
           </div>
-          <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Staff</h1>
+          <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none" style={{ letterSpacing: "-0.02em" }}>Staff</h1>
           <p className="text-[12px] mt-2" style={{ color: "#7a7a86" }}>{roster.length} caregivers · Manage your team</p>
         </div>
       </div>
@@ -1293,13 +1329,13 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
             <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#5F47FF" }}>Insights</span>
           </div>
-          <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Utilisation Report</h1>
+          <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none" style={{ letterSpacing: "-0.02em" }}>Utilisation Report</h1>
           <p className="text-[12px] mt-2" style={{ color: "#7a7a86" }}>Planned vs completed service days across all caregivers (Sundays are weekly off)</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <StatTile value={utilisedCount} label="Utilised" />
-          <StatTile value={idleCount} label="Idle" accent={idleCount > 0 ? "#f59e0b" : undefined} />
-          <StatTile value={`${avgUtil}%`} label="Avg utilisation" />
+          <StatTile value={utilisedCount} label="Utilised" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 13V9M6 13V5M10 13V7M14 13V3"/></svg>} />
+          <StatTile value={idleCount} label="Idle" accent={idleCount > 0 ? "#f59e0b" : undefined} icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 8h5"/></svg>} />
+          <StatTile value={`${avgUtil}%`} label="Avg utilisation" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>} />
         </div>
       </div>
 
@@ -1552,13 +1588,13 @@ function TravelExpensesView({
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#f59e0b", boxShadow: "0 0 8px #f59e0b" }} />
             <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#5F47FF" }}>Finance</span>
           </div>
-          <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Travel Expenses</h1>
+          <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none" style={{ letterSpacing: "-0.02em" }}>Travel Expenses</h1>
           <p className="text-[12px] mt-2" style={{ color: "#7a7a86" }}>Log caregiver trips and track travel reimbursements</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <StatTile value={`₹${grandTotal.toLocaleString("en-IN")}`} label="Total logged" />
-          <StatTile value={entries.length} label="Entries" />
-          <StatTile value={`${totalKm.toFixed(1)} km`} label="Distance" />
+          <StatTile value={`₹${grandTotal.toLocaleString("en-IN")}`} label="Total logged" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4h12M2 8h8M5 12h4M8 1v14"/></svg>} />
+          <StatTile value={entries.length} label="Entries" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6h6M5 9h4"/></svg>} />
+          <StatTile value={`${totalKm.toFixed(1)} km`} label="Distance" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2C5.79 2 4 3.79 4 6c0 3.5 4 8 4 8s4-4.5 4-8c0-2.21-1.79-4-4-4z"/><circle cx="8" cy="6" r="1.5"/></svg>} />
         </div>
       </div>
 
@@ -1780,13 +1816,13 @@ function AttendanceView({ roster, customers }: { roster: Staff[]; customers: Cus
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
             <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#5F47FF" }}>Workforce</span>
           </div>
-          <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Attendance Report</h1>
+          <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none" style={{ letterSpacing: "-0.02em" }}>Attendance Report</h1>
           <p className="text-[12px] mt-2" style={{ color: "#7a7a86" }}>Present, absent and leave days across all caregivers</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <StatTile value={`${overall}%`} label="Overall attendance" />
-          <StatTile value={totalPresent} label="Present days" />
-          <StatTile value={onLeave} label="On leave" />
+          <StatTile value={`${overall}%`} label="Overall attendance" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M5 1v4M11 1v4M2 7h12"/><path d="M5.5 10.5l2 2 3-3"/></svg>} />
+          <StatTile value={totalPresent} label="Present days" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 8.5l2 2 3-3.5"/></svg>} />
+          <StatTile value={onLeave} label="On leave" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6.5" cy="5" r="2.5"/><path d="M1.5 14c0-2.76 2.24-5 5-5M11 10v4M13 12h-4"/></svg>} />
         </div>
       </div>
 
@@ -2055,7 +2091,7 @@ function OpsBoardInner() {
     <div
       className="min-h-screen w-full flex"
       style={{
-        backgroundColor: "#f8fafc",
+        background: "linear-gradient(160deg, #f5f7ff 0%, #f8fafc 40%, #f8fafc 100%)",
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
@@ -2073,9 +2109,9 @@ function OpsBoardInner() {
         className={`shrink-0 h-screen flex flex-col z-40 transition-transform duration-300 ${sidebarOpen ? "fixed inset-y-0 left-0 translate-x-0" : "fixed -translate-x-full md:relative md:translate-x-0 md:sticky md:top-0"}`}
         style={{
           width: 260,
-          backgroundColor: "#ffffff",
-          borderRight: "1px solid #e2e8f0",
-          boxShadow: sidebarOpen ? "4px 0 24px rgba(15,17,21,0.12)" : undefined,
+          backgroundColor: "#0f172a",
+          borderRight: "1px solid rgba(255,255,255,0.07)",
+          boxShadow: sidebarOpen ? "4px 0 32px rgba(15,17,21,0.30)" : undefined,
         }}
       >
         <div className="px-6 py-7">
@@ -2086,9 +2122,9 @@ function OpsBoardInner() {
             >
               <div className="h-4 w-4 rounded-full border-2 border-white opacity-90" />
             </div>
-            <span className="text-[15px] font-bold tracking-tight" style={{ color: "#1e293b" }}>CRADLEWELL</span>
+            <span className="text-[15px] font-bold tracking-tight" style={{ color: "#f8fafc", letterSpacing: "0.04em" }}>CRADLEWELL</span>
           </div>
-          <p className="mt-2 text-[11px] font-bold tracking-[0.2em] uppercase" style={{ color: "#94a3b8" }}>Operations</p>
+          <p className="mt-2 text-[11px] font-bold tracking-[0.2em] uppercase" style={{ color: "rgba(148,163,184,0.55)" }}>Operations</p>
         </div>
         <nav className="px-3 flex flex-col gap-1">
           {([
@@ -2113,21 +2149,21 @@ function OpsBoardInner() {
               <button
                 key={tab.id}
                 onClick={() => { setView(tab.id); setSidebarOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-colors"
                 style={{
-                  backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent",
-                  color: active ? "#5F47FF" : "#64748b",
-                  fontWeight: active ? 600 : 500,
+                  backgroundColor: active ? "rgba(139,92,246,0.18)" : "transparent",
+                  color: active ? "#c4b5fd" : "#64748b",
+                  fontWeight: active ? 600 : 400,
                 }}
               >
-                <span style={{ color: active ? "#5F47FF" : "#94a3b8", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
-                <span className="text-[13.5px] flex-1">{tab.label}</span>
+                <span style={{ color: active ? "#c4b5fd" : "#475569", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
+                <span className="text-[13px] flex-1">{tab.label}</span>
                 <span
-                  className="text-[11px] px-2.5 py-0.5 rounded-full font-bold shrink-0"
+                  className="text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0"
                   style={{
-                    backgroundColor: active ? "#5F47FF" : "#eef2f7",
-                    color: active ? "#ffffff" : "#94a3b8",
-                    minWidth: 26,
+                    backgroundColor: active ? "#5F47FF" : "rgba(255,255,255,0.07)",
+                    color: active ? "#ffffff" : "#475569",
+                    minWidth: 24,
                     textAlign: "center",
                   }}
                 >
@@ -2139,7 +2175,7 @@ function OpsBoardInner() {
         </nav>
 
         {/* Sidebar bottom */}
-        <div className="mt-auto px-4 pb-5 pt-4" style={{ borderTop: "1px solid #f1f5f9" }}>
+        <div className="mt-auto px-4 pb-5 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
           <div className="flex items-center gap-3 px-2">
             <div
               className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-white text-[12px] font-bold"
@@ -2148,13 +2184,13 @@ function OpsBoardInner() {
               A
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-semibold truncate" style={{ color: "#1e293b" }}>Admin</div>
-              <div className="text-[11px]" style={{ color: "#94a3b8" }}>Cradlewell</div>
+              <div className="text-[13px] font-semibold truncate" style={{ color: "#e2e8f0" }}>Admin</div>
+              <div className="text-[11px]" style={{ color: "#64748b" }}>Cradlewell</div>
             </div>
             <button
               aria-label="Settings"
               className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "#94a3b8" }}
+              style={{ color: "#475569" }}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42"/></svg>
             </button>
@@ -2201,21 +2237,22 @@ function OpsBoardInner() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-10 pb-6" style={{ borderBottom: "1px solid #f1f5f9" }}>
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: "#10b981" }} />
-                  <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ color: "#94a3b8" }}>Live Operations</span>
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: "#10b981", boxShadow: "0 0 8px #10b981" }} />
+                  <span className="text-[11px] font-bold tracking-[0.18em] uppercase" style={{ color: "#10b981" }}>Live Operations</span>
                 </div>
-                <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Customers</h1>
+                <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none" style={{ letterSpacing: "-0.02em" }}>Customers</h1>
                 <p className="text-[13px] mt-2" style={{ color: "#64748b" }}>{customers.length} clients · All zones</p>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                <StatTile value={stats.activeStations} label="Active clients" />
-                <StatTile value={stats.operators} label="Caregivers on duty" />
-                <StatTile value={stats.attention} label="Needs attention" accent={stats.attention > 0 ? "#ef4444" : undefined} />
+                <StatTile value={stats.activeStations} label="Active clients" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-2.76 2.24-5 5-5s5 2.24 5 5"/><circle cx="12.5" cy="5" r="2"/><path d="M15 14c0-2.21-1.57-4-3.5-4"/></svg>} />
+                <StatTile value={stats.operators} label="Caregivers on duty" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="5" r="3"/><path d="M2 15c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg>} />
+                <StatTile value={stats.attention} label="Needs attention" accent={stats.attention > 0 ? "#ef4444" : undefined} icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2L1.5 13h13L8 2z"/><path d="M8 6.5v3M8 11.5v.5"/></svg>} />
               </div>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap items-end gap-6 mb-10">
+            <div className="flex flex-wrap items-end gap-5 mb-10 px-5 py-4 rounded-2xl"
+              style={{ backgroundColor: "#ffffff", border: "1px solid #e8edf2", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
               <SelectField
                 label="Zone"
                 value={zoneFilter}
@@ -2259,14 +2296,17 @@ function OpsBoardInner() {
             </div>
 
             <div
-              className="mt-6 flex items-center justify-between text-[11px]"
-              style={{ color: "#7a7a86" }}
+              className="mt-8 flex items-center justify-between text-[11px] px-1"
+              style={{ color: "#94a3b8" }}
             >
-              <span>
-                <span className="text-[#0f1115] font-medium">Cradlewell Ops</span> ·{" "}
-                <span style={{ color: "#22c55e" }}>● Live</span>
+              <span className="flex items-center gap-2">
+                <span className="font-semibold" style={{ color: "#475569" }}>Cradlewell Ops</span>
+                <span className="flex items-center gap-1.5" style={{ color: "#22c55e" }}>
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ backgroundColor: "#22c55e" }} />
+                  Live
+                </span>
               </span>
-              <span>Click a card to view details</span>
+              <span className="text-[10px]">Click a card to view details</span>
             </div>
           </>
         )}
