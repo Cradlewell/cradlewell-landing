@@ -231,7 +231,6 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   const cs = cardStatus(c);
   const dot = cs.color;
   const isWide = !!c.span;
-  const isAccent = cs.label !== "Active";
   void now;
 
   return (
@@ -240,34 +239,20 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
       className={`text-left rounded-2xl flex flex-col transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
         padding: "20px 24px",
-        background: selected
-          ? "linear-gradient(135deg,#fdfcff,#f0eeff)"
-          : isAccent
-            ? `linear-gradient(135deg,${dot}12,${dot}20)`
-            : "linear-gradient(135deg,#ffffff,#f8fafc)",
-        border: selected
-          ? "1.5px solid #5F47FF"
-          : isAccent
-            ? `1px solid ${dot}45`
-            : "1px solid #e2e8f0",
+        background: selected ? "linear-gradient(135deg,#fdfcff,#f0eeff)" : "linear-gradient(135deg,#ffffff,#f8fafc)",
+        border: selected ? "1.5px solid #5F47FF" : "1px solid #e2e8f0",
         boxShadow: selected
           ? "0 0 0 3px rgba(95,71,255,0.12), 0 4px 16px rgba(95,71,255,0.14)"
           : "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
       }}
     >
       {/* Name */}
-      <div
-        className="text-[16px] font-bold leading-tight truncate"
-        style={{ color: selected ? "#5F47FF" : isAccent ? dot : "#0f172a" }}
-      >
+      <div className="text-[16px] font-bold leading-tight truncate" style={{ color: selected ? "#5F47FF" : "#0f172a" }}>
         {displayName(c.name)}
       </div>
 
       {/* Area */}
-      <div
-        className="text-[11px] mt-1.5 font-semibold uppercase tracking-wider truncate"
-        style={{ color: isAccent ? `${dot}cc` : "#94a3b8" }}
-      >
+      <div className="text-[11px] mt-1.5 font-semibold uppercase tracking-wider truncate" style={{ color: "#94a3b8" }}>
         {c.area}
       </div>
 
