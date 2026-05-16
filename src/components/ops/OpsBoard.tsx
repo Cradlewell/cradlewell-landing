@@ -33,7 +33,7 @@ interface Customer {
 }
 
 const PALETTE = [
-  "#6388FF", "#5F47FF", "#22c55e", "#f59e0b", "#a855f7",
+  "#5F47FF", "#5F47FF", "#22c55e", "#f59e0b", "#a855f7",
   "#ec4899", "#06b6d4", "#f43f5e", "#84cc16", "#eab308",
 ];
 
@@ -84,6 +84,13 @@ const INITIAL_CUSTOMERS: Customer[] = [
 ];
 
 const ZONE_ORDER: Zone[] = ["Central", "South", "East", "North"];
+
+const ZONE_COLORS: Record<Zone, string> = {
+  Central: "#5F47FF",
+  South: "#06b6d4",
+  East: "#f59e0b",
+  North: "#22c55e",
+};
 
 const STATUS_DOT: Record<Status, string> = {
   active: "#22c55e",
@@ -229,13 +236,13 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`group relative text-left rounded-[24px] p-6 transition-shadow flex flex-col justify-between min-h-[140px] hover:shadow-md ${isWide ? "sm:col-span-2" : ""}`}
+      className={`group relative text-left rounded-[24px] p-6 transition-all flex flex-col justify-between min-h-[140px] hover:shadow-lg hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
         backgroundColor: "#ffffff",
-        border: selected ? "1.5px solid #6366f1" : "1px solid #f1f5f9",
+        border: selected ? "1.5px solid #5F47FF" : "1px solid #f1f5f9",
         boxShadow: selected
-          ? "0 0 0 4px rgba(99,102,241,0.12)"
-          : "0 1px 2px rgba(15,23,42,0.04)",
+          ? "0 0 0 4px rgba(95,71,255,0.12), 0 4px 16px rgba(95,71,255,0.12)"
+          : "0 2px 8px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)",
       }}
     >
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -260,7 +267,7 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
 
         <div className="flex items-center gap-2 shrink-0">
           <span
-            className="text-[10px] rounded-full px-3 py-1.5 font-bold uppercase tracking-[0.12em]"
+            className="text-[11px] rounded-full px-3 py-1.5 font-bold uppercase tracking-[0.12em]"
             style={{
               backgroundColor: `${dot}14`,
               color: dot,
@@ -281,9 +288,9 @@ function StatTile({ value, label, accent }: { value: number | string; label: str
     <div
       className="rounded-2xl px-6 py-3 min-w-[140px] flex flex-col justify-center"
       style={{
-        backgroundColor: isAccent ? "#fff1f2" : "#ffffff",
-        border: `1px solid ${isAccent ? "#fecdd3" : "#f1f5f9"}`,
-        boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+        background: isAccent ? "linear-gradient(135deg,#fff1f2,#ffe4e6)" : "linear-gradient(135deg,#ffffff,#f8fafc)",
+        border: `1px solid ${isAccent ? "#fecdd3" : "#e2e8f0"}`,
+        boxShadow: "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
       }}
     >
       <div className="text-[24px] font-bold leading-none" style={{ color: isAccent ? "#e11d48" : "#0f172a" }}>{value}</div>
@@ -294,14 +301,18 @@ function StatTile({ value, label, accent }: { value: number | string; label: str
 
 function ZoneSection({ zone, customers, now, selectedId, onSelect }: { zone: Zone; customers: Customer[]; now: number | null; selectedId: string | null; onSelect: (id: string) => void }) {
   if (customers.length === 0) return null;
+  const zoneColor = ZONE_COLORS[zone];
   return (
     <section className="mb-12">
       <div className="flex items-center gap-4 mb-6">
-        <h2 className="text-[12px] font-bold uppercase tracking-[0.2em]" style={{ color: "#94a3b8" }}>{zone}</h2>
+        <div className="flex items-center gap-2.5">
+          <div className="w-1 h-5 rounded-full shrink-0" style={{ backgroundColor: zoneColor }} />
+          <h2 className="text-[12px] font-bold uppercase tracking-[0.2em]" style={{ color: "#475569" }}>{zone}</h2>
+        </div>
         <div className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
         <span
-          className="text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider"
-          style={{ backgroundColor: "#f1f5f9", color: "#94a3b8" }}
+          className="text-[11px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider"
+          style={{ backgroundColor: `${zoneColor}14`, color: zoneColor, border: `1px solid ${zoneColor}33` }}
         >
           {customers.length} {customers.length === 1 ? "Client" : "Clients"}
         </span>
@@ -412,31 +423,31 @@ function DetailDialog({
         className="w-full max-w-[880px] max-h-[92vh] overflow-y-auto p-7 rounded-[16px]"
         style={{
           backgroundColor: "#ffffff",
-          border: "1px solid #e7e5dd",
+          border: "1px solid #e2e8f0",
           boxShadow: "0 24px 60px rgba(15,17,21,0.12), 0 4px 12px rgba(15,17,21,0.04)",
         }}
       >
         <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="text-[11px] uppercase tracking-wider" style={{ color: "#6388FF" }}>{customer.zone}</div>
+            <div className="text-[11px] uppercase tracking-wider" style={{ color: "#5F47FF" }}>{customer.zone}</div>
             <h3 className="text-[#0f1115] text-[18px] font-semibold mt-1">{displayName(customer.name)}</h3>
             <div className="text-[12px]" style={{ color: "#7a7a86" }}>{customer.area}</div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setConfirmDelete(true)}
-              className="text-[11px] font-semibold rounded-md px-2.5 py-1.5"
-              style={{ backgroundColor: "transparent", color: "#ef4444", border: "1px solid #ef444466" }}
+              onClick={onClose}
+              aria-label="Close"
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+              style={{ color: "#94a3b8" }}
             >
-              Delete client
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
             </button>
-            <button onClick={onClose} className="text-[#7a7a86] hover:text-[#0f1115] text-xl leading-none px-2">×</button>
           </div>
         </div>
 
         <div
           className="rounded-[12px] p-3 mb-4 flex items-center justify-between"
-          style={{ backgroundColor: "#faf9f5", border: "1px solid #e7e5dd" }}
+          style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}
         >
           <div>
             <div className="text-[11px]" style={{ color: "#7a7a86" }}>Status</div>
@@ -455,14 +466,14 @@ function DetailDialog({
           <button
             onClick={() => setPickerOpen((v) => !v)}
             className="text-[11px] font-medium rounded-md px-2 py-1"
-            style={{ backgroundColor: "#6388FF", color: "#ffffff" }}
+            style={{ backgroundColor: "#5F47FF", color: "#ffffff" }}
           >
             {pickerOpen ? "Cancel" : "+ Add Staff"}
           </button>
         </div>
 
         {pickerOpen && (
-          <div className="rounded-[10px] mb-3 p-2 max-h-[220px] overflow-y-auto" style={{ backgroundColor: "#f6f5f1", border: "1px solid #e7e5dd" }}>
+          <div className="rounded-[10px] mb-3 p-2 max-h-[220px] overflow-y-auto" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
             {available.length === 0 && (
               <div className="text-[11px] text-center py-3" style={{ color: "#7a7a86" }}>
                 All caregivers already assigned
@@ -472,12 +483,12 @@ function DetailDialog({
               <button
                 key={s.id}
                 onClick={() => { onAddStaff(customer.id, s.id); setPickerOpen(false); }}
-                className="w-full flex items-center gap-3 p-2 rounded-md text-left hover:bg-[#f3f2ed] transition"
+                className="w-full flex items-center gap-3 p-2 rounded-md text-left hover:bg-[#f1f5f9] transition"
               >
                 <Avatar s={s} size={28} />
                 <div className="min-w-0 flex-1">
                   <div className="text-[#0f1115] text-[12px] font-medium truncate">{s.name}</div>
-                  <div className="text-[10px]" style={{ color: "#7a7a86" }}>{s.role}</div>
+                  <div className="text-[11px]" style={{ color: "#7a7a86" }}>{s.role}</div>
                 </div>
                 <span className="text-[14px]" style={{ color: "#22c55e" }}>+</span>
               </button>
@@ -487,12 +498,12 @@ function DetailDialog({
 
         <div className="space-y-2">
           {customer.staff.length === 0 && (
-            <div className="text-[12px] py-3 text-center rounded-[10px]" style={{ color: "#7a7a86", border: "1px dashed #e7e5dd" }}>
+            <div className="text-[12px] py-3 text-center rounded-[10px]" style={{ color: "#7a7a86", border: "1px dashed #e2e8f0" }}>
               No staff assigned yet
             </div>
           )}
           {customer.staff.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 rounded-[10px] p-2.5" style={{ backgroundColor: "#ffffff", border: "1px solid #e7e5dd" }}>
+            <div key={s.id} className="flex items-center gap-3 rounded-[10px] p-2.5" style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0" }}>
               <Avatar s={s} size={36} />
               <div className="min-w-0 flex-1">
                 <div className="text-[#0f1115] text-[13px] font-medium truncate">{s.name}</div>
@@ -500,10 +511,11 @@ function DetailDialog({
               </div>
               <button
                 onClick={() => onRemoveStaff(customer.id, s.id)}
-                title="Remove"
-                className="text-[#7a7a86] hover:text-[#ef4444] text-[18px] leading-none px-2 transition"
+                aria-label={`Remove ${s.name}`}
+                title={`Remove ${s.name}`}
+                className="w-7 h-7 flex items-center justify-center rounded-md text-[#94a3b8] hover:text-[#ef4444] hover:bg-red-50 transition"
               >
-                ×
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg>
               </button>
             </div>
           ))}
@@ -518,14 +530,14 @@ function DetailDialog({
               <div className="flex items-center gap-2">
                 <button
                   onClick={downloadRota}
-                  className="text-[10px] font-medium rounded-md px-2 py-1"
-                  style={{ backgroundColor: "#6388FF", color: "#ffffff" }}
+                  className="text-[11px] font-medium rounded-md px-2 py-1"
+                  style={{ backgroundColor: "#5F47FF", color: "#ffffff" }}
                 >
                   ↓ Download CSV
                 </button>
                 <button
                   onClick={() => onClearRota(customer.id)}
-                  className="text-[10px] font-medium rounded-md px-2 py-1"
+                  className="text-[11px] font-medium rounded-md px-2 py-1"
                   style={{ backgroundColor: "transparent", color: "#ef4444", border: "1px solid #ef444466" }}
                 >
                   Reset Rota
@@ -536,16 +548,16 @@ function DetailDialog({
 
           {hasRota && (
             <div className="rounded-[10px] p-3 mb-3 flex items-center gap-2 flex-wrap"
-              style={{ backgroundColor: "#faf9f5", border: "1px solid #ece9e0" }}>
+              style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
               <span className="text-[11px] font-semibold" style={{ color: "#0f1115" }}>Extend rota</span>
-              <span className="text-[10.5px]" style={{ color: "#7a7a86" }}>Client wants to continue — add more days</span>
+              <span className="text-[11px]" style={{ color: "#7a7a86" }}>Client wants to continue — add more days</span>
               <input
                 type="number"
                 min={1}
                 value={extendDays}
                 onChange={(e) => setExtendDays(e.target.value)}
                 className="text-[12px] rounded-md px-2 py-[5px] outline-none w-[80px] ml-auto"
-                style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e7e5dd" }}
+                style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e2e8f0" }}
               />
               <span className="text-[11px]" style={{ color: "#7a7a86" }}>days</span>
               <button
@@ -563,12 +575,12 @@ function DetailDialog({
           )}
 
           {!hasRota && (
-            <div className="rounded-[10px] p-3 space-y-3" style={{ backgroundColor: "#ffffff", border: "1px solid #e7e5dd" }}>
+            <div className="rounded-[10px] p-3 space-y-3" style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0" }}>
               <p className="text-[11px]" style={{ color: "#7a7a86" }}>
                 No rota set. Configure a package to generate a day-by-day schedule.
               </p>
               <div>
-                <div className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: "#7a7a86" }}>Package length (days)</div>
+                <div className="text-[11px] uppercase tracking-wider mb-1.5" style={{ color: "#7a7a86" }}>Package length (days)</div>
                 <input
                   type="number"
                   min={1}
@@ -576,21 +588,21 @@ function DetailDialog({
                   onChange={(e) => setNewPackage(e.target.value)}
                   placeholder="e.g. 30"
                   className="w-full text-[13px] rounded-md px-3 py-[8px] outline-none"
-                  style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e7e5dd" }}
+                  style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e2e8f0" }}
                 />
-                <div className="text-[10px] mt-1" style={{ color: "#7a7a86" }}>Enter any number of days</div>
+                <div className="text-[11px] mt-1" style={{ color: "#7a7a86" }}>Enter any number of days</div>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: "#7a7a86" }}>Start date</div>
+                <div className="text-[11px] uppercase tracking-wider mb-1.5" style={{ color: "#7a7a86" }}>Start date</div>
                 <input type="date" value={newStart} onChange={(e) => setNewStart(e.target.value)}
                   className="w-full text-[12px] rounded-md px-2 py-[6px] outline-none"
-                  style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e7e5dd" }} />
+                  style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e2e8f0" }} />
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: "#7a7a86" }}>Shift time</div>
+                <div className="text-[11px] uppercase tracking-wider mb-1.5" style={{ color: "#7a7a86" }}>Shift time</div>
                 <select value={newShift} onChange={(e) => setNewShift(e.target.value)}
                   className="w-full text-[12px] rounded-md px-2 py-[6px] outline-none"
-                  style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e7e5dd" }}>
+                  style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e2e8f0" }}>
                   <option>8am - 6pm</option>
                   <option>6am - 6pm</option>
                   <option>6pm - 6am</option>
@@ -606,7 +618,7 @@ function DetailDialog({
                 }}
                 disabled={customer.staff.length === 0 || !(Number(newPackage) >= 1)}
                 className="w-full text-[12px] font-semibold rounded-md py-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "#6388FF", color: "#ffffff" }}>
+                style={{ backgroundColor: "#5F47FF", color: "#ffffff" }}>
                 {customer.staff.length === 0 ? "Assign staff first" : "Create Rota"}
               </button>
             </div>
@@ -617,18 +629,18 @@ function DetailDialog({
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[11px] tracking-wide" style={{ color: "#7a7a86" }}>
                   <span style={{ color: "#0f1115", fontWeight: 600 }}>Starts</span> · {fmtLongDate(customer.startDate!).split(",")[0]}
-                  <span className="mx-2" style={{ color: "#d6d3ca" }}>•</span>
+                  <span className="mx-2" style={{ color: "#cbd5e1" }}>•</span>
                   <span style={{ color: "#0f1115", fontWeight: 600 }}>{customer.shiftTime}</span>
                 </div>
-                <span className="text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: "#f3f2ed", color: "#5F47FF", fontWeight: 600, letterSpacing: "0.14em" }}>
+                <span className="text-[11px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600, letterSpacing: "0.14em" }}>
                   {rota.length} days
                 </span>
               </div>
               <div className="rounded-[14px] overflow-hidden"
-                style={{ border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-                <div className="grid grid-cols-[1.5fr_0.9fr_1.1fr_1.2fr] text-[10px] uppercase tracking-[0.14em] px-4 py-3"
-                  style={{ backgroundColor: "#faf9f5", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #ece9e0" }}>
+                style={{ border: "1px solid #e2e8f0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+                <div className="grid grid-cols-[1.5fr_0.9fr_1.1fr_1.2fr] text-[11px] uppercase tracking-[0.14em] px-4 py-3"
+                  style={{ backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
                   <span>Date</span><span>Time</span><span>Caregiver</span><span>Reason</span>
                 </div>
                 <div className="max-h-[360px] overflow-y-auto">
@@ -637,9 +649,9 @@ function DetailDialog({
                     const isToday = r.date === today;
                     return (
                       <div key={r.date}
-                        className="grid grid-cols-[1.5fr_0.9fr_1.1fr_1.2fr] items-center gap-2 px-4 py-3 text-[12.5px] transition-colors hover:bg-[#faf9f5]"
+                        className="grid grid-cols-[1.5fr_0.9fr_1.1fr_1.2fr] items-center gap-2 px-4 py-3 text-[13px] transition-colors hover:bg-[#f8fafc]"
                         style={{
-                          borderTop: idx === 0 ? "none" : "1px solid #f1efe7",
+                          borderTop: idx === 0 ? "none" : "1px solid #f1f5f9",
                           backgroundColor: isStart
                             ? "rgba(95,71,255,0.06)"
                             : isToday
@@ -647,17 +659,17 @@ function DetailDialog({
                               : "#ffffff",
                         }}>
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="inline-flex items-center justify-center text-[10px] font-semibold rounded-md shrink-0"
+                          <span className="inline-flex items-center justify-center text-[11px] font-semibold rounded-md shrink-0"
                             style={{
                               width: 26, height: 22,
-                              backgroundColor: isStart ? "#5F47FF" : isToday ? "#6388FF" : "#f3f2ed",
+                              backgroundColor: isStart ? "#5F47FF" : isToday ? "#5F47FF" : "#f1f5f9",
                               color: isStart || isToday ? "#ffffff" : "#7a7a86",
                               letterSpacing: "0.02em",
                             }}>
                             {String(idx + 1).padStart(2, "0")}
                           </span>
                           <span className="truncate" style={{
-                            color: isStart ? "#5F47FF" : isToday ? "#6388FF" : "#0f1115",
+                            color: isStart ? "#5F47FF" : isToday ? "#5F47FF" : "#0f1115",
                             fontWeight: isStart || isToday ? 600 : 500,
                             letterSpacing: "-0.005em",
                           }}>
@@ -669,7 +681,7 @@ function DetailDialog({
                           <button
                             onClick={() => { if (!r.paused && !r.leave) setEditDay(editDay === r.date ? null : r.date); }}
                             disabled={r.paused || r.leave}
-                            className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-md px-1.5 py-1 -mx-1.5 hover:bg-[#f3f2ed] transition-colors disabled:hover:bg-transparent"
+                            className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-md px-1.5 py-1 -mx-1.5 hover:bg-[#f1f5f9] transition-colors disabled:hover:bg-transparent"
                           >
                             {r.paused ? (
                               <span className="text-[11px] font-semibold inline-flex items-center px-2 py-1 rounded-md"
@@ -689,20 +701,20 @@ function DetailDialog({
                             ) : r.staff ? (
                               <>
                                 <Avatar s={r.staff} size={22} />
-                                <span className="text-[#0f1115] text-[12.5px] truncate" style={{ fontWeight: 500 }}>{r.staff.name.split(" ")[0]}</span>
+                                <span className="text-[#0f1115] text-[13px] truncate" style={{ fontWeight: 500 }}>{r.staff.name.split(" ")[0]}</span>
                               </>
                             ) : (
                               <span className="text-[11px] font-medium" style={{ color: "#ef4444" }}>Unassigned</span>
                             )}
                             {!r.paused && !r.leave && (
-                              <span className="ml-auto text-[10px] opacity-60" style={{ color: "#7a7a86" }}>▾</span>
+                              <span className="ml-auto text-[11px] opacity-60" style={{ color: "#7a7a86" }}>▾</span>
                             )}
                           </button>
                           {r.paused ? (
                             <button
                               onClick={() => onTogglePauseDay(customer.id, r.date)}
                               title="Resume this day"
-                              className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
+                              className="text-[11px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
                               style={{ color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)" }}
                             >
                               Resume
@@ -711,7 +723,7 @@ function DetailDialog({
                             <button
                               onClick={() => onToggleLeaveDay(customer.id, r.date)}
                               title="Cancel leave for this day"
-                              className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
+                              className="text-[11px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
                               style={{ color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)" }}
                             >
                               Resume
@@ -721,15 +733,15 @@ function DetailDialog({
                               <button
                                 onClick={() => { setReasonText(""); setPendingChange({ date: r.date, action: "pause" }); }}
                                 title="Pause this day (extends rota)"
-                                className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
-                                style={{ color: "#7a7a86", backgroundColor: "#f3f2ed" }}
+                                className="text-[11px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
+                                style={{ color: "#7a7a86", backgroundColor: "#f1f5f9" }}
                               >
                                 Pause
                               </button>
                               <button
                                 onClick={() => { setReasonText(""); setPendingChange({ date: r.date, action: "leave" }); }}
                                 title="Mark caregiver leave for this day (extends rota)"
-                                className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
+                                className="text-[11px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
                                 style={{ color: "#a855f7", backgroundColor: "rgba(168,85,247,0.10)" }}
                               >
                                 Leave
@@ -738,7 +750,7 @@ function DetailDialog({
                           )}
                           {!r.paused && !r.leave && editDay === r.date && (
                             <div className="absolute right-0 top-full mt-1.5 z-10 w-[200px] max-h-[220px] overflow-y-auto rounded-[10px] p-1.5"
-                              style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 16px 36px -12px rgba(15,17,21,0.18)" }}>
+                              style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 16px 36px -12px rgba(15,17,21,0.18)" }}>
                               {(r.weeklyOff ? available : rotaPickList).map((s) => (
                                 <button key={s.id}
                                   onClick={() => {
@@ -747,16 +759,16 @@ function DetailDialog({
                                     setReasonText("");
                                     setPendingChange({ date: r.date, action: "change", staffId: s.id });
                                   }}
-                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[#f6f5f1] text-left transition-colors">
+                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[#f8fafc] text-left transition-colors">
                                   <Avatar s={s} size={20} />
-                                  <span className="text-[#0f1115] text-[12.5px] truncate" style={{ fontWeight: 500 }}>{s.name}</span>
+                                  <span className="text-[#0f1115] text-[13px] truncate" style={{ fontWeight: 500 }}>{s.name}</span>
                                 </button>
                               ))}
                             </div>
                           )}
                         </div>
                         {customer.rotaReasons?.[r.date] ? (
-                          <span className="text-[11.5px] truncate inline-flex items-center px-2 py-1 rounded-md w-fit"
+                          <span className="text-[12px] truncate inline-flex items-center px-2 py-1 rounded-md w-fit"
                             style={{ color: "#5F47FF", backgroundColor: "rgba(95,71,255,0.08)", fontWeight: 500 }}
                             title={customer.rotaReasons?.[r.date]}>
                             {customer.rotaReasons?.[r.date]}
@@ -771,6 +783,16 @@ function DetailDialog({
           )}
         </div>
 
+        <div className="mt-6 pt-4 flex items-center justify-start" style={{ borderTop: "1px solid #f1f5f9" }}>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="text-[12px] font-medium rounded-lg px-3 py-1.5 transition-colors hover:bg-red-50"
+            style={{ color: "#ef4444" }}
+          >
+            Delete client
+          </button>
+        </div>
+
         {pendingChange && (
           <div
             className="fixed inset-0 z-40 flex items-center justify-center p-4"
@@ -780,7 +802,7 @@ function DetailDialog({
             <div
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-[420px] rounded-[14px] p-5"
-              style={{ backgroundColor: "#ffffff", border: "1px solid #e7e5dd", boxShadow: "0 20px 40px rgba(15,17,21,0.18)" }}
+              style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 20px 40px rgba(15,17,21,0.18)" }}
             >
               <h4 className="text-[#0f1115] text-[15px] font-semibold mb-1">Reason</h4>
               <p className="text-[11px] mb-3" style={{ color: "#7a7a86" }}>
@@ -805,13 +827,13 @@ function DetailDialog({
                 }
                 rows={3}
                 className="w-full text-[13px] rounded-md px-3 py-2 outline-none resize-none"
-                style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e7e5dd" }}
+                style={{ backgroundColor: "#ffffff", color: "#0f1115", border: "1px solid #e2e8f0" }}
               />
               <div className="flex items-center justify-end gap-2 mt-3">
                 <button
                   onClick={() => setPendingChange(null)}
                   className="text-[12px] rounded-md px-3 py-1.5"
-                  style={{ backgroundColor: "transparent", color: "#7a7a86", border: "1px solid #e7e5dd" }}
+                  style={{ backgroundColor: "transparent", color: "#7a7a86", border: "1px solid #e2e8f0" }}
                 >
                   Cancel
                 </button>
@@ -829,7 +851,7 @@ function DetailDialog({
                     setReasonText("");
                   }}
                   className="text-[12px] font-semibold rounded-md px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: "#6388FF", color: "#ffffff" }}
+                  style={{ backgroundColor: "#5F47FF", color: "#ffffff" }}
                 >
                   {pendingChange.action === "pause" ? "Pause day" : pendingChange.action === "leave" ? "Mark leave" : "Save Change"}
                 </button>
@@ -847,7 +869,7 @@ function DetailDialog({
             <div
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-[420px] rounded-[14px] p-5"
-              style={{ backgroundColor: "#ffffff", border: "1px solid #e7e5dd", boxShadow: "0 20px 40px rgba(15,17,21,0.18)" }}
+              style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 20px 40px rgba(15,17,21,0.18)" }}
             >
               <h4 className="text-[#0f1115] text-[15px] font-semibold mb-1">Delete this client?</h4>
               <p className="text-[12px] mb-4" style={{ color: "#7a7a86" }}>
@@ -857,7 +879,7 @@ function DetailDialog({
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="text-[12px] rounded-md px-3 py-1.5"
-                  style={{ backgroundColor: "transparent", color: "#7a7a86", border: "1px solid #e7e5dd" }}
+                  style={{ backgroundColor: "transparent", color: "#7a7a86", border: "1px solid #e2e8f0" }}
                 >
                   Cancel
                 </button>
@@ -931,8 +953,8 @@ function StaffView({
       <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
         {/* Add staff card */}
         <div className="rounded-[14px] p-5 h-fit"
-          style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-3" style={{ color: "#7a7a86" }}>Add Staff</div>
+          style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-3" style={{ color: "#7a7a86" }}>Add Staff</div>
           <label className="block text-[11px] mb-1" style={{ color: "#7a7a86" }}>Full name</label>
           <input
             value={newStaffName}
@@ -940,14 +962,14 @@ function StaffView({
             onKeyDown={(e) => { if (e.key === "Enter") onAdd(); }}
             placeholder="e.g. Anjali Krishnan"
             className="w-full text-[13px] rounded-md px-3 py-2 outline-none mb-3"
-            style={{ backgroundColor: "#faf9f5", border: "1px solid #ece9e0", color: "#0f1115" }}
+            style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", color: "#0f1115" }}
           />
           <label className="block text-[11px] mb-1" style={{ color: "#7a7a86" }}>Role</label>
           <select
             value={newStaffRole}
             onChange={(e) => setNewStaffRole(e.target.value as Role)}
             className="w-full text-[13px] rounded-md px-3 py-2 outline-none mb-4 cursor-pointer"
-            style={{ backgroundColor: "#faf9f5", border: "1px solid #ece9e0", color: "#0f1115" }}
+            style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", color: "#0f1115" }}
           >
             <option value="MOBA">MOBA</option>
             <option value="Nurse">Nurse</option>
@@ -955,7 +977,7 @@ function StaffView({
           <button
             onClick={onAdd}
             disabled={!newStaffName.trim()}
-            className="w-full text-[12.5px] font-semibold rounded-md py-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-[13px] font-semibold rounded-md py-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: "#5F47FF", color: "#ffffff" }}
           >
             + Add to Roster
@@ -964,9 +986,9 @@ function StaffView({
 
         {/* Roster list */}
         <div className="rounded-[14px] overflow-hidden"
-          style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div className="grid grid-cols-[1.4fr_0.6fr_1.6fr_60px] text-[10px] uppercase tracking-[0.14em] px-4 py-3"
-            style={{ backgroundColor: "#faf9f5", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #ece9e0" }}>
+          style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+          <div className="grid grid-cols-[1.4fr_0.6fr_1.6fr_60px] text-[11px] uppercase tracking-[0.14em] px-4 py-3"
+            style={{ backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
             <span>Caregiver</span><span>Role</span><span>Active assignments</span><span></span>
           </div>
           <div>
@@ -974,25 +996,25 @@ function StaffView({
               const assigned = assignmentsByStaff.get(s.id) ?? [];
               return (
                 <div key={s.id}
-                  className="grid grid-cols-[1.4fr_0.6fr_1.6fr_60px] items-start gap-2 px-4 py-3 text-[13px] hover:bg-[#faf9f5] transition-colors"
-                  style={{ borderTop: idx === 0 ? "none" : "1px solid #f1efe7" }}>
+                  className="grid grid-cols-[1.4fr_0.6fr_1.6fr_60px] items-start gap-2 px-4 py-3 text-[13px] hover:bg-[#f8fafc] transition-colors"
+                  style={{ borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                   <div className="flex items-center gap-3 min-w-0 pt-0.5">
                     <Avatar s={s} size={32} />
                     <div className="min-w-0">
                       <div className="text-[#0f1115] truncate" style={{ fontWeight: 500 }}>{s.name}</div>
-                      <div className="text-[10.5px]" style={{ color: "#9a9aa6" }}>
+                      <div className="text-[11px]" style={{ color: "#9a9aa6" }}>
                         {assigned.length === 0 ? "Available" : `${assigned.length} client${assigned.length > 1 ? "s" : ""}`}
                       </div>
                     </div>
                   </div>
-                  <span className="text-[10.5px] uppercase tracking-[0.1em] inline-flex items-center px-2 py-1 rounded-md w-fit mt-1"
-                    style={{ backgroundColor: "#f3f2ed", color: "#5F47FF", fontWeight: 600 }}>{s.role}</span>
+                  <span className="text-[11px] uppercase tracking-[0.1em] inline-flex items-center px-2 py-1 rounded-md w-fit mt-1"
+                    style={{ backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600 }}>{s.role}</span>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 pt-1">
                     {assigned.length === 0 ? (
                       <span className="text-[12px]" style={{ color: "#c9c6bc" }}>—</span>
                     ) : (
                       assigned.map((c) => (
-                        <span key={c.id} className="text-[#0f1115] text-[12.5px] truncate" style={{ fontWeight: 500 }}>
+                        <span key={c.id} className="text-[#0f1115] text-[13px] truncate" style={{ fontWeight: 500 }}>
                           {displayName(c.name)}
                         </span>
                       ))
@@ -1210,7 +1232,7 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
-            <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#6388FF" }}>Insights</span>
+            <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#5F47FF" }}>Insights</span>
           </div>
           <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Utilisation Report</h1>
           <p className="text-[12px] mt-2" style={{ color: "#7a7a86" }}>Planned vs completed service days across all caregivers (Sundays are weekly off)</p>
@@ -1230,7 +1252,7 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as "All" | Role)}
             className="text-[12px] rounded-md px-3 py-2 cursor-pointer"
-            style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", color: "#0f1115", fontWeight: 500 }}
+            style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", color: "#0f1115", fontWeight: 500 }}
           >
             <option value="All">All staff</option>
             <option value="Nurse">Nurses</option>
@@ -1243,7 +1265,7 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
             value={fyFilter}
             onChange={(e) => setFyFilter(e.target.value)}
             className="text-[12px] rounded-md px-3 py-2 cursor-pointer"
-            style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", color: "#0f1115", fontWeight: 500 }}
+            style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", color: "#0f1115", fontWeight: 500 }}
           >
             <option value="All">All FY</option>
             {fyList.map((fy) => (
@@ -1258,7 +1280,7 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
             onChange={(e) => setMonthFilter(e.target.value)}
             disabled={fyFilter === "All"}
             className="text-[12px] rounded-md px-3 py-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", color: "#0f1115", fontWeight: 500 }}
+            style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", color: "#0f1115", fontWeight: 500 }}
             title={fyFilter === "All" ? "Select a financial year first" : ""}
           >
             <option value="All">All months</option>
@@ -1273,7 +1295,7 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
             value={selectedStaffId}
             onChange={(e) => setSelectedStaffId(e.target.value)}
             className="text-[12px] rounded-md px-3 py-2 cursor-pointer min-w-[220px]"
-            style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", color: "#0f1115", fontWeight: 500 }}
+            style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", color: "#0f1115", fontWeight: 500 }}
           >
             <option value="">Select a caregiver…</option>
             {roster
@@ -1286,7 +1308,7 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
             <button
               onClick={() => setSelectedStaffId("")}
               className="text-[11px] px-2 py-1 rounded-md cursor-pointer"
-              style={{ color: "#7a7a86", border: "1px solid #ece9e0", backgroundColor: "#ffffff" }}
+              style={{ color: "#7a7a86", border: "1px solid #e2e8f0", backgroundColor: "#ffffff" }}
             >Clear</button>
           )}
         </div>
@@ -1294,23 +1316,23 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
 
       {selectedStaff && (
         <div className="rounded-[14px] overflow-hidden mb-6"
-          style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid #ece9e0", backgroundColor: "#faf9f5" }}>
+          style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+          <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}>
             <Avatar s={selectedStaff} size={32} />
             <div>
               <div className="text-[14px] text-[#0f1115]" style={{ fontWeight: 600 }}>{selectedStaff.name}</div>
               <div className="text-[11px]" style={{ color: "#7a7a86" }}>Monthly utilisation · {selectedStaff.role}</div>
             </div>
           </div>
-          <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_0.6fr_0.8fr_0.8fr] text-[10px] uppercase tracking-[0.14em] px-4 py-3"
-            style={{ backgroundColor: "#faf9f5", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #ece9e0" }}>
+          <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_0.6fr_0.8fr_0.8fr] text-[11px] uppercase tracking-[0.14em] px-4 py-3"
+            style={{ backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
             <span>Month</span><span>Planned</span><span>Completed</span><span>Leave</span><span>Utilisation %</span><span>Leave Rate %</span>
           </div>
           <div>
             {monthlyRows.map((m, i) => (
               <div key={m.ym}
                 className="grid grid-cols-[1.4fr_0.7fr_0.7fr_0.6fr_0.8fr_0.8fr] items-center gap-2 px-4 py-3 text-[13px]"
-                style={{ borderTop: i === 0 ? "none" : "1px solid #f1efe7" }}>
+                style={{ borderTop: i === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <span className="text-[#0f1115]" style={{ fontWeight: 500 }}>{m.label}</span>
                 <span className="tabular-nums text-[#0f1115]" style={{ fontWeight: 600 }}>{m.planned}</span>
                 <span className="tabular-nums" style={{ color: m.completed > 0 ? "#16a34a" : "#c9c6bc", fontWeight: 600 }}>{m.completed || "—"}</span>
@@ -1327,31 +1349,31 @@ function UtilisationView({ roster, customers }: { roster: Staff[]; customers: Cu
       )}
 
       <div className="rounded-[14px] overflow-hidden"
-        style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-        <div className="grid grid-cols-[1.6fr_0.6fr_0.7fr_0.8fr_0.6fr_0.8fr_0.8fr_0.8fr] text-[10px] uppercase tracking-[0.14em] px-4 py-3"
-          style={{ backgroundColor: "#faf9f5", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #ece9e0" }}>
+        style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+        <div className="grid grid-cols-[1.6fr_0.6fr_0.7fr_0.8fr_0.6fr_0.8fr_0.8fr_0.8fr] text-[11px] uppercase tracking-[0.14em] px-4 py-3"
+          style={{ backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
           <span>Caregiver</span><span>Role</span><span>Planned</span><span>Completed</span><span>Leave</span><span>Utilisation %</span><span>Leave Rate %</span><span>Status</span>
         </div>
         <div>
           {filteredRows.map((r, idx) => {
             const statusColor = r.status === "Healthy" ? "#16a34a" : r.status === "Watch" ? "#f59e0b" : r.status === "At Risk" ? "#ef4444" : "#7a7a86";
-            const statusBg = r.status === "Healthy" ? "rgba(34,197,94,0.10)" : r.status === "Watch" ? "rgba(245,158,11,0.10)" : r.status === "At Risk" ? "rgba(239,68,68,0.10)" : "#f3f2ed";
+            const statusBg = r.status === "Healthy" ? "rgba(34,197,94,0.10)" : r.status === "Watch" ? "rgba(245,158,11,0.10)" : r.status === "At Risk" ? "rgba(239,68,68,0.10)" : "#f1f5f9";
             return (
               <div key={r.staff.id}
-                className="grid grid-cols-[1.6fr_0.6fr_0.7fr_0.8fr_0.6fr_0.8fr_0.8fr_0.8fr] items-center gap-2 px-4 py-3 text-[13px] hover:bg-[#faf9f5] transition-colors"
-                style={{ borderTop: idx === 0 ? "none" : "1px solid #f1efe7" }}>
+                className="grid grid-cols-[1.6fr_0.6fr_0.7fr_0.8fr_0.6fr_0.8fr_0.8fr_0.8fr] items-center gap-2 px-4 py-3 text-[13px] hover:bg-[#f8fafc] transition-colors"
+                style={{ borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar s={r.staff} size={32} />
                   <div className="text-[#0f1115] truncate" style={{ fontWeight: 500 }}>{r.staff.name}</div>
                 </div>
-                <span className="text-[10.5px] uppercase tracking-[0.1em] inline-flex items-center px-2 py-1 rounded-md w-fit"
-                  style={{ backgroundColor: "#f3f2ed", color: "#5F47FF", fontWeight: 600 }}>{r.staff.role}</span>
+                <span className="text-[11px] uppercase tracking-[0.1em] inline-flex items-center px-2 py-1 rounded-md w-fit"
+                  style={{ backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600 }}>{r.staff.role}</span>
                 <span className="text-[#0f1115] tabular-nums" style={{ fontWeight: 600 }}>{r.planned || "—"}</span>
                 <span className="tabular-nums" style={{ color: r.completed > 0 ? "#16a34a" : "#c9c6bc", fontWeight: 600 }}>{r.completed || "—"}</span>
                 <span className="tabular-nums" style={{ color: r.leaveDays > 0 ? "#a855f7" : "#c9c6bc", fontWeight: 600 }}>{r.leaveDays || "—"}</span>
                 <span className="tabular-nums text-[#0f1115]" style={{ fontWeight: 600 }}>{r.planned > 0 ? `${r.utilisation}%` : "—"}</span>
                 <span className="tabular-nums" style={{ color: r.leaveRate > 0 ? "#0f1115" : "#c9c6bc", fontWeight: 600 }}>{r.planned > 0 ? `${r.leaveRate}%` : "—"}</span>
-                <span className="text-[10.5px] uppercase tracking-[0.1em] inline-flex items-center px-2 py-1 rounded-md w-fit"
+                <span className="text-[11px] uppercase tracking-[0.1em] inline-flex items-center px-2 py-1 rounded-md w-fit"
                   style={{ backgroundColor: statusBg, color: statusColor, fontWeight: 600 }}>{r.status}</span>
               </div>
             );
@@ -1457,7 +1479,7 @@ function TravelExpensesView({
   const totalKm = entries.reduce((s, e) => s + e.distance, 0);
 
   const inputBase: React.CSSProperties = {
-    backgroundColor: "#ffffff", border: "1px solid #ece9e0", borderRadius: 8,
+    backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8,
     padding: "10px 12px", fontSize: 13, color: "#0f1115", width: "100%", outline: "none",
   };
   const labelCls = "text-[11px] font-semibold tracking-[0.08em] uppercase";
@@ -1469,7 +1491,7 @@ function TravelExpensesView({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#f59e0b", boxShadow: "0 0 8px #f59e0b" }} />
-            <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#6388FF" }}>Finance</span>
+            <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#5F47FF" }}>Finance</span>
           </div>
           <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Travel Expenses</h1>
           <p className="text-[12px] mt-2" style={{ color: "#7a7a86" }}>Log caregiver trips and track travel reimbursements</p>
@@ -1483,7 +1505,7 @@ function TravelExpensesView({
 
       <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6">
         <form onSubmit={submit} className="rounded-[14px] p-5 space-y-4 h-fit"
-          style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+          style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)" }}>
           <div className="flex items-center justify-between">
             <h3 className="text-[15px] font-semibold text-[#0f1115]">Log new expense</h3>
           </div>
@@ -1511,9 +1533,9 @@ function TravelExpensesView({
                   <button key={t} type="button" onClick={() => setTripType(t)}
                     className="px-3 py-1.5 rounded-full text-[12px] transition-colors"
                     style={{
-                      backgroundColor: active ? "#6388FF" : "transparent",
+                      backgroundColor: active ? "#5F47FF" : "transparent",
                       color: active ? "#ffffff" : "#0f1115",
-                      border: active ? "1px solid #6388FF" : "1px solid #2a2a3e",
+                      border: active ? "1px solid #5F47FF" : "1px solid #2a2a3e",
                       fontWeight: active ? 600 : 500,
                     }}>{t}</button>
                 );
@@ -1552,7 +1574,7 @@ function TravelExpensesView({
               <div className="text-[11px] flex items-center gap-2" style={{ color: "#7a7a86" }}>
                 <span>Suggested: ₹{suggested}{MODE_RATE[mode].flat !== undefined ? " (flat)" : ` based on ${distanceNum}km`}</span>
                 <button type="button" onClick={() => setAmount(String(suggested))}
-                  className="text-[11px] underline" style={{ color: "#6388FF" }}>Use</button>
+                  className="text-[11px] underline" style={{ color: "#5F47FF" }}>Use</button>
               </div>
             )}
           </div>
@@ -1568,7 +1590,7 @@ function TravelExpensesView({
               </button>
               <span className="text-[12px]" style={{ color: "#0f1115" }}>{receipt ? "Yes" : "No"}</span>
               {receipt && (
-                <span className="text-[10px] px-2 py-0.5 rounded font-semibold"
+                <span className="text-[11px] px-2 py-0.5 rounded font-semibold"
                   style={{ backgroundColor: "rgba(34,197,94,0.12)", color: "#15803d" }}>Receipt ✓</span>
               )}
             </div>
@@ -1582,15 +1604,15 @@ function TravelExpensesView({
 
           <button type="submit"
             className="w-full font-semibold text-[14px] transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#6388FF", color: "#ffffff", borderRadius: 8, height: 44 }}>
+            style={{ backgroundColor: "#5F47FF", color: "#ffffff", borderRadius: 8, height: 44 }}>
             Log Expense
           </button>
         </form>
 
         <div className="rounded-[14px] overflow-hidden h-fit"
-          style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div className="grid grid-cols-[1.3fr_0.8fr_1fr_1.2fr_0.6fr_0.9fr_0.4fr] text-[10px] uppercase tracking-[0.14em] px-4 py-3"
-            style={{ backgroundColor: "#faf9f5", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #ece9e0" }}>
+          style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+          <div className="grid grid-cols-[1.3fr_0.8fr_1fr_1.2fr_0.6fr_0.9fr_0.4fr] text-[11px] uppercase tracking-[0.14em] px-4 py-3"
+            style={{ backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
             <span>Caregiver</span><span>Date</span><span>Trip</span><span>Route</span><span>Km</span><span>Amount</span><span>Rcpt</span>
           </div>
           <div>
@@ -1601,23 +1623,23 @@ function TravelExpensesView({
               const staff = roster.find((s) => s.id === e.staffId);
               return (
                 <div key={e.id}
-                  className="grid grid-cols-[1.3fr_0.8fr_1fr_1.2fr_0.6fr_0.9fr_0.4fr] items-center gap-2 px-4 py-3 text-[13px] hover:bg-[#faf9f5] transition-colors"
-                  style={{ borderTop: idx === 0 ? "none" : "1px solid #f1efe7" }}>
+                  className="grid grid-cols-[1.3fr_0.8fr_1fr_1.2fr_0.6fr_0.9fr_0.4fr] items-center gap-2 px-4 py-3 text-[13px] hover:bg-[#f8fafc] transition-colors"
+                  style={{ borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                   <div className="flex items-center gap-2 min-w-0">
                     {staff && <Avatar s={staff} size={28} />}
                     <div className="min-w-0">
                       <div className="text-[#0f1115] truncate" style={{ fontWeight: 500 }}>{staff?.name ?? "—"}</div>
-                      <div className="text-[10.5px]" style={{ color: "#7a7a86" }}>{staff?.role}</div>
+                      <div className="text-[11px]" style={{ color: "#7a7a86" }}>{staff?.role}</div>
                     </div>
                   </div>
                   <div className="text-[#0f1115] tabular-nums text-[12px]">{formatDateDMY(e.date)}</div>
                   <div>
-                    <span className="text-[10.5px] px-2 py-0.5 rounded"
-                      style={{ backgroundColor: "rgba(99,136,255,0.10)", color: "#6388FF", fontWeight: 600 }}>{e.tripType}</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded"
+                      style={{ backgroundColor: "rgba(99,136,255,0.10)", color: "#5F47FF", fontWeight: 600 }}>{e.tripType}</span>
                   </div>
                   <div className="min-w-0 text-[12px]">
                     <div className="text-[#0f1115] truncate">{e.from} → {e.to}</div>
-                    <div className="text-[10.5px]" style={{ color: "#7a7a86" }}>{e.mode}</div>
+                    <div className="text-[11px]" style={{ color: "#7a7a86" }}>{e.mode}</div>
                   </div>
                   <div className="text-[#0f1115] tabular-nums">{e.distance}</div>
                   <div className="text-[#0f1115] tabular-nums" style={{ fontWeight: 600 }}>₹{e.amount.toLocaleString("en-IN")}</div>
@@ -1697,7 +1719,7 @@ function AttendanceView({ roster, customers }: { roster: Staff[]; customers: Cus
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
-            <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#6388FF" }}>Workforce</span>
+            <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#5F47FF" }}>Workforce</span>
           </div>
           <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Attendance Report</h1>
           <p className="text-[12px] mt-2" style={{ color: "#7a7a86" }}>Present, absent and leave days across all caregivers</p>
@@ -1710,9 +1732,9 @@ function AttendanceView({ roster, customers }: { roster: Staff[]; customers: Cus
       </div>
 
       <div className="rounded-[14px] overflow-hidden"
-        style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-        <div className="grid grid-cols-[1.6fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_1fr] text-[10px] uppercase tracking-[0.14em] px-4 py-3"
-          style={{ backgroundColor: "#faf9f5", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #ece9e0" }}>
+        style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+        <div className="grid grid-cols-[1.6fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_1fr] text-[11px] uppercase tracking-[0.14em] px-4 py-3"
+          style={{ backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
           <span>Caregiver</span><span>Clients</span><span>Scheduled</span><span>Present</span><span>Absent</span><span>Leave</span><span>Attendance</span>
         </div>
         <div>
@@ -1720,8 +1742,8 @@ function AttendanceView({ roster, customers }: { roster: Staff[]; customers: Cus
             const barColor = r.attendance >= 90 ? "#22c55e" : r.attendance >= 75 ? "#f59e0b" : "#ef4444";
             return (
               <div key={r.staff.id}
-                className="grid grid-cols-[1.6fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_1fr] items-center gap-2 px-4 py-3 text-[13px] hover:bg-[#faf9f5] transition-colors"
-                style={{ borderTop: idx === 0 ? "none" : "1px solid #f1efe7" }}>
+                className="grid grid-cols-[1.6fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_1fr] items-center gap-2 px-4 py-3 text-[13px] hover:bg-[#f8fafc] transition-colors"
+                style={{ borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar s={r.staff} size={32} />
                   <div className="min-w-0">
@@ -1735,7 +1757,7 @@ function AttendanceView({ roster, customers }: { roster: Staff[]; customers: Cus
                 <div className="tabular-nums" style={{ color: "#ef4444", fontWeight: 600 }}>{r.absent}</div>
                 <div className="tabular-nums" style={{ color: "#f59e0b", fontWeight: 600 }}>{r.leave}</div>
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#f1efe7" }}>
+                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#f1f5f9" }}>
                     <div className="h-full rounded-full" style={{ width: `${r.attendance}%`, backgroundColor: barColor }} />
                   </div>
                   <span className="text-[12px] tabular-nums" style={{ color: "#0f1115", fontWeight: 600, minWidth: 36, textAlign: "right" }}>{r.attendance}%</span>
@@ -1764,6 +1786,7 @@ function OpsBoardInner() {
   const [zoneFilter, setZoneFilter] = useState<Zone | "All">("All");
   const [areaFilter, setAreaFilter] = useState<string>("All");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Areas available given current zone filter
   const areasForZone = useMemo(() => {
@@ -1977,65 +2000,123 @@ function OpsBoardInner() {
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 md:hidden"
+          style={{ backgroundColor: "rgba(15,17,21,0.4)", backdropFilter: "blur(2px)" }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
       <aside
-        className="shrink-0 sticky top-0 h-screen flex flex-col"
+        className={`shrink-0 h-screen flex flex-col z-40 transition-transform duration-300 ${sidebarOpen ? "fixed inset-y-0 left-0 translate-x-0" : "fixed -translate-x-full md:relative md:translate-x-0 md:sticky md:top-0"}`}
         style={{
           width: 260,
           backgroundColor: "#ffffff",
           borderRight: "1px solid #e2e8f0",
+          boxShadow: sidebarOpen ? "4px 0 24px rgba(15,17,21,0.12)" : undefined,
         }}
       >
-        <div className="px-6 py-8">
+        <div className="px-6 py-7">
           <div className="flex items-center gap-2.5">
             <div
               className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{ backgroundColor: "#4f46e5" }}
+              style={{ background: "linear-gradient(135deg,#5F47FF,#a855f7)" }}
             >
-              <div className="h-4 w-4 rounded-full border-2 border-white" />
+              <div className="h-4 w-4 rounded-full border-2 border-white opacity-90" />
             </div>
             <span className="text-[15px] font-bold tracking-tight" style={{ color: "#1e293b" }}>CRADLEWELL</span>
           </div>
-          <p className="mt-2 text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: "#94a3b8" }}>Operations</p>
+          <p className="mt-2 text-[11px] font-bold tracking-[0.2em] uppercase" style={{ color: "#94a3b8" }}>Operations</p>
         </div>
-        <nav className="px-4 flex flex-col gap-1">
+        <nav className="px-3 flex flex-col gap-0.5">
           {([
-            { id: "customers" as const, label: "Customers", count: customers.length, icon: "◍" },
-            { id: "staff" as const, label: "Staff", count: roster.length, icon: "◐" },
-            { id: "utilisation" as const, label: "Utilisation Report", count: roster.filter((s) => customers.some((c) => c.staff.some((x) => x.id === s.id))).length, icon: "◈" },
-            { id: "travel" as const, label: "Travel Expenses", count: travelEntries.length, icon: "◇" },
-            { id: "attendance" as const, label: "Attendance Report", count: roster.length, icon: "◉" },
+            { id: "customers" as const, label: "Customers", count: customers.length, icon: (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-2.76 2.24-5 5-5s5 2.24 5 5"/><circle cx="12.5" cy="5" r="2"/><path d="M15 14c0-2.21-1.57-4-3.5-4"/></svg>
+            )},
+            { id: "staff" as const, label: "Staff", count: roster.length, icon: (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="5" r="3"/><path d="M2 15c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg>
+            )},
+            { id: "utilisation" as const, label: "Utilisation", count: roster.filter((s) => customers.some((c) => c.staff.some((x) => x.id === s.id))).length, icon: (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 13V9M6 13V5M10 13V7M14 13V3"/></svg>
+            )},
+            { id: "travel" as const, label: "Travel Expenses", count: travelEntries.length, icon: (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2C5.79 2 4 3.79 4 6c0 3.5 4 8 4 8s4-4.5 4-8c0-2.21-1.79-4-4-4z"/><circle cx="8" cy="6" r="1.5"/></svg>
+            )},
+            { id: "attendance" as const, label: "Attendance", count: roster.length, icon: (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M5 1v4M11 1v4M2 7h12"/><path d="M5.5 10.5l2 2 3-3"/></svg>
+            )},
           ]).map((tab) => {
             const active = view === tab.id;
             return (
-              <button
-                key={tab.id}
-                onClick={() => setView(tab.id)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors"
-                style={{
-                  backgroundColor: active ? "rgba(79,70,229,0.08)" : "transparent",
-                  color: active ? "#4338ca" : "#64748b",
-                  fontWeight: active ? 600 : 500,
-                }}
-              >
-                <span className="text-[14px]" style={{ color: active ? "#4338ca" : "#94a3b8" }}>{tab.icon}</span>
-                <span className="text-[13px] flex-1">{tab.label}</span>
-                <span
-                  className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+              <div key={tab.id} className="relative">
+                {active && (
+                  <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "#5F47FF" }} />
+                )}
+                <button
+                  onClick={() => { setView(tab.id); setSidebarOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-colors"
                   style={{
-                    backgroundColor: active ? "#4f46e5" : "transparent",
-                    color: active ? "#ffffff" : "#94a3b8",
+                    backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent",
+                    color: active ? "#5F47FF" : "#64748b",
+                    fontWeight: active ? 600 : 500,
                   }}
                 >
-                  {tab.count}
-                </span>
-              </button>
+                  <span style={{ color: active ? "#5F47FF" : "#94a3b8", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
+                  <span className="text-[13px] flex-1">{tab.label}</span>
+                  <span
+                    className="text-[11px] px-2 py-0.5 rounded-full font-bold"
+                    style={{
+                      backgroundColor: active ? "#5F47FF" : "#f1f5f9",
+                      color: active ? "#ffffff" : "#94a3b8",
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              </div>
             );
           })}
         </nav>
+
+        {/* Sidebar bottom */}
+        <div className="mt-auto px-4 pb-5 pt-4" style={{ borderTop: "1px solid #f1f5f9" }}>
+          <div className="flex items-center gap-3 px-2">
+            <div
+              className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-white text-[12px] font-bold"
+              style={{ background: "linear-gradient(135deg,#5F47FF,#a855f7)" }}
+            >
+              A
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-semibold truncate" style={{ color: "#1e293b" }}>Admin</div>
+              <div className="text-[11px]" style={{ color: "#94a3b8" }}>Cradlewell</div>
+            </div>
+            <button
+              aria-label="Settings"
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: "#94a3b8" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+        </div>
       </aside>
 
       <div className="flex-1 max-w-[1400px] mx-auto px-5 sm:px-8 py-6 min-w-0">
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open navigation"
+          className="mb-4 flex items-center gap-2 md:hidden px-3 py-2 rounded-lg transition-colors"
+          style={{ backgroundColor: "#f1f5f9", color: "#475569" }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+          <span className="text-[13px] font-medium">Menu</span>
+        </button>
+
         {view === "attendance" ? (
           <AttendanceView roster={roster} customers={customers} />
         ) : view === "travel" ? (
@@ -2062,12 +2143,12 @@ function OpsBoardInner() {
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-10 pb-6" style={{ borderBottom: "1px solid #f1f5f9" }}>
               <div>
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: "#10b981" }} />
-                  <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ color: "#1e293b" }}>
-                    Live Operations
-                  </span>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: "#10b981" }} />
+                  <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ color: "#94a3b8" }}>Live Operations</span>
                 </div>
+                <h1 className="text-[#0f1115] text-[36px] sm:text-[44px] font-bold tracking-tight leading-none">Customers</h1>
+                <p className="text-[13px] mt-2" style={{ color: "#64748b" }}>{customers.length} clients · All zones</p>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <StatTile value={stats.activeStations} label="Active clients" />
@@ -2136,8 +2217,14 @@ function OpsBoardInner() {
                 />
               ))}
               {filtered.length === 0 && (
-                <div className="text-center py-20" style={{ color: "#7a7a86" }}>
-                  No clients match this filter.
+                <div className="flex flex-col items-center py-24 gap-4">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#f1f5f9" }}>
+                    <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3"/></svg>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[14px] font-semibold" style={{ color: "#1e293b" }}>No clients found</p>
+                    <p className="text-[12px] mt-1" style={{ color: "#94a3b8" }}>Try adjusting your zone or area filter</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -2150,7 +2237,7 @@ function OpsBoardInner() {
                 <span className="text-[#0f1115] font-medium">Cradlewell Ops</span> ·{" "}
                 <span style={{ color: "#22c55e" }}>● Live</span>
               </span>
-              <span>Tap a card to view assigned staff</span>
+              <span>Click a card to view details</span>
             </div>
           </>
         )}
