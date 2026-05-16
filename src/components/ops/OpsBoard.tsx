@@ -2111,7 +2111,7 @@ function OpsBoardInner() {
           </div>
           <p className="mt-2 text-[11px] font-bold tracking-[0.2em] uppercase" style={{ color: "#94a3b8" }}>Operations</p>
         </div>
-        <nav className="px-3 flex flex-col gap-0.5">
+        <nav className="px-3 flex flex-col gap-1">
           {([
             { id: "customers" as const, label: "Customers", count: customers.length, icon: (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-2.76 2.24-5 5-5s5 2.24 5 5"/><circle cx="12.5" cy="5" r="2"/><path d="M15 14c0-2.21-1.57-4-3.5-4"/></svg>
@@ -2119,44 +2119,42 @@ function OpsBoardInner() {
             { id: "staff" as const, label: "Staff", count: roster.length, icon: (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="5" r="3"/><path d="M2 15c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg>
             )},
-            { id: "utilisation" as const, label: "Utilisation", count: roster.filter((s) => customers.some((c) => c.staff.some((x) => x.id === s.id))).length, icon: (
+            { id: "utilisation" as const, label: "Utilisation Report", count: roster.filter((s) => customers.some((c) => c.staff.some((x) => x.id === s.id))).length, icon: (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 13V9M6 13V5M10 13V7M14 13V3"/></svg>
             )},
             { id: "travel" as const, label: "Travel Expenses", count: travelEntries.length, icon: (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2C5.79 2 4 3.79 4 6c0 3.5 4 8 4 8s4-4.5 4-8c0-2.21-1.79-4-4-4z"/><circle cx="8" cy="6" r="1.5"/></svg>
             )},
-            { id: "attendance" as const, label: "Attendance", count: roster.length, icon: (
+            { id: "attendance" as const, label: "Attendance Report", count: roster.length, icon: (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M5 1v4M11 1v4M2 7h12"/><path d="M5.5 10.5l2 2 3-3"/></svg>
             )},
           ]).map((tab) => {
             const active = view === tab.id;
             return (
-              <div key={tab.id} className="relative">
-                {active && (
-                  <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "#5F47FF" }} />
-                )}
-                <button
-                  onClick={() => { setView(tab.id); setSidebarOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-colors"
+              <button
+                key={tab.id}
+                onClick={() => { setView(tab.id); setSidebarOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors"
+                style={{
+                  backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent",
+                  color: active ? "#5F47FF" : "#64748b",
+                  fontWeight: active ? 600 : 500,
+                }}
+              >
+                <span style={{ color: active ? "#5F47FF" : "#94a3b8", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
+                <span className="text-[13.5px] flex-1">{tab.label}</span>
+                <span
+                  className="text-[11px] px-2.5 py-0.5 rounded-full font-bold shrink-0"
                   style={{
-                    backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent",
-                    color: active ? "#5F47FF" : "#64748b",
-                    fontWeight: active ? 600 : 500,
+                    backgroundColor: active ? "#5F47FF" : "#eef2f7",
+                    color: active ? "#ffffff" : "#94a3b8",
+                    minWidth: 26,
+                    textAlign: "center",
                   }}
                 >
-                  <span style={{ color: active ? "#5F47FF" : "#94a3b8", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
-                  <span className="text-[13px] flex-1">{tab.label}</span>
-                  <span
-                    className="text-[11px] px-2 py-0.5 rounded-full font-bold"
-                    style={{
-                      backgroundColor: active ? "#5F47FF" : "#f1f5f9",
-                      color: active ? "#ffffff" : "#94a3b8",
-                    }}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              </div>
+                  {tab.count}
+                </span>
+              </button>
             );
           })}
         </nav>
