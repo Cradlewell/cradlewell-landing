@@ -236,7 +236,7 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`group relative text-left rounded-2xl flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
+      className={`group relative text-left rounded-[20px] flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
         backgroundColor: "#ffffff",
         border: selected ? "1.5px solid #5F47FF" : "1px solid #e2e8f0",
