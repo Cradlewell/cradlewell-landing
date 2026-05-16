@@ -229,28 +229,30 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`group relative text-left rounded-[14px] p-4 transition flex flex-col justify-between min-h-[120px] ${isWide ? "sm:col-span-2" : ""}`}
+      className={`group relative text-left rounded-[24px] p-6 transition-shadow flex flex-col justify-between min-h-[140px] hover:shadow-md ${isWide ? "sm:col-span-2" : ""}`}
       style={{
         backgroundColor: "#ffffff",
-        border: selected ? "1.5px solid #6388FF" : "1px solid #e7e5dd",
-        boxShadow: selected ? "0 0 0 3px rgba(99,136,255,0.15)" : undefined,
+        border: selected ? "1.5px solid #6366f1" : "1px solid #f1f5f9",
+        boxShadow: selected
+          ? "0 0 0 4px rgba(99,102,241,0.12)"
+          : "0 1px 2px rgba(15,23,42,0.04)",
       }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0">
-          <div className="text-[#0f1115] font-semibold text-[14px] leading-tight truncate">{displayName(c.name)}</div>
-          <div className="text-[11px] mt-0.5" style={{ color: "#7a7a86" }}>{c.area}</div>
+          <div className="text-[#1e293b] font-bold text-[16px] leading-tight truncate">{displayName(c.name)}</div>
+          <div className="text-[11px] mt-1 font-medium" style={{ color: "#94a3b8" }}>{c.area}</div>
         </div>
         <span
-          className="w-2 h-2 rounded-full mt-1 shrink-0"
-          style={{ backgroundColor: dot, boxShadow: `0 0 8px ${dot}` }}
+          className="w-3 h-3 rounded-full mt-1 shrink-0"
+          style={{ backgroundColor: dot, boxShadow: `0 0 0 4px ${dot}1a` }}
         />
       </div>
 
-      <div className="flex items-end justify-between gap-3 mt-4">
+      <div className="flex items-end justify-between gap-3">
         <div className="flex items-center -space-x-2">
           {c.staff.length === 0 ? (
-            <span className="text-[11px]" style={{ color: "#7a7a86" }}>No staff assigned</span>
+            <span className="text-[11px] font-medium" style={{ color: "#94a3b8" }}>No staff assigned</span>
           ) : (
             c.staff.map((s) => <Avatar key={s.id} s={s} ring />)
           )}
@@ -258,11 +260,11 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
 
         <div className="flex items-center gap-2 shrink-0">
           <span
-            className="text-[10px] rounded-md px-2 py-[3px] font-medium"
+            className="text-[10px] rounded-full px-3 py-1.5 font-bold uppercase tracking-[0.12em]"
             style={{
-              backgroundColor: "#f6f5f1",
+              backgroundColor: `${dot}14`,
               color: dot,
-              border: `1px solid ${dot}40`,
+              border: `1px solid ${dot}33`,
             }}
           >
             {cs.label}
@@ -274,13 +276,18 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
 }
 
 function StatTile({ value, label, accent }: { value: number | string; label: string; accent?: string }) {
+  const isAccent = !!accent;
   return (
     <div
-      className="rounded-[12px] px-4 py-3 min-w-[120px]"
-      style={{ backgroundColor: "#ffffff", border: "1px solid #e7e5dd" }}
+      className="rounded-2xl px-6 py-3 min-w-[140px] flex flex-col justify-center"
+      style={{
+        backgroundColor: isAccent ? "#fff1f2" : "#ffffff",
+        border: `1px solid ${isAccent ? "#fecdd3" : "#f1f5f9"}`,
+        boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+      }}
     >
-      <div className="text-[#0f1115] text-[22px] font-bold leading-none" style={accent ? { color: accent } : undefined}>{value}</div>
-      <div className="text-[11px] mt-1" style={{ color: "#7a7a86" }}>{label}</div>
+      <div className="text-[24px] font-bold leading-none" style={{ color: isAccent ? "#e11d48" : "#0f172a" }}>{value}</div>
+      <div className="text-[11px] mt-1.5 font-semibold uppercase tracking-wider" style={{ color: isAccent ? "#fb7185" : "#94a3b8" }}>{label}</div>
     </div>
   );
 }
@@ -288,15 +295,18 @@ function StatTile({ value, label, accent }: { value: number | string; label: str
 function ZoneSection({ zone, customers, now, selectedId, onSelect }: { zone: Zone; customers: Customer[]; now: number | null; selectedId: string | null; onSelect: (id: string) => void }) {
   if (customers.length === 0) return null;
   return (
-    <section className="mb-8">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <h2 className="text-[#0f1115] text-[13px] font-semibold uppercase tracking-[0.12em]">{zone}</h2>
-          <span className="text-[11px]" style={{ color: "#7a7a86" }}>{customers.length} clients</span>
-        </div>
-        <div className="flex-1 ml-4 h-px" style={{ backgroundColor: "#e7e5dd" }} />
+    <section className="mb-12">
+      <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-[12px] font-bold uppercase tracking-[0.2em]" style={{ color: "#94a3b8" }}>{zone}</h2>
+        <div className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
+        <span
+          className="text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider"
+          style={{ backgroundColor: "#f1f5f9", color: "#94a3b8" }}
+        >
+          {customers.length} {customers.length === 1 ? "Client" : "Clients"}
+        </span>
       </div>
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {customers.map((c) => (
           <CustomerCard key={c.id} c={c} now={now} selected={selectedId === c.id} onSelect={() => onSelect(c.id)} />
         ))}
@@ -603,161 +613,161 @@ function DetailDialog({
           )}
 
           {hasRota && (
-          <>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-wide" style={{ color: "#7a7a86" }}>
-                <span style={{ color: "#0f1115", fontWeight: 600 }}>Starts</span> · {fmtLongDate(customer.startDate!).split(",")[0]}
-                <span className="mx-2" style={{ color: "#d6d3ca" }}>•</span>
-                <span style={{ color: "#0f1115", fontWeight: 600 }}>{customer.shiftTime}</span>
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-[11px] tracking-wide" style={{ color: "#7a7a86" }}>
+                  <span style={{ color: "#0f1115", fontWeight: 600 }}>Starts</span> · {fmtLongDate(customer.startDate!).split(",")[0]}
+                  <span className="mx-2" style={{ color: "#d6d3ca" }}>•</span>
+                  <span style={{ color: "#0f1115", fontWeight: 600 }}>{customer.shiftTime}</span>
+                </div>
+                <span className="text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: "#f3f2ed", color: "#5F47FF", fontWeight: 600, letterSpacing: "0.14em" }}>
+                  {rota.length} days
+                </span>
               </div>
-              <span className="text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: "#f3f2ed", color: "#5F47FF", fontWeight: 600, letterSpacing: "0.14em" }}>
-                {rota.length} days
-              </span>
-            </div>
-            <div className="rounded-[14px] overflow-hidden"
-              style={{ border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-              <div className="grid grid-cols-[1.5fr_0.9fr_1.1fr_1.2fr] text-[10px] uppercase tracking-[0.14em] px-4 py-3"
-                style={{ backgroundColor: "#faf9f5", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #ece9e0" }}>
-                <span>Date</span><span>Time</span><span>Caregiver</span><span>Reason</span>
-              </div>
-              <div className="max-h-[360px] overflow-y-auto">
-                {rota.map((r, idx) => {
-                  const isStart = r.date === customer.startDate;
-                  const isToday = r.date === today;
-                  return (
-                    <div key={r.date}
-                      className="grid grid-cols-[1.5fr_0.9fr_1.1fr_1.2fr] items-center gap-2 px-4 py-3 text-[12.5px] transition-colors hover:bg-[#faf9f5]"
-                      style={{
-                        borderTop: idx === 0 ? "none" : "1px solid #f1efe7",
-                        backgroundColor: isStart
-                          ? "rgba(95,71,255,0.06)"
-                          : isToday
-                          ? "rgba(99,136,255,0.05)"
-                          : "#ffffff",
-                      }}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="inline-flex items-center justify-center text-[10px] font-semibold rounded-md shrink-0"
-                          style={{
-                            width: 26, height: 22,
-                            backgroundColor: isStart ? "#5F47FF" : isToday ? "#6388FF" : "#f3f2ed",
-                            color: isStart || isToday ? "#ffffff" : "#7a7a86",
-                            letterSpacing: "0.02em",
-                          }}>
-                          {String(idx + 1).padStart(2, "0")}
-                        </span>
-                        <span className="truncate" style={{
-                          color: isStart ? "#5F47FF" : isToday ? "#6388FF" : "#0f1115",
-                          fontWeight: isStart || isToday ? 600 : 500,
-                          letterSpacing: "-0.005em",
+              <div className="rounded-[14px] overflow-hidden"
+                style={{ border: "1px solid #ece9e0", boxShadow: "0 1px 0 rgba(15,17,21,0.02), 0 12px 32px -20px rgba(15,17,21,0.18)" }}>
+                <div className="grid grid-cols-[1.5fr_0.9fr_1.1fr_1.2fr] text-[10px] uppercase tracking-[0.14em] px-4 py-3"
+                  style={{ backgroundColor: "#faf9f5", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #ece9e0" }}>
+                  <span>Date</span><span>Time</span><span>Caregiver</span><span>Reason</span>
+                </div>
+                <div className="max-h-[360px] overflow-y-auto">
+                  {rota.map((r, idx) => {
+                    const isStart = r.date === customer.startDate;
+                    const isToday = r.date === today;
+                    return (
+                      <div key={r.date}
+                        className="grid grid-cols-[1.5fr_0.9fr_1.1fr_1.2fr] items-center gap-2 px-4 py-3 text-[12.5px] transition-colors hover:bg-[#faf9f5]"
+                        style={{
+                          borderTop: idx === 0 ? "none" : "1px solid #f1efe7",
+                          backgroundColor: isStart
+                            ? "rgba(95,71,255,0.06)"
+                            : isToday
+                              ? "rgba(99,136,255,0.05)"
+                              : "#ffffff",
                         }}>
-                          {fmtLongDate(r.date)}
-                        </span>
-                      </div>
-                      <span style={{ color: "#7a7a86", fontVariantNumeric: "tabular-nums" }}>{r.time}</span>
-                       <div className="relative flex items-center gap-1.5" ref={editDay === r.date ? editDayRef : undefined}>
-                        <button
-                          onClick={() => { if (!r.paused && !r.leave) setEditDay(editDay === r.date ? null : r.date); }}
-                          disabled={r.paused || r.leave}
-                          className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-md px-1.5 py-1 -mx-1.5 hover:bg-[#f3f2ed] transition-colors disabled:hover:bg-transparent"
-                        >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="inline-flex items-center justify-center text-[10px] font-semibold rounded-md shrink-0"
+                            style={{
+                              width: 26, height: 22,
+                              backgroundColor: isStart ? "#5F47FF" : isToday ? "#6388FF" : "#f3f2ed",
+                              color: isStart || isToday ? "#ffffff" : "#7a7a86",
+                              letterSpacing: "0.02em",
+                            }}>
+                            {String(idx + 1).padStart(2, "0")}
+                          </span>
+                          <span className="truncate" style={{
+                            color: isStart ? "#5F47FF" : isToday ? "#6388FF" : "#0f1115",
+                            fontWeight: isStart || isToday ? 600 : 500,
+                            letterSpacing: "-0.005em",
+                          }}>
+                            {fmtLongDate(r.date)}
+                          </span>
+                        </div>
+                        <span style={{ color: "#7a7a86", fontVariantNumeric: "tabular-nums" }}>{r.time}</span>
+                        <div className="relative flex items-center gap-1.5" ref={editDay === r.date ? editDayRef : undefined}>
+                          <button
+                            onClick={() => { if (!r.paused && !r.leave) setEditDay(editDay === r.date ? null : r.date); }}
+                            disabled={r.paused || r.leave}
+                            className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-md px-1.5 py-1 -mx-1.5 hover:bg-[#f3f2ed] transition-colors disabled:hover:bg-transparent"
+                          >
+                            {r.paused ? (
+                              <span className="text-[11px] font-semibold inline-flex items-center px-2 py-1 rounded-md"
+                                style={{ color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.10)", letterSpacing: "0.04em" }}>
+                                PAUSED
+                              </span>
+                            ) : r.leave ? (
+                              <span className="text-[11px] font-semibold inline-flex items-center px-2 py-1 rounded-md"
+                                style={{ color: "#a855f7", backgroundColor: "rgba(168,85,247,0.10)", letterSpacing: "0.04em" }}>
+                                LEAVE
+                              </span>
+                            ) : r.weeklyOff ? (
+                              <span className="text-[11px] font-semibold inline-flex items-center px-2 py-1 rounded-md"
+                                style={{ color: "#0ea5e9", backgroundColor: "rgba(14,165,233,0.10)", letterSpacing: "0.04em" }}>
+                                WEEKLY OFF
+                              </span>
+                            ) : r.staff ? (
+                              <>
+                                <Avatar s={r.staff} size={22} />
+                                <span className="text-[#0f1115] text-[12.5px] truncate" style={{ fontWeight: 500 }}>{r.staff.name.split(" ")[0]}</span>
+                              </>
+                            ) : (
+                              <span className="text-[11px] font-medium" style={{ color: "#ef4444" }}>Unassigned</span>
+                            )}
+                            {!r.paused && !r.leave && (
+                              <span className="ml-auto text-[10px] opacity-60" style={{ color: "#7a7a86" }}>▾</span>
+                            )}
+                          </button>
                           {r.paused ? (
-                            <span className="text-[11px] font-semibold inline-flex items-center px-2 py-1 rounded-md"
-                              style={{ color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.10)", letterSpacing: "0.04em" }}>
-                              PAUSED
-                            </span>
+                            <button
+                              onClick={() => onTogglePauseDay(customer.id, r.date)}
+                              title="Resume this day"
+                              className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
+                              style={{ color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)" }}
+                            >
+                              Resume
+                            </button>
                           ) : r.leave ? (
-                            <span className="text-[11px] font-semibold inline-flex items-center px-2 py-1 rounded-md"
-                              style={{ color: "#a855f7", backgroundColor: "rgba(168,85,247,0.10)", letterSpacing: "0.04em" }}>
-                              LEAVE
-                            </span>
-                          ) : r.weeklyOff ? (
-                            <span className="text-[11px] font-semibold inline-flex items-center px-2 py-1 rounded-md"
-                              style={{ color: "#0ea5e9", backgroundColor: "rgba(14,165,233,0.10)", letterSpacing: "0.04em" }}>
-                              WEEKLY OFF
-                            </span>
-                          ) : r.staff ? (
+                            <button
+                              onClick={() => onToggleLeaveDay(customer.id, r.date)}
+                              title="Cancel leave for this day"
+                              className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
+                              style={{ color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)" }}
+                            >
+                              Resume
+                            </button>
+                          ) : r.weeklyOff ? null : (
                             <>
-                              <Avatar s={r.staff} size={22} />
-                              <span className="text-[#0f1115] text-[12.5px] truncate" style={{ fontWeight: 500 }}>{r.staff.name.split(" ")[0]}</span>
-                            </>
-                          ) : (
-                            <span className="text-[11px] font-medium" style={{ color: "#ef4444" }}>Unassigned</span>
-                          )}
-                          {!r.paused && !r.leave && (
-                            <span className="ml-auto text-[10px] opacity-60" style={{ color: "#7a7a86" }}>▾</span>
-                          )}
-                        </button>
-                        {r.paused ? (
-                          <button
-                            onClick={() => onTogglePauseDay(customer.id, r.date)}
-                            title="Resume this day"
-                            className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
-                            style={{ color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)" }}
-                          >
-                            Resume
-                          </button>
-                        ) : r.leave ? (
-                          <button
-                            onClick={() => onToggleLeaveDay(customer.id, r.date)}
-                            title="Cancel leave for this day"
-                            className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
-                            style={{ color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)" }}
-                          >
-                            Resume
-                          </button>
-                        ) : r.weeklyOff ? null : (
-                          <>
-                            <button
-                              onClick={() => { setReasonText(""); setPendingChange({ date: r.date, action: "pause" }); }}
-                              title="Pause this day (extends rota)"
-                              className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
-                              style={{ color: "#7a7a86", backgroundColor: "#f3f2ed" }}
-                            >
-                              Pause
-                            </button>
-                            <button
-                              onClick={() => { setReasonText(""); setPendingChange({ date: r.date, action: "leave" }); }}
-                              title="Mark caregiver leave for this day (extends rota)"
-                              className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
-                              style={{ color: "#a855f7", backgroundColor: "rgba(168,85,247,0.10)" }}
-                            >
-                              Leave
-                            </button>
-                          </>
-                        )}
-                        {!r.paused && !r.leave && editDay === r.date && (
-                          <div className="absolute right-0 top-full mt-1.5 z-10 w-[200px] max-h-[220px] overflow-y-auto rounded-[10px] p-1.5"
-                            style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 16px 36px -12px rgba(15,17,21,0.18)" }}>
-                            {(r.weeklyOff ? available : rotaPickList).map((s) => (
-                              <button key={s.id}
-                                onClick={() => {
-                                  setEditDay(null);
-                                  if (r.staff && r.staff.id === s.id) return;
-                                  setReasonText("");
-                                  setPendingChange({ date: r.date, action: "change", staffId: s.id });
-                                }}
-                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[#f6f5f1] text-left transition-colors">
-                                <Avatar s={s} size={20} />
-                                <span className="text-[#0f1115] text-[12.5px] truncate" style={{ fontWeight: 500 }}>{s.name}</span>
+                              <button
+                                onClick={() => { setReasonText(""); setPendingChange({ date: r.date, action: "pause" }); }}
+                                title="Pause this day (extends rota)"
+                                className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
+                                style={{ color: "#7a7a86", backgroundColor: "#f3f2ed" }}
+                              >
+                                Pause
                               </button>
-                            ))}
-                          </div>
-                        )}
+                              <button
+                                onClick={() => { setReasonText(""); setPendingChange({ date: r.date, action: "leave" }); }}
+                                title="Mark caregiver leave for this day (extends rota)"
+                                className="text-[10px] font-semibold uppercase tracking-[0.08em] px-2 py-1 rounded-md shrink-0 transition-colors"
+                                style={{ color: "#a855f7", backgroundColor: "rgba(168,85,247,0.10)" }}
+                              >
+                                Leave
+                              </button>
+                            </>
+                          )}
+                          {!r.paused && !r.leave && editDay === r.date && (
+                            <div className="absolute right-0 top-full mt-1.5 z-10 w-[200px] max-h-[220px] overflow-y-auto rounded-[10px] p-1.5"
+                              style={{ backgroundColor: "#ffffff", border: "1px solid #ece9e0", boxShadow: "0 16px 36px -12px rgba(15,17,21,0.18)" }}>
+                              {(r.weeklyOff ? available : rotaPickList).map((s) => (
+                                <button key={s.id}
+                                  onClick={() => {
+                                    setEditDay(null);
+                                    if (r.staff && r.staff.id === s.id) return;
+                                    setReasonText("");
+                                    setPendingChange({ date: r.date, action: "change", staffId: s.id });
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[#f6f5f1] text-left transition-colors">
+                                  <Avatar s={s} size={20} />
+                                  <span className="text-[#0f1115] text-[12.5px] truncate" style={{ fontWeight: 500 }}>{s.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {customer.rotaReasons?.[r.date] ? (
+                          <span className="text-[11.5px] truncate inline-flex items-center px-2 py-1 rounded-md w-fit"
+                            style={{ color: "#5F47FF", backgroundColor: "rgba(95,71,255,0.08)", fontWeight: 500 }}
+                            title={customer.rotaReasons?.[r.date]}>
+                            {customer.rotaReasons?.[r.date]}
+                          </span>
+                        ) : null}
                       </div>
-                      {customer.rotaReasons?.[r.date] ? (
-                        <span className="text-[11.5px] truncate inline-flex items-center px-2 py-1 rounded-md w-fit"
-                          style={{ color: "#5F47FF", backgroundColor: "rgba(95,71,255,0.08)", fontWeight: 500 }}
-                          title={customer.rotaReasons?.[r.date]}>
-                          {customer.rotaReasons?.[r.date]}
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          </>
+            </>
           )}
         </div>
 
@@ -778,8 +788,8 @@ function DetailDialog({
                   pendingChange.action === "pause"
                     ? "please record why this day is being paused."
                     : pendingChange.action === "leave"
-                    ? "please record why the caregiver is on leave."
-                    : "please record why this change is being made."
+                      ? "please record why the caregiver is on leave."
+                      : "please record why this change is being made."
                 }
               </p>
               <textarea
@@ -790,8 +800,8 @@ function DetailDialog({
                   pendingChange.action === "pause"
                     ? "e.g. Client travelling, family event, hospitalisation…"
                     : pendingChange.action === "leave"
-                    ? "e.g. Sick leave, personal emergency, planned leave…"
-                    : "e.g. Original caregiver on leave, client request, emergency cover…"
+                      ? "e.g. Sick leave, personal emergency, planned leave…"
+                      : "e.g. Original caregiver on leave, client request, emergency cover…"
                 }
                 rows={3}
                 className="w-full text-[13px] rounded-md px-3 py-2 outline-none resize-none"
@@ -1802,11 +1812,11 @@ function OpsBoardInner() {
       prev.map((c) =>
         c.id === customerId && !c.staff.some((x) => x.id === staffId)
           ? {
-              ...c,
-              staff: [...c.staff, s],
-              status: "active",
-              badge: /paus|break|unassigned|awaiting/i.test(c.badge) ? "Active" : c.badge,
-            }
+            ...c,
+            staff: [...c.staff, s],
+            status: "active",
+            badge: /paus|break|unassigned|awaiting/i.test(c.badge) ? "Active" : c.badge,
+          }
           : c
       )
     );
@@ -1856,10 +1866,10 @@ function OpsBoardInner() {
       prev.map((c) =>
         c.id === customerId
           ? {
-              ...c,
-              rota: { ...(c.rota ?? {}), [dateISO]: staffId },
-              rotaReasons: { ...(c.rotaReasons ?? {}), [dateISO]: reason },
-            }
+            ...c,
+            rota: { ...(c.rota ?? {}), [dateISO]: staffId },
+            rotaReasons: { ...(c.rotaReasons ?? {}), [dateISO]: reason },
+          }
           : c
       )
     );
@@ -1963,27 +1973,32 @@ function OpsBoardInner() {
     <div
       className="min-h-screen w-full flex"
       style={{
-        backgroundColor: "#faf9f5",
+        backgroundColor: "#f8fafc",
         fontFamily: "Inter, system-ui, sans-serif",
-        backgroundImage:
-          "radial-gradient(1200px 600px at 80% -10%, rgba(95,71,255,0.06), transparent 60%), radial-gradient(900px 500px at -10% 10%, rgba(99,136,255,0.05), transparent 60%)",
       }}
     >
       {/* Sidebar Navigation */}
       <aside
         className="shrink-0 sticky top-0 h-screen flex flex-col"
         style={{
-          width: 220,
+          width: 260,
           backgroundColor: "#ffffff",
-          borderRight: "1px solid #ece9e0",
-          boxShadow: "0 1px 0 rgba(15,17,21,0.02)",
+          borderRight: "1px solid #e2e8f0",
         }}
       >
-        <div className="px-5 py-5" style={{ borderBottom: "1px solid #f1efe7" }}>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "#6388FF" }}>Cradlewell</div>
-          <div className="text-[#0f1115] text-[15px] font-bold mt-0.5">Operations</div>
+        <div className="px-6 py-8">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "#4f46e5" }}
+            >
+              <div className="h-4 w-4 rounded-full border-2 border-white" />
+            </div>
+            <span className="text-[15px] font-bold tracking-tight" style={{ color: "#1e293b" }}>CRADLEWELL</span>
+          </div>
+          <p className="mt-2 text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: "#94a3b8" }}>Operations</p>
         </div>
-        <nav className="p-2 flex flex-col gap-1">
+        <nav className="px-4 flex flex-col gap-1">
           {([
             { id: "customers" as const, label: "Customers", count: customers.length, icon: "◍" },
             { id: "staff" as const, label: "Staff", count: roster.length, icon: "◐" },
@@ -1996,21 +2011,20 @@ function OpsBoardInner() {
               <button
                 key={tab.id}
                 onClick={() => setView(tab.id)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors"
                 style={{
-                  backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent",
-                  color: active ? "#5F47FF" : "#0f1115",
+                  backgroundColor: active ? "rgba(79,70,229,0.08)" : "transparent",
+                  color: active ? "#4338ca" : "#64748b",
                   fontWeight: active ? 600 : 500,
                 }}
               >
-                <span className="text-[14px]" style={{ color: active ? "#5F47FF" : "#7a7a86" }}>{tab.icon}</span>
-                <span className="text-[13.5px] flex-1">{tab.label}</span>
+                <span className="text-[14px]" style={{ color: active ? "#4338ca" : "#94a3b8" }}>{tab.icon}</span>
+                <span className="text-[13px] flex-1">{tab.label}</span>
                 <span
-                  className="text-[10.5px] px-1.5 py-0.5 rounded"
+                  className="text-[10px] px-2 py-0.5 rounded-full font-bold"
                   style={{
-                    backgroundColor: active ? "#5F47FF" : "#f3f2ed",
-                    color: active ? "#ffffff" : "#7a7a86",
-                    fontWeight: 600,
+                    backgroundColor: active ? "#4f46e5" : "transparent",
+                    color: active ? "#ffffff" : "#94a3b8",
                   }}
                 >
                   {tab.count}
@@ -2045,97 +2059,99 @@ function OpsBoardInner() {
           />
         ) : (
           <>
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
-              <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#6388FF" }}>
-                Live Operations
+            {/* Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-10 pb-6" style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: "#10b981" }} />
+                  <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ color: "#1e293b" }}>
+                    Live Operations
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <StatTile value={stats.activeStations} label="Active clients" />
+                <StatTile value={stats.operators} label="Caregivers on duty" />
+                <StatTile value={stats.attention} label="Needs attention" accent={stats.attention > 0 ? "#ef4444" : undefined} />
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-end gap-6 mb-10">
+              <div className="flex flex-col gap-1.5 min-w-[220px]">
+                <label className="text-[11px] font-bold uppercase tracking-[0.16em] px-1" style={{ color: "#94a3b8" }}>
+                  Zone
+                </label>
+                <select
+                  value={zoneFilter}
+                  onChange={(e) => { setZoneFilter(e.target.value as Zone | "All"); setAreaFilter("All"); }}
+                  className="text-[13px] font-medium rounded-xl px-4 py-3 outline-none cursor-pointer focus:ring-2 focus:ring-indigo-100"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    color: "#1e293b",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+                    minWidth: 220,
+                  }}
+                >
+                  {zones.map((z) => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5 min-w-[220px]">
+                <label className="text-[11px] font-bold uppercase tracking-[0.16em] px-1" style={{ color: "#94a3b8" }}>
+                  Area
+                </label>
+                <select
+                  value={areaFilter}
+                  onChange={(e) => setAreaFilter(e.target.value)}
+                  className="text-[13px] font-medium rounded-xl px-4 py-3 outline-none cursor-pointer focus:ring-2 focus:ring-indigo-100"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    color: "#1e293b",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+                    minWidth: 220,
+                  }}
+                >
+                  {(["All", ...areasForZone] as string[]).map((a) => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Grouped sections */}
+            <div className="mt-4">
+              {ZONE_ORDER.map((z) => (
+                <ZoneSection
+                  key={z}
+                  zone={z}
+                  customers={grouped.get(z) ?? []}
+                  now={now}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
+              ))}
+              {filtered.length === 0 && (
+                <div className="text-center py-20" style={{ color: "#7a7a86" }}>
+                  No clients match this filter.
+                </div>
+              )}
+            </div>
+
+            <div
+              className="mt-6 flex items-center justify-between text-[11px]"
+              style={{ color: "#7a7a86" }}
+            >
+              <span>
+                <span className="text-[#0f1115] font-medium">Cradlewell Ops</span> ·{" "}
+                <span style={{ color: "#22c55e" }}>● Live</span>
               </span>
+              <span>Tap a card to view assigned staff</span>
             </div>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <StatTile value={stats.activeStations} label="Active clients" />
-            <StatTile value={stats.operators} label="Caregivers on duty" />
-            <StatTile value={stats.attention} label="Needs attention" accent={stats.attention > 0 ? "#ef4444" : undefined} />
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-end gap-4 pb-4 mb-2">
-          <div className="flex flex-col gap-1.5 min-w-[200px]">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#7a7a86" }}>
-              Zone
-            </label>
-            <select
-              value={zoneFilter}
-              onChange={(e) => { setZoneFilter(e.target.value as Zone | "All"); setAreaFilter("All"); }}
-              className="text-[13px] rounded-md px-3 py-[8px] outline-none cursor-pointer"
-              style={{
-                backgroundColor: "#ffffff",
-                color: "#0f1115",
-                border: "1px solid #6388FF",
-                minWidth: 200,
-              }}
-            >
-              {zones.map((z) => (
-                <option key={z} value={z}>{z}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1.5 min-w-[200px]">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#7a7a86" }}>
-              Area
-            </label>
-            <select
-              value={areaFilter}
-              onChange={(e) => setAreaFilter(e.target.value)}
-              className="text-[13px] rounded-md px-3 py-[8px] outline-none cursor-pointer"
-              style={{
-                backgroundColor: "#ffffff",
-                color: "#0f1115",
-                border: "1px solid #5F47FF",
-                minWidth: 200,
-              }}
-            >
-              {(["All", ...areasForZone] as string[]).map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Grouped sections */}
-        <div className="mt-4">
-          {ZONE_ORDER.map((z) => (
-            <ZoneSection
-              key={z}
-              zone={z}
-              customers={grouped.get(z) ?? []}
-              now={now}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-            />
-          ))}
-          {filtered.length === 0 && (
-            <div className="text-center py-20" style={{ color: "#7a7a86" }}>
-              No clients match this filter.
-            </div>
-          )}
-        </div>
-
-        <div
-          className="mt-6 flex items-center justify-between text-[11px]"
-          style={{ color: "#7a7a86" }}
-        >
-          <span>
-            <span className="text-[#0f1115] font-medium">Cradlewell Ops</span> ·{" "}
-            <span style={{ color: "#22c55e" }}>● Live</span>
-          </span>
-          <span>Tap a card to view assigned staff</span>
-        </div>
           </>
         )}
       </div>
