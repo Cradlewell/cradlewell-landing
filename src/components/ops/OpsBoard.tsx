@@ -236,48 +236,57 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`text-left rounded-2xl flex flex-col justify-center transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
+      className={`text-left rounded-2xl flex flex-col gap-3 transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
-        padding: "16px 24px",
+        padding: "18px 20px",
         background: selected ? "linear-gradient(135deg,#fdfcff,#f0eeff)" : "linear-gradient(135deg,#ffffff,#f8fafc)",
         border: selected ? "1.5px solid #5F47FF" : "1px solid #e2e8f0",
         boxShadow: "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
       }}
     >
-      {/* Name — mirrors the large value in StatTile */}
-      <div className="text-[20px] font-bold leading-none truncate" style={{ color: selected ? "#5F47FF" : "#0f172a" }}>
-        {displayName(c.name)}
-      </div>
-
-      {/* Area — mirrors the label row in StatTile */}
-      <div className="text-[11px] mt-2 font-semibold uppercase tracking-wider truncate" style={{ color: "#94a3b8" }}>
-        {c.area}
-      </div>
-
-      {/* Staff avatars + status — compact footer */}
-      <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: "1px solid #f1f5f9" }}>
-        {c.staff.length === 0 ? (
-          <span className="text-[11px]" style={{ color: "#cbd5e1" }}>No staff</span>
-        ) : (
-          <div className="flex items-center -space-x-1.5">
-            {c.staff.slice(0, 3).map((s) => <Avatar key={s.id} s={s} size={22} ring />)}
-            {c.staff.length > 3 && (
-              <div
-                className="flex items-center justify-center rounded-full text-[9px] font-bold"
-                style={{ width: 22, height: 22, backgroundColor: "#f1f5f9", color: "#64748b", boxShadow: "0 0 0 2px #ffffff" }}
-              >
-                +{c.staff.length - 3}
-              </div>
-            )}
+      {/* Name + status badge */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-bold leading-snug truncate" style={{ color: selected ? "#5F47FF" : "#0f172a" }}>
+            {displayName(c.name)}
           </div>
-        )}
+          <div className="text-[11px] mt-0.5 font-semibold uppercase tracking-wider truncate" style={{ color: "#94a3b8" }}>
+            {c.area}
+          </div>
+        </div>
         <span
-          className="ml-auto flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] px-2 py-0.5 rounded-full shrink-0"
+          className="shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] px-2.5 py-1 rounded-full"
           style={{ backgroundColor: `${dot}18`, color: dot }}
         >
           <span className={`w-1.5 h-1.5 rounded-full shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`} style={{ backgroundColor: dot }} />
           {cs.label}
         </span>
+      </div>
+
+      {/* Staff row */}
+      <div className="flex items-center gap-2 pt-2.5" style={{ borderTop: "1px solid #f1f5f9" }}>
+        {c.staff.length === 0 ? (
+          <span className="text-[11px]" style={{ color: "#cbd5e1" }}>No staff assigned</span>
+        ) : (
+          <>
+            <div className="flex items-center -space-x-1.5">
+              {c.staff.slice(0, 3).map((s) => <Avatar key={s.id} s={s} size={24} ring />)}
+              {c.staff.length > 3 && (
+                <div
+                  className="flex items-center justify-center rounded-full text-[9px] font-bold"
+                  style={{ width: 24, height: 24, backgroundColor: "#f1f5f9", color: "#64748b", boxShadow: "0 0 0 2px #ffffff" }}
+                >
+                  +{c.staff.length - 3}
+                </div>
+              )}
+            </div>
+            {c.staff.length === 1 && (
+              <span className="text-[11px] font-medium" style={{ color: "#64748b" }}>
+                {c.staff[0].name.split(" ")[0]}
+              </span>
+            )}
+          </>
+        )}
       </div>
     </button>
   );
