@@ -229,11 +229,13 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`group relative text-left rounded-[14px] p-4 transition flex flex-col justify-between min-h-[120px] ${isWide ? "sm:col-span-2" : ""}`}
+      className={`group relative text-left rounded-[14px] p-4 transition-all duration-200 flex flex-col justify-between min-h-[120px] hover:-translate-y-[2px] ${isWide ? "sm:col-span-2" : ""}`}
       style={{
         backgroundColor: "#ffffff",
-        border: selected ? "1.5px solid #6388FF" : "1px solid #e7e5dd",
-        boxShadow: selected ? "0 0 0 3px rgba(99,136,255,0.15)" : undefined,
+        border: selected ? "1.5px solid #6388FF" : "1px solid #e9e7df",
+        boxShadow: selected
+          ? "0 0 0 3px rgba(99,136,255,0.15), 0 8px 24px -4px rgba(15,17,21,0.12)"
+          : "0 1px 3px rgba(15,17,21,0.05), 0 4px 12px -4px rgba(15,17,21,0.08)",
       }}
     >
       <div className="flex items-start justify-between gap-3">
@@ -276,11 +278,15 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
 function StatTile({ value, label, accent }: { value: number | string; label: string; accent?: string }) {
   return (
     <div
-      className="rounded-[12px] px-4 py-3 min-w-[120px]"
-      style={{ backgroundColor: "#ffffff", border: "1px solid #e7e5dd" }}
+      className="rounded-[14px] px-5 py-4 min-w-[130px]"
+      style={{
+        backgroundColor: "#ffffff",
+        border: "1px solid #e9e7df",
+        boxShadow: "0 1px 3px rgba(15,17,21,0.05), 0 6px 20px -4px rgba(15,17,21,0.09)",
+      }}
     >
-      <div className="text-[#0f1115] text-[22px] font-bold leading-none" style={accent ? { color: accent } : undefined}>{value}</div>
-      <div className="text-[11px] mt-1" style={{ color: "#7a7a86" }}>{label}</div>
+      <div className="text-[28px] font-bold leading-none tracking-tight" style={accent ? { color: accent } : { color: "#0f1115" }}>{value}</div>
+      <div className="text-[12px] mt-1.5 font-medium" style={{ color: "#8a8a98" }}>{label}</div>
     </div>
   );
 }
@@ -291,8 +297,9 @@ function ZoneSection({ zone, customers, now, selectedId, onSelect }: { zone: Zon
     <section className="mb-8">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-[#0f1115] text-[13px] font-semibold uppercase tracking-[0.12em]">{zone}</h2>
-          <span className="text-[11px]" style={{ color: "#7a7a86" }}>{customers.length} clients</span>
+          <div className="w-[3px] h-4 rounded-full shrink-0" style={{ backgroundColor: "#5F47FF", opacity: 0.55 }} />
+          <h2 className="text-[#0f1115] text-[13px] font-bold uppercase tracking-[0.14em]">{zone}</h2>
+          <span className="text-[11px] font-medium" style={{ color: "#9a9aa6" }}>{customers.length} clients</span>
         </div>
         <div className="flex-1 ml-4 h-px" style={{ backgroundColor: "#e7e5dd" }} />
       </div>
@@ -1963,10 +1970,10 @@ function OpsBoardInner() {
     <div
       className="min-h-screen w-full flex"
       style={{
-        backgroundColor: "#faf9f5",
+        backgroundColor: "#f5f4f0",
         fontFamily: "Inter, system-ui, sans-serif",
         backgroundImage:
-          "radial-gradient(1200px 600px at 80% -10%, rgba(95,71,255,0.06), transparent 60%), radial-gradient(900px 500px at -10% 10%, rgba(99,136,255,0.05), transparent 60%)",
+          "radial-gradient(1400px 700px at 85% -15%, rgba(95,71,255,0.07), transparent 55%), radial-gradient(1000px 600px at -5% 15%, rgba(99,136,255,0.05), transparent 55%), radial-gradient(800px 500px at 50% 110%, rgba(34,197,94,0.03), transparent 60%)",
       }}
     >
       {/* Sidebar Navigation */}
@@ -1976,39 +1983,43 @@ function OpsBoardInner() {
           width: 220,
           backgroundColor: "#ffffff",
           borderRight: "1px solid #ece9e0",
-          boxShadow: "0 1px 0 rgba(15,17,21,0.02)",
+          boxShadow: "1px 0 0 rgba(15,17,21,0.03), 4px 0 24px -4px rgba(15,17,21,0.07)",
         }}
       >
         <div className="px-5 py-5" style={{ borderBottom: "1px solid #f1efe7" }}>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "#6388FF" }}>Cradlewell</div>
-          <div className="text-[#0f1115] text-[15px] font-bold mt-0.5">Operations</div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#5F47FF" }} />
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5F47FF" }}>Cradlewell</div>
+          </div>
+          <div className="text-[#0f1115] text-[16px] font-bold mt-1 tracking-tight">Operations</div>
         </div>
-        <nav className="p-2 flex flex-col gap-1">
+        <nav className="px-2 py-2 flex flex-col gap-0.5">
           {([
-            { id: "customers" as const, label: "Customers", count: customers.length, icon: "◍" },
-            { id: "staff" as const, label: "Staff", count: roster.length, icon: "◐" },
-            { id: "utilisation" as const, label: "Utilisation Report", count: roster.filter((s) => customers.some((c) => c.staff.some((x) => x.id === s.id))).length, icon: "◈" },
-            { id: "travel" as const, label: "Travel Expenses", count: travelEntries.length, icon: "◇" },
-            { id: "attendance" as const, label: "Attendance Report", count: roster.length, icon: "◉" },
+            { id: "customers" as const, label: "Customers", count: customers.length, icon: (<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="5.5" r="2.5"/><path d="M3 14c0-2.761 2.239-4.5 5-4.5s5 1.739 5 4.5"/></svg>) },
+            { id: "staff" as const, label: "Staff", count: roster.length, icon: (<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="5.5" r="2"/><circle cx="11" cy="5.5" r="2"/><path d="M1.5 14c0-2.2 1.8-3.5 4-3.5h5c2.2 0 4 1.3 4 3.5"/></svg>) },
+            { id: "utilisation" as const, label: "Utilisation Report", count: roster.filter((s) => customers.some((c) => c.staff.some((x) => x.id === s.id))).length, icon: (<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13V8M8 13V4M13 13V6"/></svg>) },
+            { id: "travel" as const, label: "Travel Expenses", count: travelEntries.length, icon: (<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2C5.8 2 4 3.8 4 6c0 3.5 4 8 4 8s4-4.5 4-8c0-2.2-1.8-4-4-4z"/><circle cx="8" cy="6" r="1.5" fill="currentColor" stroke="none"/></svg>) },
+            { id: "attendance" as const, label: "Attendance Report", count: roster.length, icon: (<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 1v4M11 1v4M2 7h12"/><path d="M5.5 10.5l1.5 1.5 3.5-3.5"/></svg>) },
           ]).map((tab) => {
             const active = view === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setView(tab.id)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150"
                 style={{
                   backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent",
-                  color: active ? "#5F47FF" : "#0f1115",
-                  fontWeight: active ? 600 : 500,
+                  color: active ? "#5F47FF" : "#3a3a48",
+                  fontWeight: active ? 600 : 450,
+                  boxShadow: active ? "inset 3px 0 0 #5F47FF" : "none",
                 }}
               >
-                <span className="text-[14px]" style={{ color: active ? "#5F47FF" : "#7a7a86" }}>{tab.icon}</span>
+                <span className="shrink-0" style={{ color: active ? "#5F47FF" : "#7a7a86" }}>{tab.icon}</span>
                 <span className="text-[13.5px] flex-1">{tab.label}</span>
                 <span
-                  className="text-[10.5px] px-1.5 py-0.5 rounded"
+                  className="text-[10.5px] px-1.5 py-0.5 rounded-md"
                   style={{
-                    backgroundColor: active ? "#5F47FF" : "#f3f2ed",
+                    backgroundColor: active ? "#5F47FF" : "#eeece6",
                     color: active ? "#ffffff" : "#7a7a86",
                     fontWeight: 600,
                   }}
@@ -2049,7 +2060,7 @@ function OpsBoardInner() {
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
+              <span className="ops-pulse relative w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
               <span className="text-[11px] font-semibold tracking-[0.18em] uppercase" style={{ color: "#6388FF" }}>
                 Live Operations
               </span>
