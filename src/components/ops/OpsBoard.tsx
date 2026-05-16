@@ -236,19 +236,24 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`group relative text-left rounded-[20px] flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
+      className={`group relative text-left rounded-3xl flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-1 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
-        backgroundColor: "#ffffff",
-        border: selected ? "1.5px solid #5F47FF" : "1px solid #e2e8f0",
+        background: selected
+          ? "linear-gradient(160deg,#fdfcff 0%,#f8f6ff 100%)"
+          : "linear-gradient(160deg,#ffffff 0%,#f8fafc 100%)",
+        border: selected ? "1.5px solid #5F47FF" : "1px solid #e8edf5",
         boxShadow: selected
-          ? "0 0 0 4px rgba(95,71,255,0.10), 0 8px 24px rgba(95,71,255,0.14)"
-          : "0 1px 3px rgba(15,23,42,0.06), 0 4px 14px rgba(15,23,42,0.05)",
+          ? "0 0 0 4px rgba(95,71,255,0.10), 0 12px 32px rgba(95,71,255,0.16)"
+          : "0 2px 4px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.07), inset 0 1px 0 rgba(255,255,255,0.9)",
       }}
     >
       {/* Left status stripe */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: dot }} />
+      <div
+        className="absolute left-0 top-3 bottom-3 w-[3.5px] rounded-r-full"
+        style={{ backgroundColor: dot, boxShadow: `2px 0 8px ${dot}40` }}
+      />
 
-      <div className="pl-5 pr-4 pt-4 pb-4 flex flex-col gap-3 flex-1">
+      <div className="pl-5 pr-4 pt-5 pb-5 flex flex-col gap-3.5 flex-1">
         {/* Name + status badge */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -265,7 +270,12 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
           </div>
           <span
             className="shrink-0 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full mt-0.5"
-            style={{ backgroundColor: `${dot}18`, color: dot, border: `1px solid ${dot}30` }}
+            style={{
+              backgroundColor: `${dot}15`,
+              color: dot,
+              border: `1px solid ${dot}35`,
+              boxShadow: `0 1px 4px ${dot}20`,
+            }}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`}
@@ -276,7 +286,7 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
         </div>
 
         {/* Divider */}
-        <div style={{ height: 1, backgroundColor: "#f1f5f9" }} />
+        <div style={{ height: 1, background: "linear-gradient(90deg, #e8edf5 0%, transparent 100%)" }} />
 
         {/* Staff row */}
         <div className="flex items-center gap-2">
