@@ -17,7 +17,7 @@ if (!ACCESS_TOKEN || !FLOW_DUE_DATE || !FLOW_CARE_DATE) {
 
 const BASE = "https://graph.facebook.com/v21.0";
 
-function makeDatePickerScreen(fieldName, label, instruction) {
+function makeDatePickerScreen(fieldName, label) {
   return {
     version: "6.0",
     screens: [
@@ -29,10 +29,6 @@ function makeDatePickerScreen(fieldName, label, instruction) {
         layout: {
           type: "SingleColumnLayout",
           children: [
-            {
-              type: "TextBody",
-              text: instruction,
-            },
             {
               type: "Form",
               name: "date_form",
@@ -85,9 +81,9 @@ async function publishFlow(flowId) {
   return apiJson(`${BASE}/${flowId}/publish`, { method: "POST" });
 }
 
-async function updateFlow(flowId, name, fieldName, label, instruction) {
+async function updateFlow(flowId, name, fieldName, label) {
   console.log(`\nUpdating flow: ${name} (${flowId})...`);
-  const result = await uploadFlowJson(flowId, makeDatePickerScreen(fieldName, label, instruction));
+  const result = await uploadFlowJson(flowId, makeDatePickerScreen(fieldName, label));
   console.log(`  Upload result:`, JSON.stringify(result));
   if (result.validation_errors?.length) {
     console.error("  Validation errors:", result.validation_errors);
@@ -100,20 +96,8 @@ async function updateFlow(flowId, name, fieldName, label, instruction) {
 
 (async () => {
   try {
-    await updateFlow(
-      FLOW_DUE_DATE,
-      "Cradlewell Due Date",
-      "due_date",
-      "Tap to select your due date",
-      "Tap the field below to open the calendar, then tap \"Confirm Date\"."
-    );
-    await updateFlow(
-      FLOW_CARE_DATE,
-      "Cradlewell Care Start Date",
-      "care_start_date",
-      "Tap to select care start date",
-      "Tap the field below to open the calendar, then tap \"Confirm Date\"."
-    );
+    await updateFlow(FLOW_DUE_DATE, "Cradlewell Due Date", "due_date", "Expected due date");
+    await updateFlow(FLOW_CARE_DATE, "Cradlewell Care Start Date", "care_start_date", "Care start date");
     console.log("\n✅ Both flows updated successfully.");
   } catch (err) {
     console.error("\n❌ Failed:", err.message);
