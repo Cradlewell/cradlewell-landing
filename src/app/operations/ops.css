@@ -1,7 +1,9 @@
-/* Tailwind v4 utilities only — no global preflight to preserve Bootstrap on other routes */
-@import "tailwindcss/utilities";
+/* Tailwind v3 — no preflight (preserves Bootstrap on other routes) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Reset Bootstrap overrides inside .ops-shell so OpsBoard renders like Lovable */
+/* Reset Bootstrap overrides inside .ops-shell */
 .ops-shell *,
 .ops-shell *::before,
 .ops-shell *::after {
@@ -39,11 +41,6 @@
 .ops-shell a {
   color: inherit;
   text-decoration: none;
-}
-
-.ops-shell img {
-  max-width: 100%;
-  display: block;
 }
 
 .ops-shell h1,
