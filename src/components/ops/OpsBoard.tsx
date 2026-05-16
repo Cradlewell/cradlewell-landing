@@ -236,53 +236,44 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
   return (
     <button
       onClick={onSelect}
-      className={`text-left rounded-2xl flex flex-col transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
+      className={`text-left rounded-2xl flex flex-col justify-center transition-all duration-200 hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
-        padding: "20px 24px",
+        padding: "16px 24px",
         background: selected ? "linear-gradient(135deg,#fdfcff,#f0eeff)" : "linear-gradient(135deg,#ffffff,#f8fafc)",
         border: selected ? "1.5px solid #5F47FF" : "1px solid #e2e8f0",
-        boxShadow: selected
-          ? "0 0 0 3px rgba(95,71,255,0.12), 0 4px 16px rgba(95,71,255,0.14)"
-          : "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
+        boxShadow: "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
       }}
     >
-      {/* Name */}
-      <div className="text-[16px] font-bold leading-tight truncate" style={{ color: selected ? "#5F47FF" : "#0f172a" }}>
+      {/* Name — mirrors the large value in StatTile */}
+      <div className="text-[20px] font-bold leading-none truncate" style={{ color: selected ? "#5F47FF" : "#0f172a" }}>
         {displayName(c.name)}
       </div>
 
-      {/* Area */}
-      <div className="text-[11px] mt-1.5 font-semibold uppercase tracking-wider truncate" style={{ color: "#94a3b8" }}>
+      {/* Area — mirrors the label row in StatTile */}
+      <div className="text-[11px] mt-2 font-semibold uppercase tracking-wider truncate" style={{ color: "#94a3b8" }}>
         {c.area}
       </div>
 
-      {/* Staff + status */}
-      <div className="flex items-center gap-2 mt-4">
+      {/* Staff avatars + status — compact footer */}
+      <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: "1px solid #f1f5f9" }}>
         {c.staff.length === 0 ? (
           <span className="text-[11px]" style={{ color: "#cbd5e1" }}>No staff</span>
         ) : (
-          <>
-            <div className="flex items-center -space-x-1.5">
-              {c.staff.slice(0, 3).map((s) => <Avatar key={s.id} s={s} size={24} ring />)}
-              {c.staff.length > 3 && (
-                <div
-                  className="flex items-center justify-center rounded-full text-[9px] font-bold"
-                  style={{ width: 24, height: 24, backgroundColor: "#f1f5f9", color: "#64748b", boxShadow: "0 0 0 2px #ffffff" }}
-                >
-                  +{c.staff.length - 3}
-                </div>
-              )}
-            </div>
-            {c.staff.length === 1 && (
-              <span className="text-[11px] font-medium" style={{ color: "#64748b" }}>
-                {c.staff[0].name.split(" ")[0]}
-              </span>
+          <div className="flex items-center -space-x-1.5">
+            {c.staff.slice(0, 3).map((s) => <Avatar key={s.id} s={s} size={22} ring />)}
+            {c.staff.length > 3 && (
+              <div
+                className="flex items-center justify-center rounded-full text-[9px] font-bold"
+                style={{ width: 22, height: 22, backgroundColor: "#f1f5f9", color: "#64748b", boxShadow: "0 0 0 2px #ffffff" }}
+              >
+                +{c.staff.length - 3}
+              </div>
             )}
-          </>
+          </div>
         )}
         <span
-          className="ml-auto flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full shrink-0"
-          style={{ backgroundColor: `${dot}20`, color: dot }}
+          className="ml-auto flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] px-2 py-0.5 rounded-full shrink-0"
+          style={{ backgroundColor: `${dot}18`, color: dot }}
         >
           <span className={`w-1.5 h-1.5 rounded-full shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`} style={{ backgroundColor: dot }} />
           {cs.label}
