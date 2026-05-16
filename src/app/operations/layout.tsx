@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
+import "./ops.css";
 
 export const metadata = { title: "Operations | Cradlewell" };
 
 export default function OperationsLayout({ children }: { children: ReactNode }) {
   return (
-    <div style={{ position: "fixed", inset: 0, overflow: "hidden", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", overflow: "auto" }}>
       {children}
     </div>
   );
