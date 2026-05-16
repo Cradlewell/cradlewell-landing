@@ -239,7 +239,7 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
       className={`group relative text-left rounded-[24px] p-6 transition-all flex flex-col justify-between min-h-[140px] hover:shadow-lg hover:-translate-y-0.5 ${isWide ? "sm:col-span-2" : ""}`}
       style={{
         backgroundColor: "#ffffff",
-        border: selected ? "1.5px solid #5F47FF" : "1px solid #f1f5f9",
+        border: selected ? "1.5px solid #5F47FF" : "1px solid #e2e8f0",
         boxShadow: selected
           ? "0 0 0 4px rgba(95,71,255,0.12), 0 4px 16px rgba(95,71,255,0.12)"
           : "0 2px 8px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)",
@@ -251,7 +251,7 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
           <div className="text-[11px] mt-1 font-medium" style={{ color: "#94a3b8" }}>{c.area}</div>
         </div>
         <span
-          className="w-3 h-3 rounded-full mt-1 shrink-0"
+          className={`w-3 h-3 rounded-full mt-1 shrink-0${cs.label === "Active" ? " animate-pulse" : ""}`}
           style={{ backgroundColor: dot, boxShadow: `0 0 0 4px ${dot}1a` }}
         />
       </div>
@@ -279,6 +279,44 @@ function CustomerCard({ c, now, selected, onSelect }: { c: Customer; now: number
         </div>
       </div>
     </button>
+  );
+}
+
+function SelectField({ label, value, onChange, children }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 min-w-[220px]">
+      <label className="text-[11px] font-bold uppercase tracking-[0.16em] px-1" style={{ color: "#94a3b8" }}>
+        {label}
+      </label>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="text-[13px] font-medium rounded-xl px-4 py-3 outline-none cursor-pointer w-full pr-9"
+          style={{
+            backgroundColor: "#ffffff",
+            color: "#1e293b",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 1px 3px rgba(15,23,42,0.06)",
+            minWidth: 220,
+            appearance: "none",
+            WebkitAppearance: "none",
+          } as React.CSSProperties}
+        >
+          {children}
+        </select>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#94a3b8" }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 5l4 4 4-4"/>
+          </svg>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2159,49 +2197,21 @@ function OpsBoardInner() {
 
             {/* Filters */}
             <div className="flex flex-wrap items-end gap-6 mb-10">
-              <div className="flex flex-col gap-1.5 min-w-[220px]">
-                <label className="text-[11px] font-bold uppercase tracking-[0.16em] px-1" style={{ color: "#94a3b8" }}>
-                  Zone
-                </label>
-                <select
-                  value={zoneFilter}
-                  onChange={(e) => { setZoneFilter(e.target.value as Zone | "All"); setAreaFilter("All"); }}
-                  className="text-[13px] font-medium rounded-xl px-4 py-3 outline-none cursor-pointer focus:ring-2 focus:ring-indigo-100"
-                  style={{
-                    backgroundColor: "#ffffff",
-                    color: "#1e293b",
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
-                    minWidth: 220,
-                  }}
-                >
-                  {zones.map((z) => (
-                    <option key={z} value={z}>{z}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectField
+                label="Zone"
+                value={zoneFilter}
+                onChange={(v) => { setZoneFilter(v as Zone | "All"); setAreaFilter("All"); }}
+              >
+                {zones.map((z) => <option key={z} value={z}>{z}</option>)}
+              </SelectField>
 
-              <div className="flex flex-col gap-1.5 min-w-[220px]">
-                <label className="text-[11px] font-bold uppercase tracking-[0.16em] px-1" style={{ color: "#94a3b8" }}>
-                  Area
-                </label>
-                <select
-                  value={areaFilter}
-                  onChange={(e) => setAreaFilter(e.target.value)}
-                  className="text-[13px] font-medium rounded-xl px-4 py-3 outline-none cursor-pointer focus:ring-2 focus:ring-indigo-100"
-                  style={{
-                    backgroundColor: "#ffffff",
-                    color: "#1e293b",
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
-                    minWidth: 220,
-                  }}
-                >
-                  {(["All", ...areasForZone] as string[]).map((a) => (
-                    <option key={a} value={a}>{a}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectField
+                label="Area"
+                value={areaFilter}
+                onChange={(v) => setAreaFilter(v)}
+              >
+                {(["All", ...areasForZone] as string[]).map((a) => <option key={a} value={a}>{a}</option>)}
+              </SelectField>
             </div>
 
             {/* Grouped sections */}
