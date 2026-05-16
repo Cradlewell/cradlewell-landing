@@ -24,11 +24,18 @@
 }
 
 .ops-shell select {
-  all: unset;
   box-sizing: border-box;
   cursor: pointer;
   display: block;
   width: 100%;
+  /* preserve native dropdown arrow — don't use all:unset */
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
 }
 
 .ops-shell input {
