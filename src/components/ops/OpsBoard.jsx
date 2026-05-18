@@ -637,7 +637,7 @@ function StaffView({ roster, customers, newStaffName, setNewStaffName, newStaffR
 
 // ─── Utilisation View ──────────────────────────────────────────────────────────
 
-function UtilisationView({ roster, customers }) {
+function UtilisationView({ roster, customers, travelEntries = [] }) {
   const [roleFilter, setRoleFilter] = useState("All");
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [fyFilter, setFyFilter] = useState("All");
@@ -701,12 +701,17 @@ function UtilisationView({ roster, customers }) {
           offset++;
         }
       }
+      const travelTrips = travelEntries.filter(e => {
+        if (e.staffId !== staff.id) return false;
+        if (!dateInScope(e.date)) return false;
+        return true;
+      }).length;
       const utilisation = planned === 0 ? 0 : Math.round((completed / planned) * 1000) / 10;
       const leaveRate = planned === 0 ? 0 : Math.round((leaveDays / planned) * 1000) / 10;
       const status = planned === 0 ? "Idle" : utilisation >= 85 ? "Healthy" : utilisation >= 70 ? "Watch" : "At Risk";
-      return { staff, clients: assigned.length, planned, completed, leaveDays, utilisation, leaveRate, status };
+      return { staff, clients: assigned.length, planned, completed, leaveDays, travelTrips, utilisation, leaveRate, status };
     }).sort((a, b) => b.utilisation - a.utilisation);
-  }, [roster, customers, fyFilter, monthFilter]);
+  }, [roster, customers, travelEntries, fyFilter, monthFilter]);
 
   const filteredRows = useMemo(() => roleFilter === "All" ? rows : rows.filter(r => r.staff.role === roleFilter), [rows, roleFilter]);
   const utilisedCount = filteredRows.filter(r => r.planned > 0).length;
@@ -733,7 +738,7 @@ function UtilisationView({ roster, customers }) {
         const wouldBe = pool[workIdx % pool.length];
         const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
         const sundayOverrideId = c.rota?.[date];
-        const get = () => { let b = buckets.get(ym); if (!b) { b = { planned: 0, completed: 0, leave: 0 }; buckets.set(ym, b); } return b; };
+        const get = () => { let b = buckets.get(ym); if (!b) { b = { planned: 0, completed: 0, leave: 0, travel: 0 }; buckets.set(ym, b); } return b; };
         if (isSunday && !sundayOverrideId) { consumed++; }
         else if (leaveSet.has(date)) { if (wouldBe?.id === selectedStaff.id) { const b = get(); b.planned++; b.leave++; } consumed++; }
         else if (pausedSet.has(date)) { /* skip */ }
@@ -746,12 +751,18 @@ function UtilisationView({ roster, customers }) {
         offset++;
       }
     }
+    for (const e of travelEntries) {
+      if (e.staffId !== selectedStaff.id) continue;
+      const ym = e.date.slice(0, 7);
+      const b = buckets.get(ym);
+      if (b) b.travel++;
+    }
     return Array.from(buckets.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([ym, v]) => ({
       ym, label: new Date(`${ym}-01T00:00:00`).toLocaleString("default", { month: "long", year: "numeric" }),
       ...v, util: v.planned === 0 ? 0 : Math.round((v.completed / v.planned) * 1000) / 10,
       leaveRate: v.planned === 0 ? 0 : Math.round((v.leave / v.planned) * 1000) / 10,
     }));
-  }, [selectedStaff, customers, roster]);
+  }, [selectedStaff, customers, roster, travelEntries]);
 
   const selStyle = { backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#0f1115", fontWeight: 500, cursor: "pointer" };
 
@@ -798,15 +809,16 @@ function UtilisationView({ roster, customers }) {
             <Avatar s={selectedStaff} size={32} />
             <div><div style={{ fontSize: 14, fontWeight: 600, color: "#0f1115" }}>{selectedStaff.name}</div><div style={{ fontSize: 11, color: "#7a7a86" }}>Monthly utilisation · {selectedStaff.role}</div></div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.7fr 0.7fr 0.6fr 0.8fr 0.8fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
-            <span>Month</span><span>Planned</span><span>Completed</span><span>Leave</span><span>Utilisation %</span><span>Leave Rate %</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.7fr 0.7fr 0.6fr 0.6fr 0.8fr 0.8fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+            <span>Month</span><span>Planned</span><span>Completed</span><span>Leave</span><span>Travel</span><span>Utilisation %</span><span>Leave Rate %</span>
           </div>
           {monthlyRows.map((m, i) => (
-            <div key={m.ym} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.7fr 0.7fr 0.6fr 0.8fr 0.8fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: i === 0 ? "none" : "1px solid #f1f5f9" }}>
+            <div key={m.ym} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.7fr 0.7fr 0.6fr 0.6fr 0.8fr 0.8fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: i === 0 ? "none" : "1px solid #f1f5f9" }}>
               <span style={{ fontWeight: 500, color: "#0f1115" }}>{m.label}</span>
               <span style={{ fontWeight: 600, color: "#0f1115" }}>{m.planned}</span>
               <span style={{ fontWeight: 600, color: m.completed > 0 ? "#16a34a" : "#c9c6bc" }}>{m.completed || "—"}</span>
               <span style={{ fontWeight: 600, color: m.leave > 0 ? "#a855f7" : "#c9c6bc" }}>{m.leave || "—"}</span>
+              <span style={{ fontWeight: 600, color: m.travel > 0 ? "#f59e0b" : "#c9c6bc" }}>{m.travel || "—"}</span>
               <span style={{ fontWeight: 600, color: "#0f1115" }}>{m.planned > 0 ? `${m.util}%` : "—"}</span>
               <span style={{ fontWeight: 600, color: m.leaveRate > 0 ? "#0f1115" : "#c9c6bc" }}>{m.planned > 0 ? `${m.leaveRate}%` : "—"}</span>
             </div>
@@ -816,14 +828,14 @@ function UtilisationView({ roster, customers }) {
       )}
 
       <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.8fr 0.6fr 0.8fr 0.8fr 0.8fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
-          <span>Caregiver</span><span>Role</span><span>Planned</span><span>Completed</span><span>Leave</span><span>Utilisation %</span><span>Leave Rate %</span><span>Status</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.8fr 0.6fr 0.6fr 0.8fr 0.8fr 0.8fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+          <span>Caregiver</span><span>Role</span><span>Planned</span><span>Completed</span><span>Leave</span><span>Travel</span><span>Utilisation %</span><span>Leave Rate %</span><span>Status</span>
         </div>
         {filteredRows.map((r, idx) => {
           const sc = r.status === "Healthy" ? "#16a34a" : r.status === "Watch" ? "#f59e0b" : r.status === "At Risk" ? "#ef4444" : "#7a7a86";
           const sb = r.status === "Healthy" ? "rgba(34,197,94,0.10)" : r.status === "Watch" ? "rgba(245,158,11,0.10)" : r.status === "At Risk" ? "rgba(239,68,68,0.10)" : "#f1f5f9";
           return (
-            <div key={r.staff.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.8fr 0.6fr 0.8fr 0.8fr 0.8fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
+            <div key={r.staff.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.8fr 0.6fr 0.6fr 0.8fr 0.8fr 0.8fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <Avatar s={r.staff} size={32} />
                 <div style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{r.staff.name}</div>
@@ -832,6 +844,7 @@ function UtilisationView({ roster, customers }) {
               <span style={{ fontWeight: 600, color: "#0f1115" }}>{r.planned || "—"}</span>
               <span style={{ fontWeight: 600, color: r.completed > 0 ? "#16a34a" : "#c9c6bc" }}>{r.completed || "—"}</span>
               <span style={{ fontWeight: 600, color: r.leaveDays > 0 ? "#a855f7" : "#c9c6bc" }}>{r.leaveDays || "—"}</span>
+              <span style={{ fontWeight: 600, color: r.travelTrips > 0 ? "#f59e0b" : "#c9c6bc" }}>{r.travelTrips || "—"}</span>
               <span style={{ fontWeight: 600, color: "#0f1115" }}>{r.planned > 0 ? `${r.utilisation}%` : "—"}</span>
               <span style={{ fontWeight: 600, color: r.leaveRate > 0 ? "#0f1115" : "#c9c6bc" }}>{r.planned > 0 ? `${r.leaveRate}%` : "—"}</span>
               <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px", borderRadius: 6, backgroundColor: sb, color: sc, fontWeight: 600, display: "inline-block" }}>{r.status}</span>
@@ -1301,7 +1314,7 @@ export function OpsBoard() {
       <div style={{ marginLeft: 260, padding: "24px 32px", minWidth: 0 }}>
         {view === "attendance" ? <AttendanceView roster={roster} customers={customers} />
           : view === "travel" ? <TravelExpensesView roster={roster} entries={travelEntries} onAdd={e => setTravelEntries(prev => [e, ...prev])} />
-            : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} />
+            : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} travelEntries={travelEntries} />
               : view === "staff" ? <StaffView roster={roster} customers={customers} newStaffName={newStaffName} setNewStaffName={setNewStaffName} newStaffRole={newStaffRole} setNewStaffRole={setNewStaffRole} onAdd={addToRoster} onRemove={removeFromRoster} />
                 : (
                   <>
