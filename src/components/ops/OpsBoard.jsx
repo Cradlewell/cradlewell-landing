@@ -1096,8 +1096,19 @@ function AttendanceView({ roster, customers }) {
 
 export function OpsBoard() {
   useClientNow();
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+  const [customers, setCustomers] = useState([]);
+  const [customersLoading, setCustomersLoading] = useState(true);
   const [roster, setRoster] = useState(ALL_STAFF);
+
+  useEffect(() => {
+    fetch("/api/ops/customers")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setCustomers(data);
+      })
+      .catch(() => {})
+      .finally(() => setCustomersLoading(false));
+  }, []);
   const [travelEntries, setTravelEntries] = useState([]);
   const [view, setView] = useState("customers");
   const [newStaffName, setNewStaffName] = useState("");
@@ -1290,8 +1301,14 @@ export function OpsBoard() {
 
                     {/* Zone sections */}
                     <div>
-                      {ZONE_ORDER.map(z => <ZoneSection key={z} zone={z} customers={grouped.get(z) ?? []} selectedId={selectedId} onSelect={setSelectedId} />)}
-                      {filtered.length === 0 && (
+                      {customersLoading && (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "96px 0", gap: 12, color: "#94a3b8", fontSize: 14 }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" /></path></svg>
+                          Loading customers…
+                        </div>
+                      )}
+                      {!customersLoading && ZONE_ORDER.map(z => <ZoneSection key={z} zone={z} customers={grouped.get(z) ?? []} selectedId={selectedId} onSelect={setSelectedId} />)}
+                      {!customersLoading && filtered.length === 0 && (
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "96px 0", gap: 16 }}>
                           <div style={{ width: 56, height: 56, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f1f5f9" }}>
                             <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"><circle cx="9" cy="9" r="6" /><path d="M15 15l3 3" /></svg>
