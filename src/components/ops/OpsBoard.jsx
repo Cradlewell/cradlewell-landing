@@ -1065,20 +1065,36 @@ export function OpsBoard() {
   const [roster, setRoster] = useState([]);
 
   useEffect(() => {
-    fetch("/api/ops/staff")
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setRoster(data); })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/ops/customers")
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setCustomers(data);
-      })
-      .catch(() => {})
-      .finally(() => setCustomersLoading(false));
+    Promise.all([
+      fetch("/api/ops/staff").then(r => r.json()).catch(() => []),
+      fetch("/api/ops/customers").then(r => r.json()).catch(() => []),
+      fetch("/api/ops/state").then(r => r.json()).catch(() => []),
+    ]).then(([staffData, customersData, stateData]) => {
+      const staffList = Array.isArray(staffData) ? staffData : [];
+      const customerList = Array.isArray(customersData) ? customersData : [];
+      const stateList = Array.isArray(stateData) ? stateData : [];
+      setRoster(staffList);
+      const staffMap = Object.fromEntries(staffList.map(s => [s.id, s]));
+      const stateMap = Object.fromEntries(stateList.map(s => [s.lead_id, s]));
+      const merged = customerList.map(c => {
+        const st = stateMap[c.id];
+        if (!st) return c;
+        const staff = (st.staff_ids ?? []).map(id => staffMap[id]).filter(Boolean);
+        return {
+          ...c,
+          staff,
+          packageDays: st.package_days ?? undefined,
+          startDate: st.start_date ?? undefined,
+          shiftTime: st.shift_time ?? undefined,
+          rota: st.rota ?? undefined,
+          rotaReasons: st.rota_reasons ?? undefined,
+          pausedDates: st.paused_dates ?? undefined,
+          leaveDates: st.leave_dates ?? undefined,
+          status: staff.length > 0 ? "active" : (c.status ?? "attention"),
+        };
+      });
+      setCustomers(merged);
+    }).finally(() => setCustomersLoading(false));
   }, []);
   const [travelEntries, setTravelEntries] = useState([]);
   const [view, setView] = useState("customers");
@@ -1119,10 +1135,34 @@ export function OpsBoard() {
 
   const selected = selectedId ? customers.find(c => c.id === selectedId) ?? null : null;
 
+  // Persist customer ops-state to Supabase
+  const persistState = (c) => {
+    fetch("/api/ops/state", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: c.id,
+        staff_ids: (c.staff ?? []).map(s => s.id),
+        package_days: c.packageDays ?? null,
+        start_date: c.startDate ?? null,
+        shift_time: c.shiftTime ?? null,
+        rota: c.rota ?? {},
+        rota_reasons: c.rotaReasons ?? {},
+        paused_dates: c.pausedDates ?? [],
+        leave_dates: c.leaveDates ?? [],
+      }),
+    }).catch(() => {});
+  };
+
   // Operations
   const addStaff = (cid, sid) => {
     const s = roster.find(x => x.id === sid); if (!s) return;
-    setCustomers(prev => prev.map(c => c.id === cid && !c.staff.some(x => x.id === sid) ? { ...c, staff: [...c.staff, s], status: "active", badge: /paus|break|unassigned|awaiting/i.test(c.badge) ? "Active" : c.badge } : c));
+    setCustomers(prev => prev.map(c => {
+      if (c.id !== cid || c.staff.some(x => x.id === sid)) return c;
+      const up = { ...c, staff: [...c.staff, s], status: "active", badge: /paus|break|unassigned|awaiting/i.test(c.badge) ? "Active" : c.badge };
+      persistState(up);
+      return up;
+    }));
   };
   const removeStaff = (cid, sid) => {
     setCustomers(prev => prev.map(c => {
@@ -1130,13 +1170,31 @@ export function OpsBoard() {
       const nextStaff = c.staff.filter(x => x.id !== sid);
       const nextRota = {}, nextReasons = {};
       for (const [d, sId] of Object.entries(c.rota ?? {})) { if (sId !== sid) { nextRota[d] = sId; if (c.rotaReasons?.[d]) nextReasons[d] = c.rotaReasons[d]; } }
-      if (nextStaff.length === 0) return { ...c, staff: [], packageDays: undefined, startDate: undefined, shiftTime: undefined, rota: undefined, rotaReasons: undefined, pausedDates: undefined, status: "attention", badge: "Unassigned" };
-      return { ...c, staff: nextStaff, rota: nextRota, rotaReasons: nextReasons };
+      const up = nextStaff.length === 0
+        ? { ...c, staff: [], packageDays: undefined, startDate: undefined, shiftTime: undefined, rota: undefined, rotaReasons: undefined, pausedDates: undefined, status: "attention", badge: "Unassigned" }
+        : { ...c, staff: nextStaff, rota: nextRota, rotaReasons: nextReasons };
+      persistState(up);
+      return up;
     }));
   };
-  const setRotaDay = (cid, date, sid, reason) => setCustomers(prev => prev.map(c => c.id === cid ? { ...c, rota: { ...(c.rota ?? {}), [date]: sid }, rotaReasons: { ...(c.rotaReasons ?? {}), [date]: reason } } : c));
-  const createRota = (cid, packageDays, startDate, shiftTime) => setCustomers(prev => prev.map(c => c.id === cid ? { ...c, packageDays, startDate, shiftTime, rota: {} } : c));
-  const clearRota = (cid) => setCustomers(prev => prev.map(c => c.id === cid ? { ...c, packageDays: undefined, startDate: undefined, shiftTime: undefined, rota: undefined } : c));
+  const setRotaDay = (cid, date, sid, reason) => setCustomers(prev => prev.map(c => {
+    if (c.id !== cid) return c;
+    const up = { ...c, rota: { ...(c.rota ?? {}), [date]: sid }, rotaReasons: { ...(c.rotaReasons ?? {}), [date]: reason } };
+    persistState(up);
+    return up;
+  }));
+  const createRota = (cid, packageDays, startDate, shiftTime) => setCustomers(prev => prev.map(c => {
+    if (c.id !== cid) return c;
+    const up = { ...c, packageDays, startDate, shiftTime, rota: {} };
+    persistState(up);
+    return up;
+  }));
+  const clearRota = (cid) => setCustomers(prev => prev.map(c => {
+    if (c.id !== cid) return c;
+    const up = { ...c, packageDays: undefined, startDate: undefined, shiftTime: undefined, rota: undefined };
+    persistState(up);
+    return up;
+  }));
   const toggleRotaPause = (cid, date, reason) => setCustomers(prev => prev.map(c => {
     if (c.id !== cid) return c;
     const cur = new Set(c.pausedDates ?? []);
@@ -1144,7 +1202,9 @@ export function OpsBoard() {
     if (was) cur.delete(date); else cur.add(date);
     const nextR = { ...(c.rotaReasons ?? {}) };
     if (was) delete nextR[date]; else if (reason) nextR[date] = reason;
-    return { ...c, pausedDates: Array.from(cur), rotaReasons: nextR };
+    const up = { ...c, pausedDates: Array.from(cur), rotaReasons: nextR };
+    persistState(up);
+    return up;
   }));
   const toggleRotaLeave = (cid, date, reason) => setCustomers(prev => prev.map(c => {
     if (c.id !== cid) return c;
@@ -1153,9 +1213,16 @@ export function OpsBoard() {
     if (was) cur.delete(date); else cur.add(date);
     const nextR = { ...(c.rotaReasons ?? {}) };
     if (was) delete nextR[date]; else if (reason) nextR[date] = reason;
-    return { ...c, leaveDates: Array.from(cur), rotaReasons: nextR };
+    const up = { ...c, leaveDates: Array.from(cur), rotaReasons: nextR };
+    persistState(up);
+    return up;
   }));
-  const extendRota = (cid, extra) => setCustomers(prev => prev.map(c => c.id === cid && c.packageDays ? { ...c, packageDays: c.packageDays + extra } : c));
+  const extendRota = (cid, extra) => setCustomers(prev => prev.map(c => {
+    if (c.id !== cid || !c.packageDays) return c;
+    const up = { ...c, packageDays: c.packageDays + extra };
+    persistState(up);
+    return up;
+  }));
   const deleteCustomer = (cid) => { setSelectedId(null); setCustomers(prev => prev.filter(c => c.id !== cid)); };
   const addToRoster = () => {
     const name = newStaffName.trim(); if (!name) return;
