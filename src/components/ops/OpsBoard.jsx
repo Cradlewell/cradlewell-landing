@@ -8,13 +8,14 @@ const PALETTE = [
 ];
 
 
-const ZONE_ORDER = ["Central", "South", "East", "North"];
+const ZONE_ORDER = ["Central", "North", "East", "South", "West"];
 
 const ZONE_COLORS = {
   Central: "#5F47FF",
-  South: "#06b6d4",
-  East: "#f59e0b",
-  North: "#22c55e",
+  North:   "#22c55e",
+  East:    "#f59e0b",
+  South:   "#06b6d4",
+  West:    "#ec4899",
 };
 
 const TRIP_TYPES = ["Client Visit", "Hospital Pickup", "Training", "Other"];

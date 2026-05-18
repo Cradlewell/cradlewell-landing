@@ -4,12 +4,20 @@ import { supabase } from "@/lib/supabase-server";
 function areaToZone(area: string | undefined): string {
   if (!area) return "Central";
   const a = area.toLowerCase();
-  if (/whitefield|bellandur|marathahalli|electronic city|sarjapur|varthur|kr puram|mahadevapura/.test(a))
-    return "East";
-  if (/koramangala|jayanagar|hsr|jp nagar|banashankari|btm|bommanahalli|begur/.test(a))
-    return "South";
-  if (/yelahanka|hebbal|kengeri|peenya|dasarahalli|jalahalli|mathikere/.test(a))
+
+  if (/hebbal|yelahanka|nagawara|manyata|jakkur|devanahalli|hennur|thanisandra|banaswadi|hbr layout|yeshwanthpur|jalahalli|peenya|sanjeevani|kempegowda|airport/.test(a))
     return "North";
+
+  if (/whitefield|marathahalli|old airport|kr puram|mahadevapura|hoodi|outer ring|bellandur|sarjapur road|hal\b|itpl/.test(a))
+    return "East";
+
+  if (/jayanagar|jp nagar|btm|bannerghatta|basavanagudi|electronic city|hosur|kanakapura|subramanyapura|hsr|sarjapur\b/.test(a))
+    return "South";
+
+  if (/vijayanagar|rajajinagar|basaveshwara|kengeri|magadi|mathikere|mahalakshmi layout|chandra layout|bapuji|tumkur|mysuru road|mysore road|rr nagar/.test(a))
+    return "West";
+
+  // Central: MG Road, Brigade Road, Cubbon Park, Chickpet, Indiranagar, RT Nagar, Koramangala (border)
   return "Central";
 }
 
