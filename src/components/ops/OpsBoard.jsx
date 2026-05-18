@@ -1060,6 +1060,13 @@ export function OpsBoard() {
   const [roster, setRoster] = useState([]);
 
   useEffect(() => {
+    fetch("/api/ops/staff")
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setRoster(data); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetch("/api/ops/customers")
       .then(r => r.json())
       .then(data => {
@@ -1149,12 +1156,15 @@ export function OpsBoard() {
     const name = newStaffName.trim(); if (!name) return;
     const initials = name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
     const color = PALETTE[roster.length % PALETTE.length];
-    setRoster(prev => [...prev, { id: `s-${Date.now()}`, name, role: newStaffRole, initials, color }]);
+    const member = { id: `s-${Date.now()}`, name, role: newStaffRole, initials, color };
+    setRoster(prev => [...prev, member]);
     setNewStaffName(""); setNewStaffRole("MOBA");
+    fetch("/api/ops/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(member) }).catch(() => {});
   };
   const removeFromRoster = (sid) => {
     setRoster(prev => prev.filter(s => s.id !== sid));
     setCustomers(prev => prev.map(c => ({ ...c, staff: c.staff.filter(s => s.id !== sid) })));
+    fetch(`/api/ops/staff?id=${sid}`, { method: "DELETE" }).catch(() => {});
   };
 
   const navTabs = [
