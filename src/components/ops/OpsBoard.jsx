@@ -265,9 +265,15 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editDay, setEditDay] = useState(null);
   const editDayRef = useRef(null);
-  const [newPackage, setNewPackage] = useState("30");
-  const [newStart, setNewStart] = useState(todayISO());
-  const [newShift, setNewShift] = useState("8am - 6pm");
+  const [newPackage, setNewPackage] = useState(() => String(customer?.serviceDays ?? "30"));
+  const [newStart, setNewStart] = useState(() => customer?.careStartDate ?? todayISO());
+  const [newShift, setNewShift] = useState(() => customer?.shiftTime ?? "8am - 6pm");
+
+  useEffect(() => {
+    setNewPackage(String(customer?.serviceDays ?? "30"));
+    setNewStart(customer?.careStartDate ?? todayISO());
+    setNewShift(customer?.shiftTime ?? "8am - 6pm");
+  }, [customer?.id]);
   const [pendingChange, setPendingChange] = useState(null);
   const [reasonText, setReasonText] = useState("");
   const [extendDays, setExtendDays] = useState("7");
