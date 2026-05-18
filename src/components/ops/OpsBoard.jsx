@@ -437,9 +437,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
               </div>
               <div>
                 <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, color: "#7a7a86" }}>Shift time</div>
-                <select value={newShift} onChange={e => setNewShift(e.target.value)} style={inp}>
-                  <option>8am - 6pm</option><option>6am - 6pm</option><option>6pm - 6am</option><option>9am - 9pm</option><option>24 hours</option>
-                </select>
+                <input type="text" value={newShift} onChange={e => setNewShift(e.target.value)} placeholder="e.g. 10:00 AM - 6:00 PM" style={inp} />
               </div>
               <button onClick={() => { const n = Math.max(1, Math.floor(Number(newPackage) || 0)); if (n >= 1) onCreateRota(customer.id, n, newStart, newShift); }}
                 disabled={customer.staff.length === 0 || !(Number(newPackage) >= 1)}
