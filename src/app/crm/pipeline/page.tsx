@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDB, api } from "@/lib/crm-store";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadStage } from "@/lib/crm-types";
@@ -15,10 +15,32 @@ export default function PipelinePage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const dragIdRef = useRef<string | null>(null);
   const [overStage, setOverStage] = useState<LeadStage | null>(null);
+  const kanbanRef = useRef<HTMLDivElement>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => stopScroll(), []);
 
   const grouped: Record<LeadStage, typeof db.leads> = {} as Record<LeadStage, typeof db.leads>;
   LEAD_STAGES.forEach(s => { grouped[s] = []; });
   db.leads.forEach(l => { if (grouped[l.stage]) grouped[l.stage].push(l); });
+
+  const stopScroll = () => {
+    if (scrollTimerRef.current) { clearInterval(scrollTimerRef.current); scrollTimerRef.current = null; }
+  };
+
+  const handleWrapDragOver = (e: React.DragEvent) => {
+    const el = kanbanRef.current;
+    if (!el) return;
+    const { left, right } = el.getBoundingClientRect();
+    const EDGE = 80;
+    const SPEED = 16;
+    stopScroll();
+    if (e.clientX < left + EDGE) {
+      scrollTimerRef.current = setInterval(() => { el.scrollLeft -= SPEED; }, 16);
+    } else if (e.clientX > right - EDGE) {
+      scrollTimerRef.current = setInterval(() => { el.scrollLeft += SPEED; }, 16);
+    }
+  };
 
   const onDragStart = (id: string) => {
     dragIdRef.current = id;
@@ -29,13 +51,19 @@ export default function PipelinePage() {
   };
   const onDrop = (e: React.DragEvent, stage: LeadStage) => {
     e.preventDefault();
+    stopScroll();
     const id = dragIdRef.current;
     if (id) api.moveStage(id, stage);
     dragIdRef.current = null;
     setDragId(null);
     setOverStage(null);
   };
-  const onDragEnd = () => { dragIdRef.current = null; setDragId(null); setOverStage(null); };
+  const onDragEnd = () => {
+    stopScroll();
+    dragIdRef.current = null;
+    setDragId(null);
+    setOverStage(null);
+  };
 
   return (
     <>
@@ -52,7 +80,11 @@ export default function PipelinePage() {
         </button>
       </div>
 
-      <div className="crm-kanban-wrap">
+      <div
+        ref={kanbanRef}
+        className="crm-kanban-wrap"
+        onDragOver={handleWrapDragOver}
+      >
         {LEAD_STAGES.map(stage => {
           const leads = grouped[stage];
           return (
