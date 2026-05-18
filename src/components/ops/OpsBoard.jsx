@@ -7,47 +7,6 @@ const PALETTE = [
   "#ec4899", "#06b6d4", "#f43f5e", "#84cc16", "#eab308",
 ];
 
-const STAFF = {
-  KR: { id: "1", name: "Kavitha R", role: "MOBA", initials: "K", color: PALETTE[1] },
-  PS: { id: "2", name: "Priya S", role: "Nurse", initials: "P", color: PALETTE[0] },
-  AM: { id: "3", name: "Anitha M", role: "MOBA", initials: "A", color: PALETTE[5] },
-  RD: { id: "4", name: "Rekha D", role: "Nurse", initials: "R", color: PALETTE[3] },
-  SB: { id: "5", name: "Sunita B", role: "MOBA", initials: "S", color: PALETTE[6] },
-  MK: { id: "6", name: "Meena K", role: "Nurse", initials: "M", color: PALETTE[4] },
-  LP: { id: "7", name: "Lakshmi P", role: "MOBA", initials: "L", color: PALETTE[2] },
-  DN: { id: "8", name: "Divya N", role: "Nurse", initials: "D", color: PALETTE[7] },
-  SV: { id: "9", name: "Saritha V", role: "Nurse", initials: "S", color: PALETTE[8] },
-  NT: { id: "10", name: "Nirmala T", role: "MOBA", initials: "N", color: PALETTE[1] },
-  UR: { id: "11", name: "Usha R", role: "Nurse", initials: "U", color: PALETTE[3] },
-  PL: { id: "12", name: "Padma L", role: "MOBA", initials: "P", color: PALETTE[5] },
-  GA: { id: "13", name: "Geetha A", role: "Nurse", initials: "G", color: PALETTE[2] },
-  RS: { id: "14", name: "Ranjitha S", role: "MOBA", initials: "R", color: PALETTE[9] },
-  VK: { id: "15", name: "Vijaya K", role: "Nurse", initials: "V", color: PALETTE[0] },
-  SM: { id: "16", name: "Shobha M", role: "MOBA", initials: "S", color: PALETTE[4] },
-};
-
-const ALL_STAFF = Object.values(STAFF);
-
-const INITIAL_CUSTOMERS = [
-  // Central
-  { id: "c1", name: "Sharma Family", zone: "Central", area: "Indiranagar", staff: [STAFF.KR], status: "active", badge: "Day 5 · Postnatal · 30d", shiftEndsInMin: 150 },
-  { id: "c2", name: "Iyer Family", zone: "Central", area: "Malleshwaram", staff: [STAFF.RS], status: "active", badge: "Day 12 · Newborn · 30d", shiftEndsInMin: 320 },
-  { id: "c3", name: "Bhat Family", zone: "Central", area: "Rajajinagar", staff: [], status: "idle", badge: "Awaiting" },
-  // South
-  { id: "c4", name: "Reddy Family", zone: "South", area: "Koramangala", staff: [STAFF.PS, STAFF.RD], status: "active", badge: "Day 3 · Postnatal · 30d", shiftEndsInMin: 250 },
-  { id: "c5", name: "Nair Family", zone: "South", area: "Jayanagar", staff: [STAFF.RD], status: "transit", badge: "ETA 12 min" },
-  { id: "c6", name: "Kapoor Family", zone: "South", area: "HSR Layout", staff: [STAFF.SB], status: "idle", badge: "On Break" },
-  { id: "c7", name: "Menon Family", zone: "South", area: "JP Nagar", staff: [STAFF.NT], status: "active", badge: "Day 8 · Newborn", shiftEndsInMin: 180 },
-  { id: "c8", name: "Rao Family", zone: "South", area: "Banashankari", staff: [STAFF.UR], status: "transit", badge: "ETA 8 min" },
-  // East
-  { id: "c9", name: "Gupta Family", zone: "East", area: "Whitefield", staff: [STAFF.AM, STAFF.MK], status: "active", badge: "Day 2 · Postnatal · 30d", shiftEndsInMin: 410 },
-  { id: "c10", name: "Pillai Family", zone: "East", area: "Bellandur", staff: [STAFF.MK], status: "active", badge: "Day 7 · Newborn", shiftEndsInMin: 105 },
-  { id: "c11", name: "Joshi Family", zone: "East", area: "Marathahalli", staff: [STAFF.LP], status: "active", badge: "Day 14 · Newborn", shiftEndsInMin: 240 },
-  { id: "c12", name: "Verma Family", zone: "East", area: "Electronic City", staff: [STAFF.PL], status: "idle", badge: "On Break" },
-  // North
-  { id: "c13", name: "Singh Family", zone: "North", area: "Yelahanka", staff: [STAFF.GA], status: "active", badge: "Day 4 · Postnatal", shiftEndsInMin: 360 },
-  { id: "c14", name: "Hegde Family", zone: "North", area: "Hebbal", staff: [], status: "attention", badge: "Unassigned" },
-];
 
 const ZONE_ORDER = ["Central", "South", "East", "North"];
 
@@ -1098,7 +1057,7 @@ export function OpsBoard() {
   useClientNow();
   const [customers, setCustomers] = useState([]);
   const [customersLoading, setCustomersLoading] = useState(true);
-  const [roster, setRoster] = useState(ALL_STAFF);
+  const [roster, setRoster] = useState([]);
 
   useEffect(() => {
     fetch("/api/ops/customers")
