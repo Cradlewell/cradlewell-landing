@@ -55,7 +55,7 @@ export default function PipelinePage() {
               className={`crm-kanban-col ${overStage === stage ? "drag-over" : ""}`}
               onDragOver={e => onDragOver(e, stage)}
               onDrop={() => onDrop(stage)}
-              onDragLeave={() => setOverStage(null)}
+              onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverStage(null); }}
             >
               <div className="crm-kanban-col-header">
                 <StageBadge stage={stage} size="md" />
@@ -74,6 +74,7 @@ export default function PipelinePage() {
                     draggable
                     onDragStart={() => onDragStart(l.id)}
                     onDragEnd={onDragEnd}
+                    onDragOver={e => e.preventDefault()}
                     onClick={() => setSelectedLead(l.id)}
                     style={{ opacity: dragId === l.id ? 0.4 : 1 }}
                   >
