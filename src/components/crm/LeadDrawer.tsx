@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Phone, MessageCircle, Edit2, Save, Trash2, Plus, Check, Clock, ChevronDown } from "lucide-react";
 import { api, useDB, isOverdue, isToday } from "@/lib/crm-store";
 import type { Lead, LeadStage, FollowupType, LostReason } from "@/lib/crm-types";
@@ -12,6 +12,29 @@ const LOST_REASONS: LostReason[] = ["Competitor selected", "Budget issue", "No r
 
 interface Props { leadId: string | null; onClose: () => void; }
 type Tab = "profile" | "followups" | "quotations" | "closure" | "activity";
+
+interface FieldProps {
+  label: string;
+  value?: string | number;
+  field: keyof Lead;
+  type?: string;
+  editing: boolean;
+  draft: Partial<Lead>;
+  setDraft: React.Dispatch<React.SetStateAction<Partial<Lead>>>;
+}
+
+function Field({ label, value, field, type = "text", editing, draft, setDraft }: FieldProps) {
+  return (
+    <div>
+      <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
+      {editing ? (
+        <input className="crm-input" type={type} value={(draft[field] as string) ?? ""} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} style={{ fontSize: "0.85rem" }} />
+      ) : (
+        <div style={{ fontSize: "0.875rem", color: value ? "var(--crm-text)" : "var(--crm-text-muted)", fontWeight: value ? 500 : 400 }}>{value || "—"}</div>
+      )}
+    </div>
+  );
+}
 
 export default function LeadDrawer({ leadId, onClose }: Props) {
   const db = useDB();
@@ -76,17 +99,6 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
     }
   };
   const fmtDt = (iso: string) => { try { return format(new Date(iso), "dd MMM, hh:mm a"); } catch { return iso; } };
-
-  const Field = ({ label, value, field, type = "text" }: { label: string; value?: string | number; field: keyof Lead; type?: string }) => (
-    <div>
-      <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
-      {editing ? (
-        <input className="crm-input" type={type} value={(draft[field] as string) ?? ""} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} style={{ fontSize: "0.85rem" }} />
-      ) : (
-        <div style={{ fontSize: "0.875rem", color: value ? "var(--crm-text)" : "var(--crm-text-muted)", fontWeight: value ? 500 : 400 }}>{value || "—"}</div>
-      )}
-    </div>
-  );
 
   return (
     <>
@@ -221,11 +233,11 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               <div style={{ marginBottom: "1.5rem" }}>
                 <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Lead Info</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                  <Field label="Name" value={lead.name} field="name" />
-                  <Field label="Phone" value={lead.phone} field="phone" />
-                  <Field label="WhatsApp" value={lead.whatsapp} field="whatsapp" />
-                  <Field label="Source" value={lead.source} field="source" />
-                  <Field label="Owner" value={lead.owner} field="owner" />
+                  <Field label="Name" value={lead.name} field="name"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Phone" value={lead.phone} field="phone"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="WhatsApp" value={lead.whatsapp} field="whatsapp"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Source" value={lead.source} field="source"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Owner" value={lead.owner} field="owner"  editing={editing} draft={draft} setDraft={setDraft} />
                 </div>
               </div>
 
@@ -235,11 +247,11 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               <div style={{ marginBottom: "1.5rem" }}>
                 <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Baby Details</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                  <Field label="Baby Status" value={lead.babyStatus} field="babyStatus" />
-                  <Field label="Hospital" value={lead.hospitalName} field="hospitalName" />
-                  <Field label="Birth Stage" value={lead.babyBirthStageStatus} field="babyBirthStageStatus" />
-                  <Field label="Baby Age" value={lead.babyAge} field="babyAge" />
-                  <Field label="Current Weight" value={lead.currentWeight} field="currentWeight" />
+                  <Field label="Baby Status" value={lead.babyStatus} field="babyStatus"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Hospital" value={lead.hospitalName} field="hospitalName"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Birth Stage" value={lead.babyBirthStageStatus} field="babyBirthStageStatus"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Baby Age" value={lead.babyAge} field="babyAge"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Current Weight" value={lead.currentWeight} field="currentWeight"  editing={editing} draft={draft} setDraft={setDraft} />
                 </div>
               </div>
 
@@ -249,13 +261,13 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               <div style={{ marginBottom: "1.5rem" }}>
                 <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Service & Shift</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                  <Field label="Service" value={lead.serviceRequired} field="serviceRequired" />
-                  <Field label="Shift Type" value={lead.preferredShift} field="preferredShift" />
-                  <Field label="Shift Hours" value={lead.shiftHoursCount} field="shiftHoursCount" type="number" />
-                  <Field label="Shift Time" value={lead.shiftTime} field="shiftTime" />
-                  <Field label="Care Start Date" value={lead.careStartDate} field="careStartDate" type="date" />
-                  <Field label="Service Days" value={lead.serviceDays} field="serviceDays" type="number" />
-                  <Field label="Budget (₹)" value={lead.budget} field="budget" type="number" />
+                  <Field label="Service" value={lead.serviceRequired} field="serviceRequired"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Shift Type" value={lead.preferredShift} field="preferredShift"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Shift Hours" value={lead.shiftHoursCount} field="shiftHoursCount" type="number"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Shift Time" value={lead.shiftTime} field="shiftTime"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Care Start Date" value={lead.careStartDate} field="careStartDate" type="date"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Service Days" value={lead.serviceDays} field="serviceDays" type="number"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Budget (₹)" value={lead.budget} field="budget" type="number"  editing={editing} draft={draft} setDraft={setDraft} />
                 </div>
               </div>
 
@@ -265,10 +277,10 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               <div style={{ marginBottom: "1.5rem" }}>
                 <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Location</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                  <Field label="Area" value={lead.area} field="area" />
-                  <Field label="City" value={lead.city} field="city" />
+                  <Field label="Area" value={lead.area} field="area"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="City" value={lead.city} field="city"  editing={editing} draft={draft} setDraft={setDraft} />
                   <div style={{ gridColumn: "1 / -1" }}>
-                    <Field label="Address" value={lead.address} field="address" />
+                    <Field label="Address" value={lead.address} field="address"  editing={editing} draft={draft} setDraft={setDraft} />
                   </div>
                 </div>
               </div>
