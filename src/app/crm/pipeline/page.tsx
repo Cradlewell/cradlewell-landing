@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useDB, api } from "@/lib/crm-store";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadStage } from "@/lib/crm-types";
@@ -13,23 +13,29 @@ export default function PipelinePage() {
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const dragIdRef = useRef<string | null>(null);
   const [overStage, setOverStage] = useState<LeadStage | null>(null);
 
   const grouped: Record<LeadStage, typeof db.leads> = {} as Record<LeadStage, typeof db.leads>;
   LEAD_STAGES.forEach(s => { grouped[s] = []; });
   db.leads.forEach(l => { if (grouped[l.stage]) grouped[l.stage].push(l); });
 
-  const onDragStart = (id: string) => setDragId(id);
-  const onDragOver = (e: React.DragEvent, stage: LeadStage) => {
-    e.preventDefault();
-    setOverStage(stage);
+  const onDragStart = (id: string) => {
+    dragIdRef.current = id;
+    setDragId(id);
   };
-  const onDrop = (stage: LeadStage) => {
-    if (dragId) api.moveStage(dragId, stage);
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  const onDrop = (e: React.DragEvent, stage: LeadStage) => {
+    e.preventDefault();
+    const id = dragIdRef.current;
+    if (id) api.moveStage(id, stage);
+    dragIdRef.current = null;
     setDragId(null);
     setOverStage(null);
   };
-  const onDragEnd = () => { setDragId(null); setOverStage(null); };
+  const onDragEnd = () => { dragIdRef.current = null; setDragId(null); setOverStage(null); };
 
   return (
     <>
@@ -53,8 +59,8 @@ export default function PipelinePage() {
             <div
               key={stage}
               className={`crm-kanban-col ${overStage === stage ? "drag-over" : ""}`}
-              onDragOver={e => onDragOver(e, stage)}
-              onDrop={() => onDrop(stage)}
+              onDragOver={e => { onDragOver(e); setOverStage(stage); }}
+              onDrop={e => onDrop(e, stage)}
               onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverStage(null); }}
             >
               <div className="crm-kanban-col-header">
@@ -74,7 +80,8 @@ export default function PipelinePage() {
                     draggable
                     onDragStart={() => onDragStart(l.id)}
                     onDragEnd={onDragEnd}
-                    onDragOver={e => e.preventDefault()}
+                    onDragOver={onDragOver}
+                    onDrop={e => onDrop(e, stage)}
                     onClick={() => setSelectedLead(l.id)}
                     style={{ opacity: dragId === l.id ? 0.4 : 1 }}
                   >
