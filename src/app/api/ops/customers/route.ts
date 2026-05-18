@@ -5,19 +5,23 @@ function areaToZone(area: string | undefined): string {
   if (!area) return "Central";
   const a = area.toLowerCase();
 
-  if (/hebbal|yelahanka|nagawara|manyata|jakkur|devanahalli|hennur|thanisandra|banaswadi|hbr layout|yeshwanthpur|jalahalli|peenya|sanjeevani|kempegowda|airport/.test(a))
+  // North Bangalore
+  if (/hebbal|yelahanka|jakkur|thanisandra|nagawara|manyata|hennur|hbr layout|banaswadi|kalyan nagar|kammanahalli|rt nagar|sahakara nagar|sanjay nagar|vidyaranyapura|kodigehalli|jalahalli|peenya(?! industrial)|abbigere|dasarahalli|yeshwanthpur|mathikere|nagasandra|bagaluru|kattigenahalli|byrathi|hegde nagar|virupakshapura|rmv extension|devanahalli|kempegowda|airport/.test(a))
     return "North";
 
-  if (/whitefield|marathahalli|old airport|kr puram|mahadevapura|hoodi|outer ring|bellandur|sarjapur road|hal\b|itpl/.test(a))
+  // East Bangalore
+  if (/whitefield|kadugodi|hoodi|mahadevapura|kr puram|ramamurthi nagar|dooravani nagar|kaggadasapura|cv raman nagar|vibhutipura|marathahalli|bellandur|doddanekundi|brookefield|munnekollal|munekollal|varthur|panathur|balagere|bhoganahalli|kadubeesanahalli|indiranagar|domlur|\bhal\b|old airport road|new tippasandra|challaghatta|kasturi nagar|hudi|itpl|outer ring road|sarjapur road|choodasandra|doddakannali|chikkabellandur|kodathi|kasavanahalli|carmelaram|hadosiddapura/.test(a))
     return "East";
 
-  if (/jayanagar|jp nagar|btm|bannerghatta|basavanagudi|electronic city|hosur|kanakapura|subramanyapura|hsr|sarjapur\b/.test(a))
+  // South Bangalore
+  if (/jayanagar|jp nagar|btm layout|hsr layout|koramangala|bannerghatta|basavanagudi|kumaraswamy layout|uttarahalli|banashankari|konanakunte|kanakapura|subramanyapura|padmanabhanagar|bilekahalli|arakere|gottigere|kalena agrahara|hulimavu|\bbegur|bommanahalli|hongasandra|mangammanapalya|kudlu|parappana agrahara|singasandra|electronic city|electronics city|bettadasanapura|heelalige|chandapura|hosur road|adugodi|neelasandra|shanti nagar|mavalli|bikasipura|chikkallasandra|hosakerehalli|\bsarjapur\b/.test(a))
     return "South";
 
-  if (/vijayanagar|rajajinagar|basaveshwara|kengeri|magadi|mathikere|mahalakshmi layout|chandra layout|bapuji|tumkur|mysuru road|mysore road|rr nagar/.test(a))
+  // West Bangalore
+  if (/vijayanagar|rajajinagar|basaveshwara nagar|nagarabhavi|rr nagar|kengeri|mysuru road|mysore road|magadi road|chandra layout|mahalakshmi layout|nandini layout|kamakshipalya|bedarahalli|annapurneshwari nagar|smv layout|nagdevanahalli|guddadahalli|binnipete|kempapura agrahara|hegganahalli|hosahalli|mudahalli|raja rajeshwari nagar|sunkadakatte|peenya industrial/.test(a))
     return "West";
 
-  // Central: MG Road, Brigade Road, Cubbon Park, Chickpet, Indiranagar, RT Nagar, Koramangala (border)
+  // Central Bangalore (also fallback)
   return "Central";
 }
 
