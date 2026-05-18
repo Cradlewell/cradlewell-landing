@@ -1196,24 +1196,25 @@ export function OpsBoard() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", width: "100%", display: "flex", background: "linear-gradient(160deg,#f5f7ff 0%,#f8fafc 40%,#f8fafc 100%)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", width: "100%", background: "linear-gradient(160deg,#f5f7ff 0%,#f8fafc 40%,#f8fafc 100%)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Mobile overlay */}
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30, backgroundColor: "rgba(15,17,21,0.4)", backdropFilter: "blur(2px)" }} />}
 
       {/* Sidebar */}
       <aside style={{
-        width: 260, flexShrink: 0, height: "100vh", display: "flex", flexDirection: "column", zIndex: 40,
-        backgroundColor: "#0f172a", borderRight: "1px solid rgba(255,255,255,0.07)",
-        position: "sticky", top: 0,
+        width: 260, height: "100vh", display: "flex", flexDirection: "column", zIndex: 40,
+        backgroundColor: "#ffffff", borderRight: "1px solid #e8edf2",
+        boxShadow: "2px 0 8px rgba(15,23,42,0.05)",
+        position: "fixed", top: 0, left: 0,
       }}>
         <div style={{ padding: "28px 24px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ height: 32, width: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#5F47FF,#a855f7)", flexShrink: 0 }}>
               <div style={{ height: 16, width: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.9)" }} />
             </div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#f8fafc", letterSpacing: "0.04em" }}>CRADLEWELL</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", letterSpacing: "0.04em" }}>CRADLEWELL</span>
           </div>
-          <p style={{ margin: "8px 0 0", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(148,163,184,0.55)" }}>Operations</p>
+          <p style={{ margin: "8px 0 0", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#94a3b8" }}>Operations</p>
         </div>
 
         <nav style={{ padding: "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
@@ -1221,23 +1222,23 @@ export function OpsBoard() {
             const active = view === tab.id;
             return (
               <button key={tab.id} onClick={() => { setView(tab.id); setSidebarOpen(false); }}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderRadius: 12, border: "none", textAlign: "left", cursor: "pointer", backgroundColor: active ? "rgba(139,92,246,0.18)" : "transparent", color: active ? "#c4b5fd" : "#64748b", fontWeight: active ? 600 : 400, transition: "background 0.15s" }}>
-                <span style={{ color: active ? "#c4b5fd" : "#475569", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderRadius: 12, border: "none", textAlign: "left", cursor: "pointer", backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent", color: active ? "#5F47FF" : "#475569", fontWeight: active ? 600 : 400, transition: "background 0.15s" }}>
+                <span style={{ color: active ? "#5F47FF" : "#94a3b8", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
                 <span style={{ fontSize: 13, flex: 1 }}>{tab.label}</span>
-                <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, fontWeight: 700, minWidth: 24, textAlign: "center", backgroundColor: active ? "#5F47FF" : "rgba(255,255,255,0.07)", color: active ? "#fff" : "#475569" }}>{tab.count}</span>
+                <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, fontWeight: 700, minWidth: 24, textAlign: "center", backgroundColor: active ? "#5F47FF" : "#f1f5f9", color: active ? "#fff" : "#64748b" }}>{tab.count}</span>
               </button>
             );
           })}
         </nav>
 
-        <div style={{ marginTop: "auto", padding: "16px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ marginTop: "auto", padding: "16px 16px 20px", borderTop: "1px solid #e8edf2" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 8px" }}>
             <div style={{ height: 32, width: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg,#5F47FF,#a855f7)", flexShrink: 0 }}>A</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Admin</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Admin</div>
               <div style={{ fontSize: 11, color: "#64748b" }}>Cradlewell</div>
             </div>
-            <button style={{ padding: 6, borderRadius: 8, border: "none", background: "transparent", color: "#475569", cursor: "pointer", display: "flex" }}>
+            <button style={{ padding: 6, borderRadius: 8, border: "none", background: "transparent", color: "#94a3b8", cursor: "pointer", display: "flex" }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="3" /><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42" /></svg>
             </button>
           </div>
@@ -1245,7 +1246,7 @@ export function OpsBoard() {
       </aside>
 
       {/* Main content */}
-      <div style={{ flex: 1, maxWidth: 1400, margin: "0 auto", padding: "24px 32px", minWidth: 0 }}>
+      <div style={{ marginLeft: 260, padding: "24px 32px", minWidth: 0 }}>
         {view === "attendance" ? <AttendanceView roster={roster} customers={customers} />
           : view === "travel" ? <TravelExpensesView roster={roster} entries={travelEntries} onAdd={e => setTravelEntries(prev => [e, ...prev])} />
             : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} />
