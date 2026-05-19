@@ -635,6 +635,17 @@ function StaffView({ roster, customers, newStaffName, setNewStaffName, newStaffR
   );
 }
 
+// ─── CSV Download Helper ───────────────────────────────────────────────────────
+
+function downloadCSV(filename, headers, rows) {
+  const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [headers.map(esc).join(","), ...rows.map(r => r.map(esc).join(","))];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Utilisation View ──────────────────────────────────────────────────────────
 
 function UtilisationView({ roster, customers, travelEntries = [] }) {
@@ -797,6 +808,14 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
           </select>
           {selectedStaff && <button onClick={() => setSelectedStaffId("")} style={{ ...selStyle, padding: "6px 10px" }}>Clear</button>}
         </div>
+        <button onClick={() => downloadCSV(
+          `utilisation-report-${todayISO()}.csv`,
+          ["Caregiver", "Role", "Planned", "Completed", "Travel (₹)", "Utilisation %", "Leave Rate %", "Status"],
+          filteredRows.map(r => [r.staff.name, r.staff.role, r.planned, r.completed, r.travelAmount, r.planned > 0 ? `${r.utilisation}%` : "—", r.planned > 0 ? `${r.leaveRate}%` : "—", r.status])
+        )} style={{ ...selStyle, backgroundColor: "#5F47FF", color: "#fff", border: "none", display: "flex", alignItems: "center", gap: 6 }}>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v9M5 8l3 3 3-3M2 13h12" /></svg>
+          Download CSV
+        </button>
       </div>
 
       {selectedStaff && (
@@ -989,10 +1008,41 @@ function TravelExpensesView({ roster, customers, entries, onAdd, onDelete }) {
 // ─── Attendance View ───────────────────────────────────────────────────────────
 
 function AttendanceView({ roster, customers }) {
+  const [roleFilter, setRoleFilter] = useState("All");
+  const [fyFilter, setFyFilter] = useState("All");
+  const [monthFilter, setMonthFilter] = useState("All");
+
+  const fyList = useMemo(() => {
+    const set = new Set();
+    for (const c of customers) {
+      if (!c.startDate || !c.packageDays) continue;
+      const span = c.packageDays + 60;
+      for (let i = 0; i < span; i += 15) set.add(fyOfDate(addDaysISO(c.startDate, i)));
+      set.add(fyOfDate(addDaysISO(c.startDate, span)));
+    }
+    const currentFy = fyOfDate(todayISO());
+    const currentStart = Number(currentFy.split("-")[0]);
+    for (let i = 0; i < 10; i++) { const y = currentStart + i; set.add(`${y}-${y + 1}`); }
+    return Array.from(set).filter(fy => Number(fy.split("-")[0]) >= currentStart).sort();
+  }, [customers]);
+
+  const monthOptions = useMemo(() => fyFilter === "All" ? [] : monthsOfFy(fyFilter), [fyFilter]);
+
+  useEffect(() => {
+    if (fyFilter === "All") { setMonthFilter("All"); return; }
+    if (monthFilter !== "All" && !monthOptions.some(m => m.value === monthFilter)) setMonthFilter("All");
+  }, [fyFilter, monthOptions, monthFilter]);
+
+  const dateInScope = (date) => {
+    if (monthFilter !== "All") return date.startsWith(monthFilter);
+    if (fyFilter !== "All") return fyOfDate(date) === fyFilter;
+    return true;
+  };
+
   const rows = useMemo(() => {
     return roster.map(staff => {
       const assigned = customers.filter(c => c.staff.some(x => x.id === staff.id));
-      let present = 0, absent = 0, leave = 0;
+      let present = 0, leave = 0;
       for (const c of assigned) {
         if (!c.packageDays || !c.startDate) continue;
         const pool = c.staff;
@@ -1006,28 +1056,33 @@ function AttendanceView({ roster, customers }) {
           const wouldBe = pool[workIdx % pool.length];
           const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
           const sundayOverrideId = c.rota?.[date];
-          if (leaveSet.has(date)) { if (wouldBe?.id === staff.id) leave++; consumed++; }
+          const inScope = dateInScope(date);
+          if (leaveSet.has(date)) { if (inScope && wouldBe?.id === staff.id) leave++; consumed++; }
           else if (pausedSet.has(date)) { /* skip */ }
           else if (isSunday && !sundayOverrideId) { consumed++; }
           else {
             const overrideId = c.rota?.[date];
             const actual = overrideId ? (roster.find(s => s.id === overrideId) ?? wouldBe) : wouldBe;
-            if (actual?.id === staff.id) present++;
+            if (inScope && actual?.id === staff.id) present++;
             workIdx++; consumed++;
           }
           offset++;
         }
       }
-      const scheduled = present + absent + leave;
+      const scheduled = present + leave;
       const attendance = scheduled === 0 ? 0 : Math.round((present / scheduled) * 100);
-      return { staff, clients: assigned.length, scheduled, present, absent, leave, attendance };
+      return { staff, clients: assigned.length, scheduled, present, leave, attendance };
     }).sort((a, b) => b.attendance - a.attendance);
-  }, [roster, customers]);
+  }, [roster, customers, fyFilter, monthFilter]);
 
-  const totalScheduled = rows.reduce((s, r) => s + r.scheduled, 0);
-  const totalPresent = rows.reduce((s, r) => s + r.present, 0);
+  const filteredRows = useMemo(() => roleFilter === "All" ? rows : rows.filter(r => r.staff.role === roleFilter), [rows, roleFilter]);
+
+  const totalScheduled = filteredRows.reduce((s, r) => s + r.scheduled, 0);
+  const totalPresent = filteredRows.reduce((s, r) => s + r.present, 0);
   const overall = totalScheduled === 0 ? 0 : Math.round((totalPresent / totalScheduled) * 100);
-  const onLeave = rows.filter(r => r.leave > 0).length;
+  const onLeave = filteredRows.filter(r => r.leave > 0).length;
+
+  const selStyle = { backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#0f1115", fontWeight: 500, cursor: "pointer" };
 
   return (
     <div>
@@ -1038,7 +1093,7 @@ function AttendanceView({ roster, customers }) {
             <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "#5F47FF" }}>Workforce</span>
           </div>
           <h1 style={{ fontSize: 44, fontWeight: 700, color: "#0f1115", letterSpacing: "-0.02em", lineHeight: 1, margin: 0 }}>Attendance Report</h1>
-          <p style={{ fontSize: 12, marginTop: 8, color: "#7a7a86" }}>Present, absent and leave days across all caregivers</p>
+          <p style={{ fontSize: 12, marginTop: 8, color: "#7a7a86" }}>Present and leave days across all caregivers</p>
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <StatTile value={`${overall}%`} label="Overall attendance" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="11" rx="2" /><path d="M5 1v4M11 1v4M2 7h12" /><path d="M5.5 10.5l2 2 3-3" /></svg>} />
@@ -1046,11 +1101,30 @@ function AttendanceView({ roster, customers }) {
           <StatTile value={onLeave} label="On leave" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6.5" cy="5" r="2.5" /><path d="M1.5 14c0-2.76 2.24-5 5-5M11 10v4M13 12h-4" /></svg>} />
         </div>
       </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        {[["Role", <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={selStyle}><option value="All">All staff</option><option value="Nurse">Nurses</option><option value="MOBA">MOBA</option></select>],
+          ["Financial Year", <select value={fyFilter} onChange={e => setFyFilter(e.target.value)} style={selStyle}><option value="All">All FY</option>{fyList.map(fy => <option key={fy} value={fy}>FY {fy}</option>)}</select>],
+          ["Month", <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} disabled={fyFilter === "All"} style={{ ...selStyle, opacity: fyFilter === "All" ? 0.5 : 1 }}><option value="All">All months</option>{monthOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select>],
+        ].map(([label, ctl]) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", color: "#7a7a86", fontWeight: 600 }}>{label}</span>
+            {ctl}
+          </div>
+        ))}
+        <button onClick={() => downloadCSV(
+          `attendance-report-${todayISO()}.csv`,
+          ["Caregiver", "Role", "Clients", "Scheduled", "Present", "Leave", "Attendance %"],
+          filteredRows.map(r => [r.staff.name, r.staff.role, r.clients, r.scheduled, r.present, r.leave, `${r.attendance}%`])
+        )} style={{ ...selStyle, backgroundColor: "#5F47FF", color: "#fff", border: "none", display: "flex", alignItems: "center", gap: 6 }}>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v9M5 8l3 3 3-3M2 13h12" /></svg>
+          Download CSV
+        </button>
+      </div>
       <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
           <span>Caregiver</span><span>Clients</span><span>Scheduled</span><span>Present</span><span>Leave</span><span>Attendance</span>
         </div>
-        {rows.map((r, idx) => {
+        {filteredRows.map((r, idx) => {
           const barColor = r.attendance >= 90 ? "#22c55e" : r.attendance >= 75 ? "#f59e0b" : "#ef4444";
           return (
             <div key={r.staff.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
@@ -1071,7 +1145,7 @@ function AttendanceView({ roster, customers }) {
             </div>
           );
         })}
-        {rows.length === 0 && <div style={{ textAlign: "center", padding: 48, fontSize: 13, color: "#7a7a86" }}>No caregivers yet.</div>}
+        {filteredRows.length === 0 && <div style={{ textAlign: "center", padding: 48, fontSize: 13, color: "#7a7a86" }}>No caregivers yet.</div>}
       </div>
     </div>
   );
