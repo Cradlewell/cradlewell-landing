@@ -18,22 +18,26 @@ const cookieOpts = {
   path: "/",
 };
 
-async function refreshSession(refreshToken: string) {
-  const supabase = createClient(
+const supabaseAuthOpts = {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+};
+
+function getSupabaseClient() {
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseAuthOpts
   );
-  const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+}
+
+async function refreshSession(refreshToken: string) {
+  const { data, error } = await getSupabaseClient().auth.refreshSession({ refresh_token: refreshToken });
   if (error || !data.session) return null;
   return data.session;
 }
 
 async function verifyToken(token: string): Promise<boolean> {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const { error } = await supabase.auth.getUser(token);
+  const { error } = await getSupabaseClient().auth.getUser(token);
   return !error;
 }
 
