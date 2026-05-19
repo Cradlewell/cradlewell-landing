@@ -853,7 +853,7 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
 
 // ─── Travel Expenses View ──────────────────────────────────────────────────────
 
-function TravelExpensesView({ roster, customers, entries, onAdd }) {
+function TravelExpensesView({ roster, customers, entries, onAdd, onDelete }) {
   const [staffId, setStaffId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [date, setDate] = useState(todayISO());
@@ -865,10 +865,13 @@ function TravelExpensesView({ roster, customers, entries, onAdd }) {
   const [receipt, setReceipt] = useState(false);
   const [notes, setNotes] = useState("");
 
-  const assignedCustomers = useMemo(
-    () => staffId ? customers.filter(c => c.staff.some(s => s.id === staffId)) : [],
-    [staffId, customers]
-  );
+  const { assignedCustomers, otherCustomers } = useMemo(() => {
+    if (!staffId) return { assignedCustomers: [], otherCustomers: customers };
+    const assigned = customers.filter(c => c.staff.some(s => s.id === staffId));
+    const assignedIds = new Set(assigned.map(c => c.id));
+    const others = customers.filter(c => !assignedIds.has(c.id));
+    return { assignedCustomers: assigned, otherCustomers: others };
+  }, [staffId, customers]);
 
   const distanceNum = parseFloat(distance) || 0;
   const suggested = distanceNum > 0 || MODE_RATE[mode].flat !== undefined ? suggestAmount(mode, distanceNum) : 0;
@@ -915,9 +918,10 @@ function TravelExpensesView({ roster, customers, entries, onAdd }) {
             <select value={staffId} onChange={e => handleStaffChange(e.target.value)} style={inp}><option value="">Select caregiver</option>{roster.map(s => <option key={s.id} value={s.id}>{s.name} · {s.role}</option>)}</select>
           </div>
           <div><label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7a7a86", display: "block", marginBottom: 6 }}>Customer</label>
-            <select value={customerId} onChange={e => setCustomerId(e.target.value)} disabled={!staffId} style={{ ...inp, opacity: staffId ? 1 : 0.5 }}>
-              <option value="">{staffId ? (assignedCustomers.length === 0 ? "No customers assigned" : "Select customer") : "Select a caregiver first"}</option>
-              {assignedCustomers.map(c => <option key={c.id} value={c.id}>{c.name} · {c.area}</option>)}
+            <select value={customerId} onChange={e => setCustomerId(e.target.value)} style={inp}>
+              <option value="">Select customer</option>
+              {assignedCustomers.length > 0 && <optgroup label="Assigned to caregiver">{assignedCustomers.map(c => <option key={c.id} value={c.id}>{c.name} · {c.area}</option>)}</optgroup>}
+              {otherCustomers.length > 0 && <optgroup label="Other customers">{otherCustomers.map(c => <option key={c.id} value={c.id}>{c.name} · {c.area}</option>)}</optgroup>}
             </select>
           </div>
           <div><label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7a7a86", display: "block", marginBottom: 6 }}>Date</label>
@@ -953,8 +957,8 @@ function TravelExpensesView({ roster, customers, entries, onAdd }) {
         </form>
 
         <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
-            <span>Caregiver</span><span>Date</span><span>Customer</span><span>Route</span><span>Km</span><span>Amount</span><span>Rcpt</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr 32px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+            <span>Caregiver</span><span>Date</span><span>Customer</span><span>Route</span><span>Km</span><span>Amount</span><span>Rcpt</span><span />
           </div>
           {entries.length === 0 && <div style={{ textAlign: "center", padding: 48, fontSize: 13, color: "#7a7a86" }}>No expenses logged yet.</div>}
           {entries.map((e, idx) => {
@@ -962,7 +966,7 @@ function TravelExpensesView({ roster, customers, entries, onAdd }) {
             const customer = e.customerId ? customers.find(c => c.id === e.customerId) : null;
             const customerLabel = customer?.name ?? e.tripType ?? "—";
             return (
-              <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
+              <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr 32px", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{staff && <Avatar s={staff} size={28} />}<div><div style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{staff?.name ?? "—"}</div><div style={{ fontSize: 11, color: "#7a7a86" }}>{staff?.role}</div></div></div>
                 <div style={{ fontSize: 12, color: "#0f1115" }}>{formatDateDMY(e.date)}</div>
                 <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, backgroundColor: "rgba(99,136,255,0.10)", color: "#5F47FF", fontWeight: 600, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customerLabel}</span>
@@ -970,6 +974,9 @@ function TravelExpensesView({ roster, customers, entries, onAdd }) {
                 <div style={{ color: "#0f1115" }}>{e.distance}</div>
                 <div style={{ fontWeight: 600, color: "#0f1115" }}>₹{e.amount.toLocaleString("en-IN")}</div>
                 <div>{e.receipt ? <span style={{ color: "#22c55e", fontWeight: 700 }}>✓</span> : <span style={{ color: "#c4c2b8" }}>—</span>}</div>
+                <button onClick={() => onDelete(e.id)} title="Delete" style={{ border: "none", background: "transparent", cursor: "pointer", color: "#c4c2b8", padding: 4, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={ev => ev.currentTarget.style.color = "#ef4444"} onMouseLeave={ev => ev.currentTarget.style.color = "#c4c2b8"}>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 4h10M6 4V2.5h4V4M5 4l.5 9h5l.5-9" /></svg>
+                </button>
               </div>
             );
           })}
@@ -1330,6 +1337,9 @@ export function OpsBoard() {
           : view === "travel" ? <TravelExpensesView roster={roster} customers={customers} entries={travelEntries} onAdd={e => {
               setTravelEntries(prev => [e, ...prev]);
               fetch("/api/ops/travel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(e) }).catch(() => {});
+            }} onDelete={id => {
+              setTravelEntries(prev => prev.filter(e => e.id !== id));
+              fetch(`/api/ops/travel/${id}`, { method: "DELETE" }).catch(() => {});
             }} />
             : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} travelEntries={travelEntries} />
               : view === "staff" ? <StaffView roster={roster} customers={customers} newStaffName={newStaffName} setNewStaffName={setNewStaffName} newStaffRole={newStaffRole} setNewStaffRole={setNewStaffRole} onAdd={addToRoster} onRemove={removeFromRoster} />
