@@ -1,27 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, isAuthed } from "@/lib/supabase-server";
+import { supabase } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/auth-guard";
 
-// Sessions that should NOT appear as importable leads
 const DONE_STEPS = ["completed", "opted_out", "agent_handoff"];
 
 export async function GET(req: NextRequest) {
-  if (!await isAuthed(req.cookies.get("crm_auth")?.value)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
+
   const { data, error } = await supabase
     .from("whatsapp_sessions")
     .select("*")
     .not("step", "in", `(${DONE_STEPS.join(",")})`)
     .order("updated_at", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) { console.error("[whatsapp-sessions GET]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
 
-  // Filter out any sessions with no name AND no service (truly blank sessions)
   const sessions = (data ?? []).filter(
     (s) => s.name || s.service || s.baby_status
   );
 
-  // Also check which phones already have a lead
   if (!sessions.length) return NextResponse.json({ sessions: [] });
 
   const phones = sessions.map((s: { wa_phone: string }) =>
@@ -45,9 +43,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!await isAuthed(req.cookies.get("crm_auth")?.value)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
+
   const { wa_phone } = await req.json();
 
   const { data: session, error: sessionError } = await supabase
@@ -70,13 +68,11 @@ export async function POST(req: NextRequest) {
   if (existing)
     return NextResponse.json({ error: "Lead already exists for this number" }, { status: 409 });
 
-  // Derive shift hours
   let shiftHoursCount: number | null = null;
   if (session.japa_hours) shiftHoursCount = parseInt(session.japa_hours) || null;
   else if (session.shift === "Night") shiftHoursCount = 9;
   else if (session.shift === "Day") shiftHoursCount = 8;
 
-  // Care start date (born = explicit date; expecting = due date)
   let careStartDate: string | null = session.care_start_date || null;
   if (!careStartDate && session.baby_status === "Expecting" && session.due_date) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(session.due_date)) careStartDate = session.due_date;
@@ -110,6 +106,6 @@ export async function POST(req: NextRequest) {
     created_at: now,
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) { console.error("[whatsapp-sessions POST]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }

@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/auth-guard";
 
 function areaToZone(area: string | undefined): string {
   if (!area) return "Central";
@@ -46,14 +47,16 @@ function buildBadge(lead: Record<string, unknown>, closure: Record<string, unkno
   ].filter(Boolean).join(" · ");
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
   const { data: leads, error: leadsErr } = await supabase
     .from("leads")
     .select("*")
     .eq("stage", "Closed Won")
     .order("created_at", { ascending: false });
 
-  if (leadsErr) return NextResponse.json({ error: leadsErr.message }, { status: 500 });
+  if (leadsErr) { console.error("[ops/customers GET]", leadsErr); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
   if (!leads || leads.length === 0) return NextResponse.json([]);
 
   const leadIds = leads.map((l) => l.id);

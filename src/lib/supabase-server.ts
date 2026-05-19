@@ -193,12 +193,3 @@ export function activityToDb(a: Partial<ActivityLog>): Record<string, unknown> {
   return r;
 }
 
-export async function isAuthed(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
-  try {
-    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
-    return payload.exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
-}

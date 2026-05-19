@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/auth-guard";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
   const { data, error } = await supabase
     .from("ops_travel_entries")
     .select("*")
     .order("date", { ascending: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) { console.error("[ops/travel GET]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
   return NextResponse.json(data ?? []);
 }
 
 export async function POST(req: NextRequest) {
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
   const body = await req.json();
   const { error } = await supabase.from("ops_travel_entries").insert({
-    id: body.id,
+    id: crypto.randomUUID(),
     staff_id: body.staffId,
     date: body.date,
     trip_type: body.tripType,
@@ -25,6 +30,6 @@ export async function POST(req: NextRequest) {
     receipt: body.receipt ?? false,
     notes: body.notes ?? null,
   });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) { console.error("[ops/travel POST]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-server";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const PHONE_NUMBER_ID     = process.env.WHATSAPP_PHONE_NUMBER_ID!;
 const ACCESS_TOKEN        = process.env.WHATSAPP_ACCESS_TOKEN!;
@@ -1067,7 +1068,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
+        const rawBody = await req.text();
+        const sig = req.headers.get("x-hub-signature-256") ?? "";
+        const appSecret = process.env.WHATSAPP_APP_SECRET;
+        if (appSecret) {
+            const expected = "sha256=" + createHmac("sha256", appSecret).update(rawBody).digest("hex");
+            const sigBuf = Buffer.from(sig.padEnd(expected.length));
+            const expBuf = Buffer.from(expected);
+            if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
+        }
+        const body = JSON.parse(rawBody);
 
         // ── account_update: Meta policy violation / restriction alerts ────────
         const changeField = body.entry?.[0]?.changes?.[0]?.field;

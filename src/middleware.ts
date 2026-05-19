@@ -12,8 +12,8 @@ function tokenExpired(token: string): boolean {
 
 const cookieOpts = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV !== "development",
+  sameSite: "strict" as const,
   maxAge: 60 * 60 * 24 * 30,
   path: "/",
 };
@@ -28,6 +28,15 @@ async function refreshSession(refreshToken: string) {
   return data.session;
 }
 
+async function verifyToken(token: string): Promise<boolean> {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  const { error } = await supabase.auth.getUser(token);
+  return !error;
+}
+
 async function checkAuth(
   request: NextRequest,
   accessKey: string,
@@ -35,6 +44,10 @@ async function checkAuth(
   loginPath: string,
   isApiRoute: boolean
 ): Promise<NextResponse> {
+  // Always strip the auth header to prevent client forgery
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete("x-cw-auth");
+
   const accessToken = request.cookies.get(accessKey)?.value;
   const refreshToken = request.cookies.get(refreshKey)?.value;
 
@@ -43,22 +56,36 @@ async function checkAuth(
     return NextResponse.redirect(new URL(loginPath, request.url));
   }
 
+  let validToken: string | null = null;
+  let newSession: Awaited<ReturnType<typeof refreshSession>> = null;
+
   if (accessToken && !tokenExpired(accessToken)) {
-    return NextResponse.next();
+    const ok = await verifyToken(accessToken);
+    if (ok) validToken = accessToken;
   }
 
-  if (refreshToken) {
-    const session = await refreshSession(refreshToken);
-    if (session) {
-      const res = NextResponse.next();
-      res.cookies.set(accessKey, session.access_token, cookieOpts);
-      res.cookies.set(refreshKey, session.refresh_token, cookieOpts);
-      return res;
+  if (!validToken && refreshToken) {
+    newSession = await refreshSession(refreshToken);
+    if (newSession) {
+      const ok = await verifyToken(newSession.access_token);
+      if (ok) validToken = newSession.access_token;
     }
   }
 
-  if (isApiRoute) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return NextResponse.redirect(new URL(loginPath, request.url));
+  if (!validToken) {
+    if (isApiRoute) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.redirect(new URL(loginPath, request.url));
+  }
+
+  requestHeaders.set("x-cw-auth", "1");
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+
+  if (newSession) {
+    res.cookies.set(accessKey, newSession.access_token, cookieOpts);
+    res.cookies.set(refreshKey, newSession.refresh_token, cookieOpts);
+  }
+
+  return res;
 }
 
 export async function middleware(request: NextRequest) {

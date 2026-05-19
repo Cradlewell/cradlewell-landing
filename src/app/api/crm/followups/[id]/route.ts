@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, dbToFollowup, followupToDb, isAuthed } from "@/lib/supabase-server";
+import { supabase, dbToFollowup, followupToDb } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await isAuthed(req.cookies.get("crm_auth")?.value)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
   const { id } = await params;
   const body = await req.json();
   const { data, error } = await supabase.from("followups").update(followupToDb(body)).eq("id", id).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) { console.error("[followups PUT]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
   return NextResponse.json(dbToFollowup(data));
 }
