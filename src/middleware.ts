@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function tokenExpired(token: string): boolean {
   try {
@@ -18,27 +20,42 @@ const cookieOpts = {
   path: "/",
 };
 
-const supabaseAuthOpts = {
-  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-};
-
-function getSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    supabaseAuthOpts
-  );
-}
-
-async function refreshSession(refreshToken: string) {
-  const { data, error } = await getSupabaseClient().auth.refreshSession({ refresh_token: refreshToken });
-  if (error || !data.session) return null;
-  return data.session;
-}
-
 async function verifyToken(token: string): Promise<boolean> {
-  const { error } = await getSupabaseClient().auth.getUser(token);
-  return !error;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+interface RefreshedSession {
+  access_token: string;
+  refresh_token: string;
+}
+
+async function refreshSession(refreshToken: string): Promise<RefreshedSession | null> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.access_token || !data.refresh_token) return null;
+    return { access_token: data.access_token, refresh_token: data.refresh_token };
+  } catch {
+    return null;
+  }
 }
 
 async function checkAuth(
@@ -48,7 +65,6 @@ async function checkAuth(
   loginPath: string,
   isApiRoute: boolean
 ): Promise<NextResponse> {
-  // Always strip the auth header to prevent client forgery
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete("x-cw-auth");
 
@@ -61,7 +77,7 @@ async function checkAuth(
   }
 
   let validToken: string | null = null;
-  let newSession: Awaited<ReturnType<typeof refreshSession>> = null;
+  let newSession: RefreshedSession | null = null;
 
   if (accessToken && !tokenExpired(accessToken)) {
     const ok = await verifyToken(accessToken);
