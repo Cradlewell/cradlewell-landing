@@ -1047,13 +1047,13 @@ function AttendanceView({ roster, customers }) {
         </div>
       </div>
       <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
-          <span>Caregiver</span><span>Clients</span><span>Scheduled</span><span>Present</span><span>Absent</span><span>Leave</span><span>Attendance</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+          <span>Caregiver</span><span>Clients</span><span>Scheduled</span><span>Present</span><span>Leave</span><span>Attendance</span>
         </div>
         {rows.map((r, idx) => {
           const barColor = r.attendance >= 90 ? "#22c55e" : r.attendance >= 75 ? "#f59e0b" : "#ef4444";
           return (
-            <div key={r.staff.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
+            <div key={r.staff.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <Avatar s={r.staff} size={32} />
                 <div><div style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{r.staff.name}</div><div style={{ fontSize: 11, color: "#7a7a86" }}>{r.staff.role}</div></div>
@@ -1061,7 +1061,6 @@ function AttendanceView({ roster, customers }) {
               <div style={{ color: "#0f1115" }}>{r.clients}</div>
               <div style={{ color: "#0f1115" }}>{r.scheduled || "—"}</div>
               <div style={{ fontWeight: 600, color: "#16a34a" }}>{r.present}</div>
-              <div style={{ fontWeight: 600, color: "#ef4444" }}>{r.absent}</div>
               <div style={{ fontWeight: 600, color: "#f59e0b" }}>{r.leave}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ flex: 1, height: 6, borderRadius: 999, overflow: "hidden", backgroundColor: "#f1f5f9" }}>
