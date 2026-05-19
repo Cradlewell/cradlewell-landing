@@ -1115,7 +1115,7 @@ export function OpsBoard() {
       })));
     }).catch(() => {});
   }, []);
-  const [view, setView] = useState(() => localStorage.getItem("ops_view") ?? "customers");
+  const [view, setView] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("ops_view") : null) ?? "customers");
   useEffect(() => { localStorage.setItem("ops_view", view); }, [view]);
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffRole, setNewStaffRole] = useState("MOBA");
