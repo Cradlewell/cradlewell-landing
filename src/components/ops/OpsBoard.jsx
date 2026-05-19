@@ -18,6 +18,14 @@ const ZONE_COLORS = {
   West:    "#ec4899",
 };
 
+const ZONE_AREAS = {
+  Central: ["Central Bangalore", "MG Road", "Brigade Road", "Cunningham Road", "Lavelle Road", "Richmond Road", "Shivajinagar", "Vasanth Nagar", "Seshadripuram", "Gandhinagar", "Rajbhavan Road", "Jayamahal", "Ulsoor", "Cleveland Town", "Fraser Town", "Benson Town", "Cox Town", "Murphy Town", "Lingarajapuram"],
+  North:   ["Hebbal", "Yelahanka", "Jakkur", "Thanisandra", "Nagawara", "Manyata Tech Park", "Hennur", "HBR Layout", "Banaswadi", "Kalyan Nagar", "Kammanahalli", "RT Nagar", "Sahakara Nagar", "Sanjay Nagar", "Vidyaranyapura", "Kodigehalli", "Jalahalli", "Peenya", "Abbigere", "Dasarahalli", "Yeshwanthpur", "Mathikere", "Nagasandra", "Bagaluru", "Kattigenahalli", "Byrathi", "Hegde Nagar", "Virupakshapura", "RMV Extension", "Devanahalli", "Kempegowda"],
+  East:    ["Whitefield", "Kadugodi", "Hoodi", "Mahadevapura", "KR Puram", "Ramamurthi Nagar", "Dooravani Nagar", "Kaggadasapura", "CV Raman Nagar", "Vibhutipura", "Marathahalli", "Bellandur", "Doddanekundi", "Brookefield", "Varthur", "Panathur", "Balagere", "Bhoganahalli", "Kadubeesanahalli", "Indiranagar", "Domlur", "HAL", "Old Airport Road", "New Tippasandra", "Kasturi Nagar", "ITPL", "Sarjapur Road", "Choodasandra", "Kodathi", "Kasavanahalli", "Carmelaram", "Hadosiddapura"],
+  South:   ["Jayanagar", "JP Nagar", "BTM Layout", "HSR Layout", "Koramangala", "Bannerghatta", "Basavanagudi", "Kumaraswamy Layout", "Uttarahalli", "Banashankari", "Konanakunte", "Kanakapura Road", "Subramanyapura", "Padmanabhanagar", "Bilekahalli", "Arakere", "Gottigere", "Kalena Agrahara", "Hulimavu", "Begur", "Bommanahalli", "Hongasandra", "Kudlu", "Parappana Agrahara", "Singasandra", "Electronic City", "Chandapura", "Hosur Road", "Adugodi", "Neelasandra", "Shanti Nagar", "Mavalli", "Bikasipura", "Hosakerehalli", "Sarjapur"],
+  West:    ["Vijayanagar", "Rajajinagar", "Basaveshwara Nagar", "Nagarabhavi", "RR Nagar", "Kengeri", "Mysuru Road", "Magadi Road", "Chandra Layout", "Mahalakshmi Layout", "Nandini Layout", "Kamakshipalya", "Annapurneshwari Nagar", "Nagdevanahalli", "Binnipete", "Raja Rajeshwari Nagar", "Sunkadakatte", "Peenya Industrial"],
+};
+
 const TRIP_TYPES = ["Client Visit", "Hospital Pickup", "Training", "Other"];
 const TRANSPORT_MODES = ["Two-Wheeler", "Auto Rickshaw", "Cab (Ola/Uber)", "Bus", "Metro", "Own Car"];
 const MODE_RATE = {
@@ -1213,8 +1221,11 @@ export function OpsBoard({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const areasForZone = useMemo(() => {
-    const src = zoneFilter === "All" ? customers : customers.filter(c => c.zone === zoneFilter);
-    return Array.from(new Set(src.map(c => c.area))).sort();
+    const staticAreas = zoneFilter === "All"
+      ? Object.values(ZONE_AREAS).flat()
+      : (ZONE_AREAS[zoneFilter] ?? []);
+    const customerAreas = (zoneFilter === "All" ? customers : customers.filter(c => c.zone === zoneFilter)).map(c => c.area).filter(Boolean);
+    return Array.from(new Set([...staticAreas, ...customerAreas])).sort();
   }, [customers, zoneFilter]);
 
   useEffect(() => {
