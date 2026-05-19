@@ -813,7 +813,7 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
               <span style={{ fontWeight: 500, color: "#0f1115" }}>{m.label}</span>
               <span style={{ fontWeight: 600, color: "#0f1115" }}>{m.planned}</span>
               <span style={{ fontWeight: 600, color: m.completed > 0 ? "#16a34a" : "#c9c6bc" }}>{m.completed || "—"}</span>
-              <span style={{ fontWeight: 600, color: m.travelAmount > 0 ? "#f59e0b" : "#c9c6bc" }}>{m.travelAmount > 0 ? `₹${m.travelAmount.toLocaleString("en-IN")}` : "—"}</span>
+              <span style={{ fontWeight: 600, color: m.travelAmount > 0 ? "#0f1115" : "#c9c6bc" }}>{m.travelAmount > 0 ? `₹${m.travelAmount.toLocaleString("en-IN")}` : "—"}</span>
               <span style={{ fontWeight: 600, color: "#0f1115" }}>{m.planned > 0 ? `${m.util}%` : "—"}</span>
               <span style={{ fontWeight: 600, color: m.leaveRate > 0 ? "#0f1115" : "#c9c6bc" }}>{m.planned > 0 ? `${m.leaveRate}%` : "—"}</span>
             </div>
@@ -838,7 +838,7 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
               <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px", borderRadius: 6, backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600, display: "inline-block" }}>{r.staff.role}</span>
               <span style={{ fontWeight: 600, color: "#0f1115" }}>{r.planned || "—"}</span>
               <span style={{ fontWeight: 600, color: r.completed > 0 ? "#16a34a" : "#c9c6bc" }}>{r.completed || "—"}</span>
-              <span style={{ fontWeight: 600, color: r.travelAmount > 0 ? "#f59e0b" : "#c9c6bc" }}>{r.travelAmount > 0 ? `₹${r.travelAmount.toLocaleString("en-IN")}` : "—"}</span>
+              <span style={{ fontWeight: 600, color: r.travelAmount > 0 ? "#0f1115" : "#c9c6bc" }}>{r.travelAmount > 0 ? `₹${r.travelAmount.toLocaleString("en-IN")}` : "—"}</span>
               <span style={{ fontWeight: 600, color: "#0f1115" }}>{r.planned > 0 ? `${r.utilisation}%` : "—"}</span>
               <span style={{ fontWeight: 600, color: r.leaveRate > 0 ? "#0f1115" : "#c9c6bc" }}>{r.planned > 0 ? `${r.leaveRate}%` : "—"}</span>
               <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px", borderRadius: 6, backgroundColor: sb, color: sc, fontWeight: 600, display: "inline-block" }}>{r.status}</span>
