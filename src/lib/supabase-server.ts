@@ -195,10 +195,10 @@ export function activityToDb(a: Partial<ActivityLog>): Record<string, unknown> {
 
 export async function isAuthed(token: string | undefined): Promise<boolean> {
   if (!token) return false;
-  const client = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
-  );
-  const { error } = await client.auth.getUser(token);
-  return !error;
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
 }

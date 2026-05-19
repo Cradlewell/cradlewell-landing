@@ -9,19 +9,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
   }
 
-  const res = NextResponse.json({ success: true });
-  res.cookies.set("crm_auth", data.session.access_token, {
+  const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "lax" as const,
     maxAge: 60 * 60 * 24 * 30,
     path: "/",
-  });
+  };
+  const res = NextResponse.json({ success: true });
+  res.cookies.set("crm_auth", data.session.access_token, cookieOpts);
+  res.cookies.set("crm_refresh", data.session.refresh_token, cookieOpts);
   return res;
 }
 
 export async function DELETE() {
   const res = NextResponse.json({ success: true });
   res.cookies.delete("crm_auth");
+  res.cookies.delete("crm_refresh");
   return res;
 }
