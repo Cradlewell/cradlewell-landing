@@ -853,10 +853,10 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
 
 // ─── Travel Expenses View ──────────────────────────────────────────────────────
 
-function TravelExpensesView({ roster, entries, onAdd }) {
+function TravelExpensesView({ roster, customers, entries, onAdd }) {
   const [staffId, setStaffId] = useState("");
+  const [customerId, setCustomerId] = useState("");
   const [date, setDate] = useState(todayISO());
-  const [tripType, setTripType] = useState("Client Visit");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [distance, setDistance] = useState("");
@@ -865,9 +865,16 @@ function TravelExpensesView({ roster, entries, onAdd }) {
   const [receipt, setReceipt] = useState(false);
   const [notes, setNotes] = useState("");
 
+  const assignedCustomers = useMemo(
+    () => staffId ? customers.filter(c => c.staff.some(s => s.id === staffId)) : [],
+    [staffId, customers]
+  );
+
   const distanceNum = parseFloat(distance) || 0;
   const suggested = distanceNum > 0 || MODE_RATE[mode].flat !== undefined ? suggestAmount(mode, distanceNum) : 0;
-  const reset = () => { setStaffId(""); setDate(todayISO()); setTripType("Client Visit"); setFrom(""); setTo(""); setDistance(""); setMode("Two-Wheeler"); setAmount(""); setReceipt(false); setNotes(""); };
+  const reset = () => { setStaffId(""); setCustomerId(""); setDate(todayISO()); setFrom(""); setTo(""); setDistance(""); setMode("Two-Wheeler"); setAmount(""); setReceipt(false); setNotes(""); };
+
+  const handleStaffChange = (id) => { setStaffId(id); setCustomerId(""); };
 
   const submit = (e) => {
     e.preventDefault();
@@ -875,7 +882,8 @@ function TravelExpensesView({ roster, entries, onAdd }) {
     const dist = parseFloat(distance);
     const amt = parseFloat(amount);
     if (isNaN(dist) || dist < 0 || isNaN(amt) || amt < 0) return;
-    onAdd({ id: `te-${Date.now()}`, staffId, date, tripType, from: from.trim(), to: to.trim(), distance: dist, mode, amount: amt, receipt, notes: notes.trim() || undefined });
+    const customerName = customers.find(c => c.id === customerId)?.name ?? "";
+    onAdd({ id: `te-${Date.now()}`, staffId, date, tripType: customerName, customerId: customerId || undefined, from: from.trim(), to: to.trim(), distance: dist, mode, amount: amt, receipt, notes: notes.trim() || undefined });
     reset();
   };
 
@@ -904,19 +912,17 @@ function TravelExpensesView({ roster, entries, onAdd }) {
         <form onSubmit={submit} style={{ borderRadius: 14, padding: 20, backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)", display: "flex", flexDirection: "column", gap: 16 }}>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0f1115", margin: 0 }}>Log new expense</h3>
           <div><label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7a7a86", display: "block", marginBottom: 6 }}>Caregiver Name</label>
-            <select value={staffId} onChange={e => setStaffId(e.target.value)} style={inp}><option value="">Select caregiver</option>{roster.map(s => <option key={s.id} value={s.id}>{s.name} · {s.role}</option>)}</select>
+            <select value={staffId} onChange={e => handleStaffChange(e.target.value)} style={inp}><option value="">Select caregiver</option>{roster.map(s => <option key={s.id} value={s.id}>{s.name} · {s.role}</option>)}</select>
+          </div>
+          <div><label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7a7a86", display: "block", marginBottom: 6 }}>Customer</label>
+            <select value={customerId} onChange={e => setCustomerId(e.target.value)} disabled={!staffId} style={{ ...inp, opacity: staffId ? 1 : 0.5 }}>
+              <option value="">{staffId ? (assignedCustomers.length === 0 ? "No customers assigned" : "Select customer") : "Select a caregiver first"}</option>
+              {assignedCustomers.map(c => <option key={c.id} value={c.id}>{c.name} · {c.area}</option>)}
+            </select>
           </div>
           <div><label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7a7a86", display: "block", marginBottom: 6 }}>Date</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
             {date && <div style={{ fontSize: 11, color: "#7a7a86", marginTop: 4 }}>{formatDateDMY(date)}</div>}
-          </div>
-          <div><label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7a7a86", display: "block", marginBottom: 6 }}>Trip Type</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {TRIP_TYPES.map(t => {
-                const active = tripType === t;
-                return <button key={t} type="button" onClick={() => setTripType(t)} style={{ padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: active ? 600 : 500, backgroundColor: active ? "#5F47FF" : "transparent", color: active ? "#fff" : "#0f1115", border: active ? "1px solid #5F47FF" : "1px solid #2a2a3e", cursor: "pointer" }}>{t}</button>;
-              })}
-            </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div><label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7a7a86", display: "block", marginBottom: 6 }}>From</label><input value={from} onChange={e => setFrom(e.target.value)} placeholder="e.g. HSR Layout" style={inp} /></div>
@@ -948,16 +954,18 @@ function TravelExpensesView({ roster, entries, onAdd }) {
 
         <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
-            <span>Caregiver</span><span>Date</span><span>Trip</span><span>Route</span><span>Km</span><span>Amount</span><span>Rcpt</span>
+            <span>Caregiver</span><span>Date</span><span>Customer</span><span>Route</span><span>Km</span><span>Amount</span><span>Rcpt</span>
           </div>
           {entries.length === 0 && <div style={{ textAlign: "center", padding: 48, fontSize: 13, color: "#7a7a86" }}>No expenses logged yet.</div>}
           {entries.map((e, idx) => {
             const staff = roster.find(s => s.id === e.staffId);
+            const customer = e.customerId ? customers.find(c => c.id === e.customerId) : null;
+            const customerLabel = customer?.name ?? e.tripType ?? "—";
             return (
               <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{staff && <Avatar s={staff} size={28} />}<div><div style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{staff?.name ?? "—"}</div><div style={{ fontSize: 11, color: "#7a7a86" }}>{staff?.role}</div></div></div>
                 <div style={{ fontSize: 12, color: "#0f1115" }}>{formatDateDMY(e.date)}</div>
-                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, backgroundColor: "rgba(99,136,255,0.10)", color: "#5F47FF", fontWeight: 600, display: "inline-block" }}>{e.tripType}</span>
+                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, backgroundColor: "rgba(99,136,255,0.10)", color: "#5F47FF", fontWeight: 600, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customerLabel}</span>
                 <div><div style={{ fontSize: 12, color: "#0f1115" }}>{e.from} → {e.to}</div><div style={{ fontSize: 11, color: "#7a7a86" }}>{e.mode}</div></div>
                 <div style={{ color: "#0f1115" }}>{e.distance}</div>
                 <div style={{ fontWeight: 600, color: "#0f1115" }}>₹{e.amount.toLocaleString("en-IN")}</div>
@@ -1319,7 +1327,7 @@ export function OpsBoard() {
       {/* Main content */}
       <div style={{ marginLeft: 260, padding: "24px 32px", minWidth: 0 }}>
         {view === "attendance" ? <AttendanceView roster={roster} customers={customers} />
-          : view === "travel" ? <TravelExpensesView roster={roster} entries={travelEntries} onAdd={e => {
+          : view === "travel" ? <TravelExpensesView roster={roster} customers={customers} entries={travelEntries} onAdd={e => {
               setTravelEntries(prev => [e, ...prev]);
               fetch("/api/ops/travel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(e) }).catch(() => {});
             }} />
