@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase-server";
+
+function sha256(value: string): string {
+    return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+}
+
+async function sendFacebookCAPIEvent(events: object[]) {
+    const pixelId = process.env.FACEBOOK_PIXEL_ID;
+    const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+    if (!pixelId || !accessToken) return;
+    try {
+        await fetch(`https://graph.facebook.com/v19.0/${pixelId}/events`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: events, access_token: accessToken }),
+        });
+    } catch (err) {
+        console.error("Facebook CAPI error:", err);
+    }
+}
 
 const LeadSchema = z.object({
     name: z.string().min(1),
@@ -89,6 +109,19 @@ export async function POST(req: NextRequest) {
             console.error("Google Sheet webhook error:", text);
             return NextResponse.json({ success: false, error: text }, { status: 500 });
         }
+
+        // ── Facebook Conversions API (server-side) ────────────────────────────
+        const phone = `91${lead.phone.replace(/\D/g, "")}`;
+        const eventTime = Math.floor(now.getTime() / 1000);
+        const userData = {
+            ph: [sha256(phone)],
+            fn: [sha256(lead.name.split(" ")[0])],
+            ln: [sha256(lead.name.split(" ").slice(1).join(" ") || lead.name)],
+        };
+        await sendFacebookCAPIEvent([
+            { event_name: "Schedule", event_time: eventTime, action_source: "website", user_data: userData },
+            { event_name: "Lead",     event_time: eventTime, action_source: "website", user_data: userData },
+        ]);
 
         // ── Write to Supabase CRM (secondary — never fail the form) ───────────
         try {
