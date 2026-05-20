@@ -73,6 +73,10 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     setForm(prev => ({ ...defaultForm, service: service ?? prev.service }));
     setSubmitted(false);
     setShowModal(true);
+    if (typeof window !== 'undefined') {
+      if ((window as any).fbq) (window as any).fbq('track', 'InitiateCheckout');
+      if ((window as any).gtag) (window as any).gtag('event', 'begin_checkout', { event_category: 'modal' });
+    }
   };
 
   const closeModal = () => {
@@ -123,8 +127,19 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
           pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
         }),
       });
-      if (res.ok) setSubmitted(true);
-      else alert('Something went wrong. Please try again.');
+      if (res.ok) {
+        setSubmitted(true);
+        if (typeof window !== 'undefined') {
+          if ((window as any).fbq) {
+            (window as any).fbq('track', 'Schedule');
+            (window as any).fbq('track', 'Lead');
+          }
+          if ((window as any).gtag) {
+            (window as any).gtag('event', 'schedule', { event_category: 'form', service: form.service });
+            (window as any).gtag('event', 'generate_lead', { event_category: 'form' });
+          }
+        }
+      } else alert('Something went wrong. Please try again.');
     } catch {
       alert('Something went wrong. Please try again.');
     } finally {
