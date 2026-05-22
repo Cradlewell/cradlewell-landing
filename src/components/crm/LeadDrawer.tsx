@@ -62,6 +62,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [cLostReason, setCLostReason] = useState<LostReason>("Competitor selected");
   const [cCompetitor, setCCompetitor] = useState("");
   const [cNotes, setCNotes] = useState("");
+  const [closureEditing, setClosureEditing] = useState(false);
 
   useEffect(() => {
     if (lead) setDraft({ ...lead });
@@ -438,29 +439,100 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
             <div className="crm-drawer-tab-content">
               {leadClosure ? (
                 <div className="crm-card p-4">
-                  <div className="d-flex align-items-center gap-2 mb-3">
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
                     <span className="crm-badge" style={leadClosure.type === "Won" ? { background: "#F0FDF4", color: "#16A34A", fontSize: "0.85rem" } : { background: "#FEF2F2", color: "#DC2626", fontSize: "0.85rem" }}>
                       {leadClosure.type === "Won" ? "🏆 Closed Won" : "✗ Closed Lost"}
                     </span>
+                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => {
+                      setClosureEditing(v => !v);
+                      if (!closureEditing) {
+                        setCPkg(leadClosure.finalPackage ?? "");
+                        setCAmount(String(leadClosure.finalAmount ?? ""));
+                        setCAdvance(String(leadClosure.advanceReceived ?? ""));
+                        setCPayStatus((leadClosure.paymentStatus as "Pending"|"Partial"|"Paid") ?? "Pending");
+                        setCLostReason((leadClosure.lostReason as LostReason) ?? "Competitor selected");
+                        setCCompetitor(leadClosure.competitorName ?? "");
+                        setCNotes(leadClosure.notes ?? "");
+                      }
+                    }}>
+                      {closureEditing ? <><X size={13} /> Cancel</> : <><Edit2 size={13} /> Edit</>}
+                    </button>
                   </div>
-                  {leadClosure.type === "Won" && (
-                    <div className="crm-grid-2">
-                      <div><div className="crm-section-title mb-1">Package</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.finalPackage || "—"}</div></div>
-                      <div><div className="crm-section-title mb-1">Final Amount</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--crm-primary)" }}>{leadClosure.finalAmount ? `₹${leadClosure.finalAmount.toLocaleString("en-IN")}` : "—"}</div></div>
-                      <div><div className="crm-section-title mb-1">Advance</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.advanceReceived ? `₹${leadClosure.advanceReceived.toLocaleString("en-IN")}` : "—"}</div></div>
-                      <div><div className="crm-section-title mb-1">Payment</div>
-                        <span className="crm-badge" style={{ background: leadClosure.paymentStatus === "Paid" ? "#F0FDF4" : leadClosure.paymentStatus === "Partial" ? "#FFFBEB" : "#FEF2F2", color: leadClosure.paymentStatus === "Paid" ? "#16A34A" : leadClosure.paymentStatus === "Partial" ? "#B45309" : "#DC2626" }}>
-                          {leadClosure.paymentStatus}
-                        </span>
+
+                  {closureEditing ? (
+                    leadClosure.type === "Won" ? (
+                      <div className="crm-grid-2">
+                        <div className="crm-form-group">
+                          <label className="crm-label">Package</label>
+                          <input className="crm-input" value={cPkg} onChange={e => setCPkg(e.target.value)} />
+                        </div>
+                        <div className="crm-form-group">
+                          <label className="crm-label">Final Amount (₹)</label>
+                          <input className="crm-input" type="number" value={cAmount} onChange={e => setCAmount(e.target.value)} />
+                        </div>
+                        <div className="crm-form-group">
+                          <label className="crm-label">Advance Received (₹)</label>
+                          <input className="crm-input" type="number" value={cAdvance} onChange={e => setCAdvance(e.target.value)} />
+                        </div>
+                        <div className="crm-form-group">
+                          <label className="crm-label">Payment Status</label>
+                          <select className="crm-select" value={cPayStatus} onChange={e => setCPayStatus(e.target.value as "Pending"|"Partial"|"Paid")}>
+                            <option>Pending</option><option>Partial</option><option>Paid</option>
+                          </select>
+                        </div>
+                        <div style={{ gridColumn: "1/-1" }}>
+                          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => {
+                            api.updateClosure(leadClosure.id, { finalPackage: cPkg, finalAmount: Number(cAmount) || undefined, advanceReceived: Number(cAdvance) || undefined, paymentStatus: cPayStatus });
+                            setClosureEditing(false);
+                          }}><Save size={13} /> Save Changes</button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {leadClosure.type === "Lost" && (
-                    <div className="crm-grid-2">
-                      <div><div className="crm-section-title mb-1">Reason</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.lostReason || "—"}</div></div>
-                      <div><div className="crm-section-title mb-1">Competitor</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.competitorName || "—"}</div></div>
-                      {leadClosure.notes && <div style={{ gridColumn: "1/-1" }}><div className="crm-section-title mb-1">Notes</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.notes}</div></div>}
-                    </div>
+                    ) : (
+                      <div className="crm-grid-2">
+                        <div className="crm-form-group">
+                          <label className="crm-label">Lost Reason</label>
+                          <select className="crm-select" value={cLostReason} onChange={e => setCLostReason(e.target.value as LostReason)}>
+                            {LOST_REASONS.map(r => <option key={r}>{r}</option>)}
+                          </select>
+                        </div>
+                        <div className="crm-form-group">
+                          <label className="crm-label">Competitor Name</label>
+                          <input className="crm-input" value={cCompetitor} onChange={e => setCCompetitor(e.target.value)} />
+                        </div>
+                        <div className="crm-form-group" style={{ gridColumn: "1/-1" }}>
+                          <label className="crm-label">Notes</label>
+                          <textarea className="crm-textarea" value={cNotes} onChange={e => setCNotes(e.target.value)} style={{ minHeight: 64 }} />
+                        </div>
+                        <div style={{ gridColumn: "1/-1" }}>
+                          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => {
+                            api.updateClosure(leadClosure.id, { lostReason: cLostReason, competitorName: cCompetitor, notes: cNotes });
+                            setClosureEditing(false);
+                          }}><Save size={13} /> Save Changes</button>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <>
+                      {leadClosure.type === "Won" && (
+                        <div className="crm-grid-2">
+                          <div><div className="crm-section-title mb-1">Package</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.finalPackage || "—"}</div></div>
+                          <div><div className="crm-section-title mb-1">Final Amount</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--crm-primary)" }}>{leadClosure.finalAmount ? `₹${leadClosure.finalAmount.toLocaleString("en-IN")}` : "—"}</div></div>
+                          <div><div className="crm-section-title mb-1">Advance</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.advanceReceived ? `₹${leadClosure.advanceReceived.toLocaleString("en-IN")}` : "—"}</div></div>
+                          <div><div className="crm-section-title mb-1">Payment</div>
+                            <span className="crm-badge" style={{ background: leadClosure.paymentStatus === "Paid" ? "#F0FDF4" : leadClosure.paymentStatus === "Partial" ? "#FFFBEB" : "#FEF2F2", color: leadClosure.paymentStatus === "Paid" ? "#16A34A" : leadClosure.paymentStatus === "Partial" ? "#B45309" : "#DC2626" }}>
+                              {leadClosure.paymentStatus}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {leadClosure.type === "Lost" && (
+                        <div className="crm-grid-2">
+                          <div><div className="crm-section-title mb-1">Reason</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.lostReason || "—"}</div></div>
+                          <div><div className="crm-section-title mb-1">Competitor</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.competitorName || "—"}</div></div>
+                          {leadClosure.notes && <div style={{ gridColumn: "1/-1" }}><div className="crm-section-title mb-1">Notes</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.notes}</div></div>}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ) : (

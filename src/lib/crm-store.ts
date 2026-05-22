@@ -236,6 +236,14 @@ export const api = {
       });
   },
 
+  updateClosure(id: string, patch: Partial<Closure>) {
+    _db.closures = _db.closures.map((c) => c.id === id ? { ...c, ...patch } : c);
+    notify();
+    apiPut(`/api/crm/closures/${id}`, patch).catch(() => {
+      notify();
+    });
+  },
+
   importLeads(rows: Lead[]) {
     const ts = Date.now();
     rows.forEach((r, i) => { if (!r.id) r.id = `IMP-${ts}-${i}`; });
