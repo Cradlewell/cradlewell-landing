@@ -60,6 +60,14 @@ export async function GET(req: NextRequest) {
   if (!leads || leads.length === 0) return NextResponse.json([]);
 
   const leadIds = leads.map((l) => l.id);
+
+  const { data: hiddenStates } = await supabase
+    .from("ops_customer_state")
+    .select("lead_id")
+    .in("lead_id", leadIds)
+    .eq("ops_hidden", true);
+
+  const hiddenIds = new Set((hiddenStates ?? []).map((s) => s.lead_id));
   const { data: closures } = await supabase
     .from("closures")
     .select("*")
@@ -69,7 +77,7 @@ export async function GET(req: NextRequest) {
   const closureByLead = new Map<string, Record<string, unknown>>();
   for (const c of closures ?? []) closureByLead.set(c.lead_id, c);
 
-  const customers = leads.map((lead) => {
+  const customers = leads.filter((lead) => !hiddenIds.has(lead.id)).map((lead) => {
     const closure = closureByLead.get(lead.id) ?? null;
     return {
       id: lead.id,
@@ -104,9 +112,8 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const { error } = await supabase
-    .from("leads")
-    .update({ stage: "Inactive" })
-    .eq("id", id);
+    .from("ops_customer_state")
+    .upsert({ lead_id: id, ops_hidden: true, updated_at: new Date().toISOString() }, { onConflict: "lead_id" });
 
   if (error) { console.error("[ops/customers DELETE]", error); return NextResponse.json({ error: "Failed to delete" }, { status: 500 }); }
   return NextResponse.json({ success: true });

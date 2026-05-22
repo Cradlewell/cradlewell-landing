@@ -300,7 +300,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
   if (!customer) return null;
 
   const assignedIds = new Set(customer.staff.map(s => s.id));
-  const available = allStaff.filter(s => !assignedIds.has(s.id) && !assignedElsewhereIds.has(s.id));
+  const available = allStaff.filter(s => !assignedIds.has(s.id) && (s.role === "Nurse" || !assignedElsewhereIds.has(s.id)));
   const rotaPickList = allStaff.filter(s => !assignedElsewhereIds.has(s.id));
   const rota = buildRota(customer, allStaff);
   const today = todayISO();
@@ -352,13 +352,31 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
         </div>
 
         {/* Info strip */}
-        <div style={{ borderRadius: 12, padding: 16, marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, backgroundColor: "#f8fafc", border: "1px solid #e8edf2" }}>
+        <div style={{ borderRadius: 12, padding: 16, marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, backgroundColor: "#f8fafc", border: "1px solid #e8edf2" }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, color: "#94a3b8" }}>Shift</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#0f1115" }}>{customer.shiftTime ?? "—"}</div>
+            <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, color: "#94a3b8" }}>Phone</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#0f1115" }}>
+              {customer.phone ? <a href={`tel:${customer.phone}`} style={{ color: "#5F47FF", textDecoration: "none" }}>{customer.phone}</a> : "—"}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, color: "#94a3b8" }}>Location</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#0f1115" }}>{customer.area || "—"}</div>
           </div>
           <div>
             <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, color: "#94a3b8" }}>Service</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#0f1115" }}>{customer.serviceRequired || "—"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, color: "#94a3b8" }}>Shift Type</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#0f1115" }}>{customer.preferredShift ? `${customer.preferredShift} · ${customer.shiftHoursCount ?? ""}hrs`.trim() : "—"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, color: "#94a3b8" }}>Shift Time</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#0f1115" }}>{customer.shiftTime ?? "—"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, color: "#94a3b8" }}>Package</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#0f1115" }}>{customer.badge}</div>
           </div>
         </div>
