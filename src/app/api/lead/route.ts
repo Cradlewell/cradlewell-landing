@@ -118,9 +118,10 @@ export async function POST(req: NextRequest) {
             fn: [sha256(lead.name.split(" ")[0])],
             ln: [sha256(lead.name.split(" ").slice(1).join(" ") || lead.name)],
         };
+        const eventSourceUrl = "https://cradlewell.com/";
         await sendFacebookCAPIEvent([
-            { event_name: "Schedule", event_time: eventTime, action_source: "website", user_data: userData },
-            { event_name: "Lead",     event_time: eventTime, action_source: "website", user_data: userData },
+            { event_name: "Schedule", event_time: eventTime, action_source: "website", event_source_url: eventSourceUrl, user_data: userData },
+            { event_name: "Lead",     event_time: eventTime, action_source: "website", event_source_url: eventSourceUrl, user_data: userData },
         ]);
 
         // ── Write to Supabase CRM (secondary — never fail the form) ───────────
