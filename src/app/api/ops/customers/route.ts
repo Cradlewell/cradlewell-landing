@@ -95,3 +95,19 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(customers);
 }
+
+export async function DELETE(req: NextRequest) {
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const { error } = await supabase
+    .from("leads")
+    .update({ stage: "Inactive" })
+    .eq("id", id);
+
+  if (error) { console.error("[ops/customers DELETE]", error); return NextResponse.json({ error: "Failed to delete" }, { status: 500 }); }
+  return NextResponse.json({ success: true });
+}

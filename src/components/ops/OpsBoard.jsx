@@ -1341,7 +1341,11 @@ export function OpsBoard({ onLogout }) {
     persistState(up);
     return up;
   }));
-  const deleteCustomer = (cid) => { setSelectedId(null); setCustomers(prev => prev.filter(c => c.id !== cid)); };
+  const deleteCustomer = (cid) => {
+    setSelectedId(null);
+    setCustomers(prev => prev.filter(c => c.id !== cid));
+    fetch(`/api/ops/customers?id=${cid}`, { method: "DELETE" }).catch(() => {});
+  };
   const addToRoster = () => {
     const name = newStaffName.trim(); if (!name) return;
     const initials = name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
