@@ -601,12 +601,16 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
 
 // ─── Staff View ────────────────────────────────────────────────────────────────
 
-function StaffView({ roster, customers, onAdd, onRemove }) {
+function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
   const [name, setName] = useState("");
   const [role, setRole] = useState("MOBA");
+  const [phone, setPhone] = useState("");
   const [languages, setLanguages] = useState("");
   const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
+
+  const [editingStaff, setEditingStaff] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   const assignmentsByStaff = useMemo(() => {
     const m = new Map();
@@ -619,12 +623,47 @@ function StaffView({ roster, customers, onAdd, onRemove }) {
 
   const handleAdd = () => {
     if (!name.trim()) return;
-    onAdd({ name: name.trim(), role, languages: languages.trim() || null, area: area.trim() || null, notes: notes.trim() || null });
-    setName(""); setRole("MOBA"); setLanguages(""); setArea(""); setNotes("");
+    onAdd({ name: name.trim(), role, phone: phone.trim() || null, languages: languages.trim() || null, area: area.trim() || null, notes: notes.trim() || null });
+    setName(""); setRole("MOBA"); setPhone(""); setLanguages(""); setArea(""); setNotes("");
   };
+
+  const openEdit = (s) => {
+    setEditingStaff(s);
+    setEditForm({ name: s.name, role: s.role, phone: s.phone ?? "", languages: s.languages ?? "", area: s.area ?? "", notes: s.notes ?? "" });
+  };
+
+  const handleEditSave = () => {
+    if (!editForm.name?.trim()) return;
+    onUpdate({ ...editingStaff, name: editForm.name.trim(), role: editForm.role, phone: editForm.phone.trim() || null, languages: editForm.languages.trim() || null, area: editForm.area.trim() || null, notes: editForm.notes.trim() || null });
+    setEditingStaff(null);
+  };
+
+  const ef = (k) => ({ value: editForm[k] ?? "", onChange: e => setEditForm(prev => ({ ...prev, [k]: e.target.value })) });
 
   return (
     <div>
+      {editingStaff && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15,17,21,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setEditingStaff(null)}>
+          <div style={{ backgroundColor: "#fff", borderRadius: 16, padding: 28, width: 400, boxShadow: "0 24px 64px -16px rgba(15,17,21,0.32)", display: "flex", flexDirection: "column", gap: 14 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "#0f1115" }}>Edit Staff</span>
+              <button onClick={() => setEditingStaff(null)} style={{ background: "none", border: "none", fontSize: 20, color: "#9a9aa6", cursor: "pointer", lineHeight: 1 }}>×</button>
+            </div>
+            <div><label style={lbl}>Full name</label><input {...ef("name")} placeholder="e.g. Anjali Krishnan" style={inp} /></div>
+            <div><label style={lbl}>Role</label>
+              <select {...ef("role")} style={inp}><option value="MOBA">MOBA</option><option value="Nurse">Nurse</option></select>
+            </div>
+            <div><label style={lbl}>Phone Number</label><input {...ef("phone")} placeholder="e.g. +91 98765 43210" style={inp} /></div>
+            <div><label style={lbl}>Languages Known</label><input {...ef("languages")} placeholder="e.g. Kannada, Hindi, English" style={inp} /></div>
+            <div><label style={lbl}>Area / Coverage Zone</label><input {...ef("area")} placeholder="e.g. HSR Layout, Koramangala" style={inp} /></div>
+            <div><label style={lbl}>Notes</label><textarea rows={3} {...ef("notes")} placeholder="Any important details…" style={{ ...inp, resize: "vertical" }} /></div>
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <button onClick={() => setEditingStaff(null)} style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: 10, borderRadius: 8, backgroundColor: "#f1f5f9", color: "#7a7a86", border: "none", cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleEditSave} disabled={!editForm.name?.trim()} style={{ flex: 2, fontSize: 13, fontWeight: 600, padding: 10, borderRadius: 8, backgroundColor: "#5F47FF", color: "#fff", border: "none", cursor: "pointer", opacity: editForm.name?.trim() ? 1 : 0.5 }}>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#5F47FF", boxShadow: "0 0 8px #5F47FF" }} />
@@ -644,6 +683,9 @@ function StaffView({ roster, customers, onAdd, onRemove }) {
               <option value="MOBA">MOBA</option><option value="Nurse">Nurse</option>
             </select>
           </div>
+          <div><label style={lbl}>Phone Number</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. +91 98765 43210" style={inp} />
+          </div>
           <div><label style={lbl}>Languages Known</label>
             <input value={languages} onChange={e => setLanguages(e.target.value)} placeholder="e.g. Kannada, Hindi, English" style={inp} />
           </div>
@@ -656,13 +698,13 @@ function StaffView({ roster, customers, onAdd, onRemove }) {
           <button onClick={handleAdd} disabled={!name.trim()} style={{ width: "100%", fontSize: 13, fontWeight: 600, padding: 10, borderRadius: 8, backgroundColor: "#5F47FF", color: "#fff", border: "none", cursor: "pointer", opacity: name.trim() ? 1 : 0.5, marginTop: 4 }}>+ Add to Roster</button>
         </div>
         <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.5fr 1fr 1.2fr 60px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
-            <span>Caregiver</span><span>Role</span><span>Languages</span><span>Active assignments</span><span></span>
+          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.5fr 1fr 1fr 1.2fr 110px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+            <span>Caregiver</span><span>Role</span><span>Phone</span><span>Languages</span><span>Active assignments</span><span></span>
           </div>
           {roster.map((s, idx) => {
             const assigned = assignmentsByStaff.get(s.id) ?? [];
             return (
-              <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.5fr 1fr 1.2fr 60px", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
+              <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.5fr 1fr 1fr 1.2fr 110px", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <Avatar s={s} size={32} />
                   <div>
@@ -672,11 +714,15 @@ function StaffView({ roster, customers, onAdd, onRemove }) {
                   </div>
                 </div>
                 <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px", borderRadius: 6, backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600, display: "inline-block" }}>{s.role}</span>
+                <div style={{ fontSize: 12, color: "#4b5563" }}>{s.phone ?? <span style={{ color: "#c9c6bc" }}>—</span>}</div>
                 <div style={{ fontSize: 11, color: "#7a7a86" }}>{s.languages ?? "—"}</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px" }}>
                   {assigned.length === 0 ? <span style={{ fontSize: 12, color: "#c9c6bc" }}>—</span> : assigned.map(c => <span key={c.id} style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{displayName(c.name)}</span>)}
                 </div>
-                <button onClick={() => onRemove(s.id)} style={{ fontSize: 11, padding: "4px 8px", borderRadius: 4, border: "none", background: "transparent", color: "#ef4444", cursor: "pointer" }}>Remove</button>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button onClick={() => openEdit(s)} style={{ fontSize: 11, padding: "4px 8px", borderRadius: 4, border: "1px solid #e2e8f0", background: "#f8fafc", color: "#5F47FF", cursor: "pointer", fontWeight: 600 }}>Edit</button>
+                  <button onClick={() => onRemove(s.id)} style={{ fontSize: 11, padding: "4px 8px", borderRadius: 4, border: "none", background: "transparent", color: "#ef4444", cursor: "pointer" }}>Remove</button>
+                </div>
               </div>
             );
           })}
@@ -1388,12 +1434,18 @@ export function OpsBoard({ onLogout }) {
     setCustomers(prev => prev.filter(c => c.id !== cid));
     fetch(`/api/ops/customers?id=${cid}`, { method: "DELETE" }).catch(() => {});
   };
-  const addToRoster = ({ name, role, languages, area, notes }) => {
+  const addToRoster = ({ name, role, phone, languages, area, notes }) => {
     const initials = name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
     const color = PALETTE[roster.length % PALETTE.length];
-    const member = { id: `s-${Date.now()}`, name, role, initials, color, languages: languages || null, area: area || null, notes: notes || null };
+    const member = { id: `s-${Date.now()}`, name, role, initials, color, phone: phone || null, languages: languages || null, area: area || null, notes: notes || null };
     setRoster(prev => [...prev, member]);
     fetch("/api/ops/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(member) }).catch(() => {});
+  };
+  const updateRoster = (updated) => {
+    const initials = updated.name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
+    const member = { ...updated, initials };
+    setRoster(prev => prev.map(s => s.id === member.id ? member : s));
+    fetch("/api/ops/staff", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(member) }).catch(() => {});
   };
   const removeFromRoster = (sid) => {
     setRoster(prev => prev.filter(s => s.id !== sid));
@@ -1483,7 +1535,7 @@ export function OpsBoard({ onLogout }) {
                 .catch(() => setTravelEntries(snapshot));
             }} />
             : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} travelEntries={travelEntries} />
-              : view === "staff" ? <StaffView roster={roster} customers={customers} onAdd={addToRoster} onRemove={removeFromRoster} />
+              : view === "staff" ? <StaffView roster={roster} customers={customers} onAdd={addToRoster} onRemove={removeFromRoster} onUpdate={updateRoster} />
                 : (
                   <>
                     {/* Header */}

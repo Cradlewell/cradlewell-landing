@@ -19,10 +19,25 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { data, error } = await supabase
     .from("ops_staff")
-    .insert({ id: body.id ?? crypto.randomUUID(), name: body.name, role: body.role, initials: body.initials, color: body.color, languages: body.languages ?? null, area: body.area ?? null, notes: body.notes ?? null })
+    .insert({ id: body.id ?? crypto.randomUUID(), name: body.name, role: body.role, initials: body.initials, color: body.color, phone: body.phone ?? null, languages: body.languages ?? null, area: body.area ?? null, notes: body.notes ?? null })
     .select()
     .single();
   if (error) { console.error("[ops/staff POST]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
+  return NextResponse.json(data);
+}
+
+export async function PUT(req: NextRequest) {
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
+  const body = await req.json();
+  if (!body.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const { data, error } = await supabase
+    .from("ops_staff")
+    .update({ name: body.name, role: body.role, initials: body.initials, phone: body.phone ?? null, languages: body.languages ?? null, area: body.area ?? null, notes: body.notes ?? null })
+    .eq("id", body.id)
+    .select()
+    .single();
+  if (error) { console.error("[ops/staff PUT]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
   return NextResponse.json(data);
 }
 
