@@ -1466,8 +1466,21 @@ export function OpsBoard({ onLogout }) {
               setTravelEntries(prev => [e, ...prev]);
               fetch("/api/ops/travel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(e) }).catch(() => {});
             }} onDelete={id => {
+              const snapshot = travelEntries;
               setTravelEntries(prev => prev.filter(e => e.id !== id));
-              fetch(`/api/ops/travel/${id}`, { method: "DELETE" }).catch(() => {});
+              fetch(`/api/ops/travel/${id}`, { method: "DELETE" })
+                .then(r => {
+                  if (!r.ok) throw new Error("delete failed");
+                  // Re-fetch to confirm DB sync and update utilisation report
+                  return fetch("/api/ops/travel").then(r2 => r2.json()).then(data => {
+                    if (Array.isArray(data)) setTravelEntries(data.map(e => ({
+                      id: e.id, staffId: e.staff_id, date: e.date, tripType: e.trip_type,
+                      from: e.from_location, to: e.to_location, distance: e.distance,
+                      mode: e.mode, amount: e.amount, receipt: e.receipt, notes: e.notes,
+                    })));
+                  });
+                })
+                .catch(() => setTravelEntries(snapshot));
             }} />
             : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} travelEntries={travelEntries} />
               : view === "staff" ? <StaffView roster={roster} customers={customers} onAdd={addToRoster} onRemove={removeFromRoster} />
