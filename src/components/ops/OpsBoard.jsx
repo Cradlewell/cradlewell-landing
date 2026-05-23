@@ -957,7 +957,7 @@ function TravelExpensesView({ roster, customers, entries, onAdd, onDelete }) {
     const amt = parseFloat(amount);
     if (isNaN(dist) || dist < 0 || isNaN(amt) || amt < 0) return;
     const customerName = customers.find(c => c.id === customerId)?.name ?? "";
-    onAdd({ id: `te-${Date.now()}`, staffId, date, tripType: customerName, customerId: customerId || undefined, from: from.trim(), to: to.trim(), distance: dist, mode, amount: amt, receipt, notes: notes.trim() || undefined });
+    onAdd({ id: crypto.randomUUID(), staffId, date, tripType: customerName, customerId: customerId || undefined, from: from.trim(), to: to.trim(), distance: dist, mode, amount: amt, receipt, notes: notes.trim() || undefined });
     reset();
   };
 

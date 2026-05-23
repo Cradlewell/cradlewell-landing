@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase.from("ops_travel_entries").insert({
     id: body.id ?? crypto.randomUUID(),
     staff_id: body.staffId,
-    customer_id: body.customerId ?? null,
     date: body.date,
     trip_type: body.tripType,
     from_location: body.from,
