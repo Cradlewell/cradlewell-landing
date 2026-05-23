@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-server";
 import { createClient } from "@supabase/supabase-js";
 
 const cookieOpts = {
@@ -10,10 +9,16 @@ const cookieOpts = {
   path: "/",
 };
 
+// Auth sign-in must use anon key — service role key cannot authenticate users
+const authClient = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!
+);
+
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await authClient.auth.signInWithPassword({ email, password });
   if (error || !data.session) {
     return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
   }
@@ -35,12 +40,8 @@ export async function DELETE(req: NextRequest) {
 
   if (accessToken && refreshToken) {
     try {
-      const userClient = createClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_ANON_KEY!
-      );
-      await userClient.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-      await userClient.auth.signOut();
+      await authClient.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      await authClient.auth.signOut();
     } catch {
       // best-effort server-side revocation
     }
