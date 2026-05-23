@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { data, error } = await supabase
     .from("ops_staff")
-    .insert({ id: crypto.randomUUID(), name: body.name, role: body.role, initials: body.initials, color: body.color })
+    .insert({ id: body.id ?? crypto.randomUUID(), name: body.name, role: body.role, initials: body.initials, color: body.color, languages: body.languages ?? null, area: body.area ?? null, notes: body.notes ?? null })
     .select()
     .single();
   if (error) { console.error("[ops/staff POST]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }

@@ -601,7 +601,13 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
 
 // ─── Staff View ────────────────────────────────────────────────────────────────
 
-function StaffView({ roster, customers, newStaffName, setNewStaffName, newStaffRole, setNewStaffRole, onAdd, onRemove }) {
+function StaffView({ roster, customers, onAdd, onRemove }) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("MOBA");
+  const [languages, setLanguages] = useState("");
+  const [area, setArea] = useState("");
+  const [notes, setNotes] = useState("");
+
   const assignmentsByStaff = useMemo(() => {
     const m = new Map();
     for (const c of customers) for (const s of c.staff) { const arr = m.get(s.id) ?? []; arr.push(c); m.set(s.id, arr); }
@@ -609,6 +615,13 @@ function StaffView({ roster, customers, newStaffName, setNewStaffName, newStaffR
   }, [customers]);
 
   const inp = { backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#0f1115", outline: "none", width: "100%", boxSizing: "border-box" };
+  const lbl = { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7a7a86", display: "block", marginBottom: 4 };
+
+  const handleAdd = () => {
+    if (!name.trim()) return;
+    onAdd({ name: name.trim(), role, languages: languages.trim() || null, area: area.trim() || null, notes: notes.trim() || null });
+    setName(""); setRole("MOBA"); setLanguages(""); setArea(""); setNotes("");
+  };
 
   return (
     <div>
@@ -621,32 +634,45 @@ function StaffView({ roster, customers, newStaffName, setNewStaffName, newStaffR
         <p style={{ fontSize: 12, marginTop: 8, color: "#7a7a86" }}>{roster.length} caregivers · Manage your team</p>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 24 }}>
-        <div style={{ borderRadius: 14, padding: 20, backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 12, color: "#7a7a86" }}>Add Staff</div>
-          <label style={{ fontSize: 11, color: "#7a7a86", display: "block", marginBottom: 4 }}>Full name</label>
-          <input value={newStaffName} onChange={e => setNewStaffName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") onAdd(); }} placeholder="e.g. Anjali Krishnan" style={{ ...inp, marginBottom: 12 }} />
-          <label style={{ fontSize: 11, color: "#7a7a86", display: "block", marginBottom: 4 }}>Role</label>
-          <select value={newStaffRole} onChange={e => setNewStaffRole(e.target.value)} style={{ ...inp, marginBottom: 16 }}>
-            <option value="MOBA">MOBA</option><option value="Nurse">Nurse</option>
-          </select>
-          <button onClick={onAdd} disabled={!newStaffName.trim()} style={{ width: "100%", fontSize: 13, fontWeight: 600, padding: 10, borderRadius: 8, backgroundColor: "#5F47FF", color: "#fff", border: "none", cursor: "pointer", opacity: newStaffName.trim() ? 1 : 0.5 }}>+ Add to Roster</button>
+        <div style={{ borderRadius: 14, padding: 20, backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: "#7a7a86" }}>Add Staff</div>
+          <div><label style={lbl}>Full name</label>
+            <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleAdd(); }} placeholder="e.g. Anjali Krishnan" style={inp} />
+          </div>
+          <div><label style={lbl}>Role</label>
+            <select value={role} onChange={e => setRole(e.target.value)} style={inp}>
+              <option value="MOBA">MOBA</option><option value="Nurse">Nurse</option>
+            </select>
+          </div>
+          <div><label style={lbl}>Languages Known</label>
+            <input value={languages} onChange={e => setLanguages(e.target.value)} placeholder="e.g. Kannada, Hindi, English" style={inp} />
+          </div>
+          <div><label style={lbl}>Area / Coverage Zone</label>
+            <input value={area} onChange={e => setArea(e.target.value)} placeholder="e.g. HSR Layout, Koramangala" style={inp} />
+          </div>
+          <div><label style={lbl}>Notes</label>
+            <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any important details before adding to roster…" style={{ ...inp, resize: "vertical" }} />
+          </div>
+          <button onClick={handleAdd} disabled={!name.trim()} style={{ width: "100%", fontSize: 13, fontWeight: 600, padding: 10, borderRadius: 8, backgroundColor: "#5F47FF", color: "#fff", border: "none", cursor: "pointer", opacity: name.trim() ? 1 : 0.5, marginTop: 4 }}>+ Add to Roster</button>
         </div>
         <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.6fr 1.6fr 60px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
-            <span>Caregiver</span><span>Role</span><span>Active assignments</span><span></span>
+          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.5fr 1fr 1.2fr 60px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+            <span>Caregiver</span><span>Role</span><span>Languages</span><span>Active assignments</span><span></span>
           </div>
           {roster.map((s, idx) => {
             const assigned = assignmentsByStaff.get(s.id) ?? [];
             return (
-              <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.6fr 1.6fr 60px", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
+              <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.5fr 1fr 1.2fr 60px", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <Avatar s={s} size={32} />
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: "#9a9aa6" }}>{assigned.length === 0 ? "Available" : `${assigned.length} client${assigned.length > 1 ? "s" : ""}`}</div>
+                    <div style={{ fontSize: 11, color: "#9a9aa6" }}>{s.area ? s.area : (assigned.length === 0 ? "Available" : `${assigned.length} client${assigned.length > 1 ? "s" : ""}`)}</div>
+                    {s.notes && <div style={{ fontSize: 11, color: "#7a7a86", marginTop: 2, fontStyle: "italic" }}>{s.notes}</div>}
                   </div>
                 </div>
                 <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px", borderRadius: 6, backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600, display: "inline-block" }}>{s.role}</span>
+                <div style={{ fontSize: 11, color: "#7a7a86" }}>{s.languages ?? "—"}</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px" }}>
                   {assigned.length === 0 ? <span style={{ fontSize: 12, color: "#c9c6bc" }}>—</span> : assigned.map(c => <span key={c.id} style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{displayName(c.name)}</span>)}
                 </div>
@@ -1231,8 +1257,6 @@ export function OpsBoard({ onLogout }) {
   }, []);
   const [view, setView] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("ops_view") : null) ?? "customers");
   useEffect(() => { localStorage.setItem("ops_view", view); }, [view]);
-  const [newStaffName, setNewStaffName] = useState("");
-  const [newStaffRole, setNewStaffRole] = useState("MOBA");
   const [zoneFilter, setZoneFilter] = useState("All");
   const [areaFilter, setAreaFilter] = useState("All");
   const [selectedId, setSelectedId] = useState(null);
@@ -1364,13 +1388,11 @@ export function OpsBoard({ onLogout }) {
     setCustomers(prev => prev.filter(c => c.id !== cid));
     fetch(`/api/ops/customers?id=${cid}`, { method: "DELETE" }).catch(() => {});
   };
-  const addToRoster = () => {
-    const name = newStaffName.trim(); if (!name) return;
+  const addToRoster = ({ name, role, languages, area, notes }) => {
     const initials = name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
     const color = PALETTE[roster.length % PALETTE.length];
-    const member = { id: `s-${Date.now()}`, name, role: newStaffRole, initials, color };
+    const member = { id: `s-${Date.now()}`, name, role, initials, color, languages: languages || null, area: area || null, notes: notes || null };
     setRoster(prev => [...prev, member]);
-    setNewStaffName(""); setNewStaffRole("MOBA");
     fetch("/api/ops/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(member) }).catch(() => {});
   };
   const removeFromRoster = (sid) => {
@@ -1448,7 +1470,7 @@ export function OpsBoard({ onLogout }) {
               fetch(`/api/ops/travel/${id}`, { method: "DELETE" }).catch(() => {});
             }} />
             : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} travelEntries={travelEntries} />
-              : view === "staff" ? <StaffView roster={roster} customers={customers} newStaffName={newStaffName} setNewStaffName={setNewStaffName} newStaffRole={newStaffRole} setNewStaffRole={setNewStaffRole} onAdd={addToRoster} onRemove={removeFromRoster} />
+              : view === "staff" ? <StaffView roster={roster} customers={customers} onAdd={addToRoster} onRemove={removeFromRoster} />
                 : (
                   <>
                     {/* Header */}
