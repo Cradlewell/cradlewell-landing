@@ -622,6 +622,7 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
   const [name, setName] = useState("");
   const [role, setRole] = useState("MOBA");
   const [phone, setPhone] = useState("");
+  const [location, setLocation] = useState("");
   const [languages, setLanguages] = useState("");
   const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
@@ -640,18 +641,18 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
 
   const handleAdd = () => {
     if (!name.trim()) return;
-    onAdd({ name: name.trim(), role, phone: phone.trim() || null, languages: languages.trim() || null, area: area.trim() || null, notes: notes.trim() || null });
-    setName(""); setRole("MOBA"); setPhone(""); setLanguages(""); setArea(""); setNotes("");
+    onAdd({ name: name.trim(), role, phone: phone.trim() || null, location: location.trim() || null, languages: languages.trim() || null, area: area.trim() || null, notes: notes.trim() || null });
+    setName(""); setRole("MOBA"); setPhone(""); setLocation(""); setLanguages(""); setArea(""); setNotes("");
   };
 
   const openEdit = (s) => {
     setEditingStaff(s);
-    setEditForm({ name: s.name, role: s.role, phone: s.phone ?? "", languages: s.languages ?? "", area: s.area ?? "", notes: s.notes ?? "" });
+    setEditForm({ name: s.name, role: s.role, phone: s.phone ?? "", location: s.location ?? "", languages: s.languages ?? "", area: s.area ?? "", notes: s.notes ?? "" });
   };
 
   const handleEditSave = () => {
     if (!editForm.name?.trim()) return;
-    onUpdate({ ...editingStaff, name: editForm.name.trim(), role: editForm.role, phone: editForm.phone.trim() || null, languages: editForm.languages.trim() || null, area: editForm.area.trim() || null, notes: editForm.notes.trim() || null });
+    onUpdate({ ...editingStaff, name: editForm.name.trim(), role: editForm.role, phone: editForm.phone.trim() || null, location: editForm.location?.trim() || null, languages: editForm.languages.trim() || null, area: editForm.area.trim() || null, notes: editForm.notes.trim() || null });
     setEditingStaff(null);
   };
 
@@ -671,6 +672,7 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
               <select {...ef("role")} style={inp}><option value="MOBA">MOBA</option><option value="Nurse">Nurse</option></select>
             </div>
             <div><label style={lbl}>Phone Number</label><input {...ef("phone")} placeholder="e.g. +91 98765 43210" style={inp} /></div>
+            <div><label style={lbl}>Location</label><input {...ef("location")} placeholder="e.g. Bangalore, Karnataka" style={inp} /></div>
             <div><label style={lbl}>Languages Known</label><input {...ef("languages")} placeholder="e.g. Kannada, Hindi, English" style={inp} /></div>
             <div><label style={lbl}>Area / Coverage Zone</label><input {...ef("area")} placeholder="e.g. HSR Layout, Koramangala" style={inp} /></div>
             <div><label style={lbl}>Notes</label><textarea rows={3} {...ef("notes")} placeholder="Any important details…" style={{ ...inp, resize: "vertical" }} /></div>
@@ -703,6 +705,9 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
           <div><label style={lbl}>Phone Number</label>
             <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. +91 98765 43210" style={inp} />
           </div>
+          <div><label style={lbl}>Location</label>
+            <input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Bangalore, Karnataka" style={inp} />
+          </div>
           <div><label style={lbl}>Languages Known</label>
             <input value={languages} onChange={e => setLanguages(e.target.value)} placeholder="e.g. Kannada, Hindi, English" style={inp} />
           </div>
@@ -715,13 +720,13 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
           <button onClick={handleAdd} disabled={!name.trim()} style={{ width: "100%", fontSize: 13, fontWeight: 600, padding: 10, borderRadius: 8, backgroundColor: "#5F47FF", color: "#fff", border: "none", cursor: "pointer", opacity: name.trim() ? 1 : 0.5, marginTop: 4 }}>+ Add to Roster</button>
         </div>
         <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.5fr 1fr 1fr 1.2fr 110px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
-            <span>Caregiver</span><span>Role</span><span>Phone</span><span>Languages</span><span>Active assignments</span><span></span>
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.5fr 1fr 1fr 1fr 1.2fr 110px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+            <span>Caregiver</span><span>Role</span><span>Phone</span><span>Location</span><span>Languages</span><span>Active assignments</span><span></span>
           </div>
           {roster.map((s, idx) => {
             const assigned = assignmentsByStaff.get(s.id) ?? [];
             return (
-              <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 0.5fr 1fr 1fr 1.2fr 110px", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
+              <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.5fr 1fr 1fr 1fr 1.2fr 110px", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <Avatar s={s} size={32} />
                   <div>
@@ -732,6 +737,7 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
                 </div>
                 <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px", borderRadius: 6, backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600, display: "inline-block" }}>{s.role}</span>
                 <div style={{ fontSize: 12, color: "#4b5563" }}>{s.phone ?? <span style={{ color: "#c9c6bc" }}>—</span>}</div>
+                <div style={{ fontSize: 12, color: "#4b5563" }}>{s.location ?? <span style={{ color: "#c9c6bc" }}>—</span>}</div>
                 <div style={{ fontSize: 11, color: "#7a7a86" }}>{s.languages ?? "—"}</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px" }}>
                   {assigned.length === 0 ? <span style={{ fontSize: 12, color: "#c9c6bc" }}>—</span> : assigned.map(c => <span key={c.id} style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{displayName(c.name)}</span>)}
@@ -1452,10 +1458,10 @@ export function OpsBoard({ onLogout }) {
     setCustomers(prev => prev.filter(c => c.id !== cid));
     fetch(`/api/ops/customers?id=${cid}`, { method: "DELETE" }).catch(() => {});
   };
-  const addToRoster = ({ name, role, phone, languages, area, notes }) => {
+  const addToRoster = ({ name, role, phone, location, languages, area, notes }) => {
     const initials = name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
     const color = PALETTE[roster.length % PALETTE.length];
-    const member = { id: `s-${Date.now()}`, name, role, initials, color, phone: phone || null, languages: languages || null, area: area || null, notes: notes || null };
+    const member = { id: `s-${Date.now()}`, name, role, initials, color, phone: phone || null, location: location || null, languages: languages || null, area: area || null, notes: notes || null };
     setRoster(prev => [...prev, member]);
     fetch("/api/ops/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(member) }).catch(() => {});
   };
