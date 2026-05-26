@@ -1155,6 +1155,7 @@ function AttendanceView({ roster, customers }) {
   };
 
   const rows = useMemo(() => {
+    const today = todayISO();
     return roster.map(staff => {
       const assigned = customers.filter(c => c.staff.some(x => x.id === staff.id));
       let present = 0, leave = 0;
@@ -1172,13 +1173,13 @@ function AttendanceView({ roster, customers }) {
           const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
           const sundayOverrideId = c.rota?.[date];
           const inScope = dateInScope(date);
-          if (leaveSet.has(date)) { if (inScope && wouldBe?.id === staff.id) leave++; consumed++; }
+          if (leaveSet.has(date)) { if (inScope && wouldBe?.id === staff.id && date <= today) leave++; consumed++; }
           else if (pausedSet.has(date)) { /* skip */ }
           else if (isSunday && !sundayOverrideId) { consumed++; }
           else {
             const overrideId = c.rota?.[date];
             const actual = overrideId ? (roster.find(s => s.id === overrideId) ?? wouldBe) : wouldBe;
-            if (inScope && actual?.id === staff.id) present++;
+            if (inScope && actual?.id === staff.id && date <= today) present++;
             workIdx++; consumed++;
           }
           offset++;
