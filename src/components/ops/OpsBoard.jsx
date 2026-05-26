@@ -274,6 +274,8 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editDay, setEditDay] = useState(null);
   const editDayRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const todayRowRef = useRef(null);
   const [newPackage, setNewPackage] = useState(() => String(customer?.serviceDays ?? "30"));
   const [newStart, setNewStart] = useState(() => customer?.careStartDate ?? todayISO());
   const [newShift, setNewShift] = useState(() => customer?.shiftTime ?? "8am - 6pm");
@@ -282,6 +284,15 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
     setNewPackage(String(customer?.serviceDays ?? "30"));
     setNewStart(customer?.careStartDate ?? todayISO());
     setNewShift(customer?.shiftTime ?? "8am - 6pm");
+  }, [customer?.id]);
+
+  useEffect(() => {
+    if (todayRowRef.current && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const row = todayRowRef.current;
+      const offset = row.offsetTop - container.clientHeight / 2 + row.clientHeight / 2;
+      container.scrollTop = Math.max(0, offset);
+    }
   }, [customer?.id]);
   const [pendingChange, setPendingChange] = useState(null);
   const [reasonText, setReasonText] = useState("");
@@ -484,23 +495,29 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                 <div style={{ display: "grid", gridTemplateColumns: "1.5fr 0.9fr 1.1fr 1.2fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
                   <span>Date</span><span>Time</span><span>Caregiver</span><span>Reason</span>
                 </div>
-                <div style={{ maxHeight: 360, overflowY: "auto" }}>
+                <div ref={scrollContainerRef} style={{ maxHeight: 360, overflowY: "auto" }}>
                   {rota.map((r, idx) => {
                     const isStart = r.date === customer.startDate;
                     const isToday = r.date === today;
+                    const isPast = r.date < today;
+                    const rowBg = isToday ? "rgba(99,136,255,0.07)" : isPast ? "#fafafa" : "#fff";
                     return (
-                      <div key={r.date} style={{
+                      <div key={r.date} ref={isToday ? todayRowRef : undefined} style={{
                         display: "grid", gridTemplateColumns: "1.5fr 0.9fr 1.1fr 1.2fr", alignItems: "center", gap: 8,
                         padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9",
-                        backgroundColor: isStart ? "rgba(95,71,255,0.06)" : isToday ? "rgba(99,136,255,0.05)" : "#fff",
+                        backgroundColor: rowBg,
+                        opacity: isPast && !isToday ? 0.55 : 1,
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <span style={{ width: 26, height: 22, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, borderRadius: 6, backgroundColor: (isStart || isToday) ? "#5F47FF" : "#f1f5f9", color: (isStart || isToday) ? "#fff" : "#7a7a86", flexShrink: 0 }}>
+                          <span style={{ width: 26, height: 22, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, borderRadius: 6, backgroundColor: isToday ? "#5F47FF" : isPast ? "#e2e8f0" : "#f1f5f9", color: isToday ? "#fff" : isPast ? "#9a9aa6" : "#7a7a86", flexShrink: 0 }}>
                             {String(idx + 1).padStart(2, "0")}
                           </span>
-                          <span style={{ color: (isStart || isToday) ? "#5F47FF" : "#0f1115", fontWeight: (isStart || isToday) ? 600 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {fmtLongDate(r.date)}
-                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+                            {isToday && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", padding: "2px 6px", borderRadius: 4, backgroundColor: "#5F47FF", color: "#fff" }}>TODAY</span>}
+                            <span style={{ color: isToday ? "#5F47FF" : isPast ? "#9a9aa6" : "#0f1115", fontWeight: isToday ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: isPast && !isToday ? "line-through" : "none" }}>
+                              {fmtLongDate(r.date)}
+                            </span>
+                          </div>
                         </div>
                         <span style={{ color: "#7a7a86" }}>{r.time}</span>
                         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 6 }} ref={editDay === r.date ? editDayRef : undefined}>
