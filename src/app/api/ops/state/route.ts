@@ -14,6 +14,14 @@ export async function POST(req: NextRequest) {
   const authErr = requireAuth(req);
   if (authErr) return authErr;
   const body = await req.json();
+
+  // Preserve ops_hidden so soft-deleted customers don't reappear after a rota save
+  const { data: existing } = await supabase
+    .from("ops_customer_state")
+    .select("ops_hidden")
+    .eq("lead_id", body.lead_id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("ops_customer_state")
     .upsert(
@@ -27,6 +35,7 @@ export async function POST(req: NextRequest) {
         rota_reasons: body.rota_reasons ?? {},
         paused_dates: body.paused_dates ?? [],
         leave_dates: body.leave_dates ?? [],
+        ops_hidden: existing?.ops_hidden ?? false,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "lead_id" }

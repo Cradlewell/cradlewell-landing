@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       .eq("direction", "inbound")
       .order("created_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (!lastInbound) {
       return NextResponse.json({ error: "No customer message — window not open" }, { status: 400 });

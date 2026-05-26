@@ -52,9 +52,13 @@ export async function POST(req: NextRequest) {
     .from("whatsapp_sessions")
     .select("*")
     .eq("wa_phone", wa_phone)
-    .single();
+    .maybeSingle();
 
-  if (sessionError || !session)
+  if (sessionError) {
+    console.error("[whatsapp-sessions POST]", sessionError);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+  if (!session)
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
   const phone = String(wa_phone).replace(/\D/g, "").slice(-10);
