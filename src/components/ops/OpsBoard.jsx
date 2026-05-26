@@ -1282,8 +1282,6 @@ function RequirementsView({ requirements, loading }) {
   const [stageFilter, setStageFilter] = useState("All");
   const [page, setPage] = useState(1);
 
-  const tempColor = t => t === "Hot" ? "#ef4444" : t === "Warm" ? "#f59e0b" : "#64748b";
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return requirements.filter(r => {
@@ -1315,16 +1313,9 @@ function RequirementsView({ requirements, loading }) {
         padding: "16px 18px",
         boxShadow: "0 1px 3px rgba(15,23,42,0.05)",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 10 }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{r.name}</div>
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{r.address ?? r.city ?? r.area ?? "—"}</div>
-          </div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: tempColor(r.temperature), background: tempColor(r.temperature) + "18", borderRadius: 999, padding: "2px 8px" }}>
-              {r.temperature}
-            </span>
-          </div>
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{r.name}</div>
+          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{r.address ?? r.city ?? r.area ?? "—"}</div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px", fontSize: 12 }}>
