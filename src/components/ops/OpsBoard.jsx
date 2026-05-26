@@ -1291,7 +1291,7 @@ function RequirementsView({ requirements, loading }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 10 }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{r.name}</div>
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{r.area ?? r.city ?? "—"}</div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{r.address ?? r.city ?? r.area ?? "—"}</div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: tempColor(r.temperature), background: tempColor(r.temperature) + "18", borderRadius: 999, padding: "2px 8px" }}>

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from("leads")
-    .select("id, name, phone, area, city, service_required, preferred_shift, shift_hours_count, shift_time, care_start_date, service_days, budget, notes, owner, temperature, last_activity_at, created_at, stage, baby_status, baby_age_or_month")
+    .select("id, name, phone, area, city, address, service_required, preferred_shift, shift_hours_count, shift_time, care_start_date, service_days, budget, notes, owner, temperature, last_activity_at, created_at, stage, baby_status, baby_age_or_month")
     .in("stage", ["Nurse Required", "Moba Required"])
     .order("last_activity_at", { ascending: false });
 
