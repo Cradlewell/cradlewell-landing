@@ -1275,11 +1275,40 @@ function AttendanceView({ roster, customers }) {
 
 // ─── Requirements View ────────────────────────────────────────────────────────
 
+const REQ_PAGE_SIZE = 20;
+
 function RequirementsView({ requirements, loading }) {
-  const nurse = requirements.filter(r => r.stage === "Nurse Required");
-  const moba  = requirements.filter(r => r.stage === "Moba Required");
+  const [search, setSearch] = useState("");
+  const [tempFilter, setTempFilter] = useState("All");
+  const [stageFilter, setStageFilter] = useState("All");
+  const [page, setPage] = useState(1);
 
   const tempColor = t => t === "Hot" ? "#ef4444" : t === "Warm" ? "#f59e0b" : "#64748b";
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return requirements.filter(r => {
+      if (tempFilter !== "All" && r.temperature !== tempFilter) return false;
+      if (stageFilter !== "All" && r.stage !== stageFilter) return false;
+      if (q) {
+        const haystack = [r.name, r.address, r.city, r.area, r.owner, r.phone].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [requirements, search, tempFilter, stageFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / REQ_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * REQ_PAGE_SIZE, safePage * REQ_PAGE_SIZE);
+
+  const nurse = paginated.filter(r => r.stage === "Nurse Required");
+  const moba  = paginated.filter(r => r.stage === "Moba Required");
+  const nurseTotal = filtered.filter(r => r.stage === "Nurse Required").length;
+  const mobaTotal  = filtered.filter(r => r.stage === "Moba Required").length;
+
+  // reset to page 1 when filters change
+  const resetPage = () => setPage(1);
 
   function ReqCard({ r }) {
     return (
@@ -1343,13 +1372,13 @@ function RequirementsView({ requirements, loading }) {
     );
   }
 
-  function Section({ label, color, items }) {
+  function Section({ label, color, items, total }) {
     return (
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
           <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
           <span style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{label}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, background: "#f1f5f9", color: "#64748b", borderRadius: 999, padding: "1px 8px" }}>{items.length}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, background: "#f1f5f9", color: "#64748b", borderRadius: 999, padding: "1px 8px" }}>{total}</span>
         </div>
         {items.length === 0 ? (
           <div style={{ padding: "24px 20px", borderRadius: 12, background: "#fafafa", border: "1px dashed #e2e8f0", textAlign: "center", fontSize: 13, color: "#94a3b8" }}>
@@ -1377,18 +1406,94 @@ function RequirementsView({ requirements, loading }) {
     );
   }
 
+  const btnStyle = (active) => ({
+    padding: "5px 13px", borderRadius: 8, border: "1px solid #e2e8f0",
+    background: active ? "#6388FF" : "#fff", color: active ? "#fff" : "#64748b",
+    fontWeight: 600, fontSize: 12, cursor: "pointer",
+  });
+
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
         <h2 style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.01em", margin: 0 }}>Requirements</h2>
         <p style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>
-          {nurse.length + moba.length} open · {nurse.length} nurse · {moba.length} moba
+          {filtered.length} of {requirements.length} · {nurseTotal} nurse · {mobaTotal} moba
         </p>
       </div>
-      <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <Section label="Nurse Required" color="#6388FF" items={nurse} />
-        <Section label="Moba Required"  color="#a855f7" items={moba}  />
+
+      {/* Search + Filters */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 24, alignItems: "center" }}>
+        <input
+          type="text"
+          placeholder="Search by name, address, owner, phone…"
+          value={search}
+          onChange={e => { setSearch(e.target.value); resetPage(); }}
+          style={{
+            flex: "1 1 220px", padding: "8px 14px", borderRadius: 10,
+            border: "1px solid #e2e8f0", fontSize: 13, outline: "none",
+            background: "#fff", color: "#0f172a",
+          }}
+        />
+        <select
+          value={tempFilter}
+          onChange={e => { setTempFilter(e.target.value); resetPage(); }}
+          style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", color: "#0f172a", cursor: "pointer" }}
+        >
+          <option value="All">All Temperatures</option>
+          <option value="Hot">Hot</option>
+          <option value="Warm">Warm</option>
+          <option value="Cold">Cold</option>
+        </select>
+        <select
+          value={stageFilter}
+          onChange={e => { setStageFilter(e.target.value); resetPage(); }}
+          style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", color: "#0f172a", cursor: "pointer" }}
+        >
+          <option value="All">All Types</option>
+          <option value="Nurse Required">Nurse Required</option>
+          <option value="Moba Required">Moba Required</option>
+        </select>
+        {(search || tempFilter !== "All" || stageFilter !== "All") && (
+          <button
+            onClick={() => { setSearch(""); setTempFilter("All"); setStageFilter("All"); resetPage(); }}
+            style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#f8fafc", color: "#64748b", fontSize: 13, cursor: "pointer", fontWeight: 600 }}
+          >
+            Clear
+          </button>
+        )}
       </div>
+
+      {/* Cards */}
+      <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <Section label="Nurse Required" color="#6388FF" items={nurse} total={nurseTotal} />
+        <Section label="Moba Required"  color="#a855f7" items={moba}  total={mobaTotal} />
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 32 }}>
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={safePage === 1}
+            style={{ ...btnStyle(false), opacity: safePage === 1 ? 0.4 : 1 }}
+          >
+            ← Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+            <button key={p} onClick={() => setPage(p)} style={btnStyle(p === safePage)}>
+              {p}
+            </button>
+          ))}
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={safePage === totalPages}
+            style={{ ...btnStyle(false), opacity: safePage === totalPages ? 0.4 : 1 }}
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
