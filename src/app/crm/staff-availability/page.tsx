@@ -64,7 +64,7 @@ export default function StaffAvailabilityPage() {
     if (!data) return ["All"];
     const s = new Set<string>(["All"]);
     for (const staff of data.staff) if (staff.area) s.add(staff.area);
-    return [...s];
+    return Array.from(s);
   }, [data]);
 
   const filteredStaff = useMemo(() => {
