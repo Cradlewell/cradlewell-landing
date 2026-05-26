@@ -1279,7 +1279,6 @@ const REQ_PAGE_SIZE = 20;
 
 function RequirementsView({ requirements, loading }) {
   const [search, setSearch] = useState("");
-  const [tempFilter, setTempFilter] = useState("All");
   const [stageFilter, setStageFilter] = useState("All");
   const [page, setPage] = useState(1);
 
@@ -1288,7 +1287,6 @@ function RequirementsView({ requirements, loading }) {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return requirements.filter(r => {
-      if (tempFilter !== "All" && r.temperature !== tempFilter) return false;
       if (stageFilter !== "All" && r.stage !== stageFilter) return false;
       if (q) {
         const haystack = [r.name, r.address, r.city, r.area, r.owner, r.phone].filter(Boolean).join(" ").toLowerCase();
@@ -1296,7 +1294,7 @@ function RequirementsView({ requirements, loading }) {
       }
       return true;
     });
-  }, [requirements, search, tempFilter, stageFilter]);
+  }, [requirements, search, stageFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / REQ_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -1436,16 +1434,6 @@ function RequirementsView({ requirements, loading }) {
           }}
         />
         <select
-          value={tempFilter}
-          onChange={e => { setTempFilter(e.target.value); resetPage(); }}
-          style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", color: "#0f172a", cursor: "pointer" }}
-        >
-          <option value="All">All Temperatures</option>
-          <option value="Hot">Hot</option>
-          <option value="Warm">Warm</option>
-          <option value="Cold">Cold</option>
-        </select>
-        <select
           value={stageFilter}
           onChange={e => { setStageFilter(e.target.value); resetPage(); }}
           style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", color: "#0f172a", cursor: "pointer" }}
@@ -1454,9 +1442,9 @@ function RequirementsView({ requirements, loading }) {
           <option value="Nurse Required">Nurse Required</option>
           <option value="Moba Required">Moba Required</option>
         </select>
-        {(search || tempFilter !== "All" || stageFilter !== "All") && (
+        {(search || stageFilter !== "All") && (
           <button
-            onClick={() => { setSearch(""); setTempFilter("All"); setStageFilter("All"); resetPage(); }}
+            onClick={() => { setSearch(""); setStageFilter("All"); resetPage(); }}
             style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#f8fafc", color: "#64748b", fontSize: 13, cursor: "pointer", fontWeight: 600 }}
           >
             Clear
