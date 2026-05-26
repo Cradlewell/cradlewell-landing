@@ -3,14 +3,15 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Users, Kanban, CalendarClock,
   FileText, Trophy, Receipt, BarChart3,
-  ChevronLeft, ChevronRight, X, LogOut, MessageCircle,
+  ChevronLeft, ChevronRight, X, LogOut, MessageCircle, UserCheck,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/crm",            label: "Dashboard",       icon: LayoutDashboard },
-  { href: "/crm/leads",      label: "Leads",           icon: Users },
-  { href: "/crm/pipeline",   label: "Pipeline",        icon: Kanban },
-  { href: "/crm/whatsapp",   label: "WhatsApp",        icon: MessageCircle },
+  { href: "/crm",                     label: "Dashboard",         icon: LayoutDashboard },
+  { href: "/crm/leads",               label: "Leads",             icon: Users },
+  { href: "/crm/pipeline",            label: "Pipeline",          icon: Kanban },
+  { href: "/crm/staff-availability",  label: "Staff Availability", icon: UserCheck },
+  { href: "/crm/whatsapp",            label: "WhatsApp",          icon: MessageCircle },
   { href: "/crm/followups",  label: "Follow-ups",      icon: CalendarClock },
   { href: "/crm/quotations", label: "Quotations",      icon: FileText },
   { href: "/crm/closures",   label: "Closures",        icon: Trophy },
