@@ -1273,6 +1273,126 @@ function AttendanceView({ roster, customers }) {
   );
 }
 
+// ─── Requirements View ────────────────────────────────────────────────────────
+
+function RequirementsView({ requirements, loading }) {
+  const nurse = requirements.filter(r => r.stage === "Nurse Required");
+  const moba  = requirements.filter(r => r.stage === "Moba Required");
+
+  const tempColor = t => t === "Hot" ? "#ef4444" : t === "Warm" ? "#f59e0b" : "#64748b";
+
+  function ReqCard({ r }) {
+    return (
+      <div style={{
+        background: "#fff", borderRadius: 14, border: "1px solid #e8edf2",
+        padding: "16px 18px",
+        boxShadow: "0 1px 3px rgba(15,23,42,0.05)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 10 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{r.name}</div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{r.area ?? r.city ?? "—"}</div>
+          </div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: tempColor(r.temperature), background: tempColor(r.temperature) + "18", borderRadius: 999, padding: "2px 8px" }}>
+              {r.temperature}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px", fontSize: 12 }}>
+          {r.service_required && (
+            <div><span style={{ color: "#94a3b8", fontWeight: 600 }}>Service </span><span style={{ color: "#1e293b" }}>{r.service_required}</span></div>
+          )}
+          {r.preferred_shift && (
+            <div><span style={{ color: "#94a3b8", fontWeight: 600 }}>Shift </span><span style={{ color: "#1e293b" }}>{r.preferred_shift}{r.shift_hours_count ? ` · ${r.shift_hours_count}h` : ""}</span></div>
+          )}
+          {r.shift_time && (
+            <div><span style={{ color: "#94a3b8", fontWeight: 600 }}>Time </span><span style={{ color: "#1e293b" }}>{r.shift_time}</span></div>
+          )}
+          {r.care_start_date && (
+            <div><span style={{ color: "#94a3b8", fontWeight: 600 }}>Start </span><span style={{ color: "#1e293b" }}>{r.care_start_date}</span></div>
+          )}
+          {r.service_days && (
+            <div><span style={{ color: "#94a3b8", fontWeight: 600 }}>Days </span><span style={{ color: "#1e293b" }}>{r.service_days}</span></div>
+          )}
+          {r.budget && (
+            <div><span style={{ color: "#94a3b8", fontWeight: 600 }}>Budget </span><span style={{ color: "#1e293b" }}>₹{r.budget.toLocaleString("en-IN")}</span></div>
+          )}
+          {r.baby_status && (
+            <div><span style={{ color: "#94a3b8", fontWeight: 600 }}>Baby </span><span style={{ color: "#1e293b" }}>{r.baby_status}{r.baby_age_or_month ? ` · ${r.baby_age_or_month}` : ""}</span></div>
+          )}
+          {r.phone && (
+            <div><span style={{ color: "#94a3b8", fontWeight: 600 }}>Phone </span><span style={{ color: "#1e293b" }}>{r.phone}</span></div>
+          )}
+        </div>
+
+        {r.notes && (
+          <div style={{ marginTop: 10, fontSize: 12, color: "#64748b", borderTop: "1px solid #f1f5f9", paddingTop: 8, fontStyle: "italic" }}>
+            {r.notes}
+          </div>
+        )}
+
+        <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: "#94a3b8" }}>Owner: {r.owner ?? "—"}</span>
+          <span style={{ fontSize: 11, color: "#94a3b8" }}>
+            {r.last_activity_at ? new Date(r.last_activity_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : ""}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  function Section({ label, color, items }) {
+    return (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{label}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, background: "#f1f5f9", color: "#64748b", borderRadius: 999, padding: "1px 8px" }}>{items.length}</span>
+        </div>
+        {items.length === 0 ? (
+          <div style={{ padding: "24px 20px", borderRadius: 12, background: "#fafafa", border: "1px dashed #e2e8f0", textAlign: "center", fontSize: 13, color: "#94a3b8" }}>
+            No open requirements
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: 10 }}>
+            {items.map(r => <ReqCard key={r.id} r={r} />)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "96px 0", gap: 12, color: "#94a3b8", fontSize: 14 }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
+            <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
+          </path>
+        </svg>
+        Loading requirements…
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <h2 style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.01em", margin: 0 }}>Requirements</h2>
+        <p style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>
+          {nurse.length + moba.length} open · {nurse.length} nurse · {moba.length} moba
+        </p>
+      </div>
+      <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <Section label="Nurse Required" color="#6388FF" items={nurse} />
+        <Section label="Moba Required"  color="#a855f7" items={moba}  />
+      </div>
+    </div>
+  );
+}
+
 // ─── Main App ──────────────────────────────────────────────────────────────────
 
 export function OpsBoard({ onLogout }) {
@@ -1325,8 +1445,21 @@ export function OpsBoard({ onLogout }) {
       })));
     }).catch(() => {});
   }, []);
+  const [requirements, setRequirements] = useState([]);
+  const [requirementsLoading, setRequirementsLoading] = useState(false);
+
   const [view, setView] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("ops_view") : null) ?? "customers");
   useEffect(() => { localStorage.setItem("ops_view", view); }, [view]);
+
+  useEffect(() => {
+    if (view !== "requirements") return;
+    setRequirementsLoading(true);
+    fetch("/api/ops/requirements")
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setRequirements(d); })
+      .catch(() => {})
+      .finally(() => setRequirementsLoading(false));
+  }, [view]);
   const [zoneFilter, setZoneFilter] = useState("All");
   const [areaFilter, setAreaFilter] = useState("All");
   const [selectedId, setSelectedId] = useState(null);
@@ -1480,6 +1613,7 @@ export function OpsBoard({ onLogout }) {
   const navTabs = [
     { id: "customers", label: "Customers", count: customers.length, icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="5" r="2.5" /><path d="M1 14c0-2.76 2.24-5 5-5s5 2.24 5 5" /><circle cx="12.5" cy="5" r="2" /><path d="M15 14c0-2.21-1.57-4-3.5-4" /></svg> },
     { id: "staff", label: "Staff", count: roster.length, icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="5" r="3" /><path d="M2 15c0-3.31 2.69-6 6-6s6 2.69 6 6" /></svg> },
+    { id: "requirements", label: "Requirements", count: requirements.length, icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="10" height="12" rx="1.5" /><path d="M6 5h4M6 8h4M6 11h2" /></svg> },
     { id: "utilisation", label: "Utilisation Report", count: roster.filter(s => customers.some(c => c.staff.some(x => x.id === s.id))).length, icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 13V9M6 13V5M10 13V7M14 13V3" /></svg> },
     { id: "travel", label: "Travel Expenses", count: travelEntries.length, icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2C5.79 2 4 3.79 4 6c0 3.5 4 8 4 8s4-4.5 4-8c0-2.21-1.79-4-4-4z" /><circle cx="8" cy="6" r="1.5" /></svg> },
     { id: "attendance", label: "Attendance Report", count: roster.length, icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="11" rx="2" /><path d="M5 1v4M11 1v4M2 7h12" /><path d="M5.5 10.5l2 2 3-3" /></svg> },
@@ -1558,7 +1692,8 @@ export function OpsBoard({ onLogout }) {
                 })
                 .catch(() => setTravelEntries(snapshot));
             }} />
-            : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} travelEntries={travelEntries} />
+            : view === "requirements" ? <RequirementsView requirements={requirements} loading={requirementsLoading} />
+              : view === "utilisation" ? <UtilisationView roster={roster} customers={customers} travelEntries={travelEntries} />
               : view === "staff" ? <StaffView roster={roster} customers={customers} onAdd={addToRoster} onRemove={removeFromRoster} onUpdate={updateRoster} />
                 : (
                   <>
