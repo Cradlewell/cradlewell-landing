@@ -8,133 +8,140 @@ const VERIFY_TOKEN        = process.env.WHATSAPP_VERIFY_TOKEN!;
 const FLOW_DUE_DATE_ID    = process.env.WHATSAPP_FLOW_DUE_DATE_ID!;
 const FLOW_CARE_DATE_ID   = process.env.WHATSAPP_FLOW_CARE_DATE_ID!;
 
-// ── Send plain text message ───────────────────────────────────────────────────
+// ── Shared Meta API caller ────────────────────────────────────────────────────
+// All send functions go through here so Meta error responses are always logged.
 
-async function sendMessage(to: string, text: string) {
+async function callMetaAPI(payload: object, label: string): Promise<boolean> {
     try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+        const res = await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
             method: "POST",
             headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: text } }),
+            body: JSON.stringify(payload),
         });
+        if (!res.ok) {
+            const detail = await res.text().catch(() => "");
+            console.error(`[WA] ${label} failed (HTTP ${res.status}):`, detail);
+            return false;
+        }
+        return true;
     } catch (err) {
-        console.error("sendMessage failed:", err);
+        console.error(`[WA] ${label} failed:`, err);
+        return false;
     }
+}
+
+// ── Send plain text message ───────────────────────────────────────────────────
+
+async function sendMessage(to: string, text: string): Promise<boolean> {
+    return callMetaAPI(
+        { messaging_product: "whatsapp", to, type: "text", text: { body: text } },
+        "sendMessage"
+    );
 }
 
 // ── Send interactive button message (max 3 buttons, title max 20 chars) ───────
 
-async function sendButtonMessage(to: string, body: string, buttons: Array<{ id: string; title: string }>) {
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "button",
-                    body: { text: body },
-                    action: { buttons: buttons.map((b) => ({ type: "reply", reply: { id: b.id, title: b.title } })) },
-                },
-            }),
-        });
-    } catch (err) {
-        console.error("sendButtonMessage failed:", err);
-    }
+async function sendButtonMessage(to: string, body: string, buttons: Array<{ id: string; title: string }>): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+            type: "button",
+            body: { text: body },
+            action: { buttons: buttons.map((b) => ({ type: "reply", reply: { id: b.id, title: b.title } })) },
+        },
+    }, "sendButtonMessage");
 }
 
 // ── Send native location request ──────────────────────────────────────────────
 
-async function sendLocationRequest(to: string, bodyText: string) {
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "location_request_message",
-                    body: { text: bodyText },
-                    action: { name: "send_location" },
-                },
-            }),
-        });
-    } catch (err) {
-        console.error("sendLocationRequest failed:", err);
-    }
+async function sendLocationRequest(to: string, bodyText: string): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+            type: "location_request_message",
+            body: { text: bodyText },
+            action: { name: "send_location" },
+        },
+    }, "sendLocationRequest");
+}
+
+// ── Send pre-approved template message (required outside the 24-hour window) ──
+// Templates must be created and approved in Meta Business Manager first.
+// languageCode: use "en" for English or "en_IN" for Indian English templates.
+
+export async function sendTemplateMessage(
+    to: string,
+    templateName: string,
+    languageCode = "en",
+    components?: unknown[]
+): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "template",
+        template: {
+            name: templateName,
+            language: { code: languageCode },
+            ...(components?.length ? { components } : {}),
+        },
+    }, "sendTemplateMessage");
 }
 
 // ── Send 8-hour day time slot list (Nurse day & Japa 8hr) ────────────────────
 
-async function sendDaySlotListMessage(to: string) {
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "list",
-                    body: { text: "Please select your preferred start time:" },
-                    action: {
-                        button: "Select Timing",
-                        sections: [
-                            {
-                                title: "Morning Shifts (8 hrs)",
-                                rows: [
-                                    { id: "slot_8", title: "8 AM – 4 PM" },
-                                    { id: "slot_9", title: "9 AM – 5 PM" },
-                                    { id: "slot_10", title: "10 AM – 6 PM" },
-                                ],
-                            },
-                            { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
+async function sendDaySlotListMessage(to: string): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+            type: "list",
+            body: { text: "Please select your preferred start time:" },
+            action: {
+                button: "Select Timing",
+                sections: [
+                    {
+                        title: "Morning Shifts (8 hrs)",
+                        rows: [
+                            { id: "slot_8", title: "8 AM – 4 PM" },
+                            { id: "slot_9", title: "9 AM – 5 PM" },
+                            { id: "slot_10", title: "10 AM – 6 PM" },
                         ],
                     },
-                },
-            }),
-        });
-    } catch (err) {
-        console.error("sendDaySlotListMessage failed:", err);
-    }
+                    { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
+                ],
+            },
+        },
+    }, "sendDaySlotListMessage");
 }
 
 // ── Send WhatsApp Flow (date picker) ─────────────────────────────────────────
 
-async function sendFlowMessage(to: string, flowId: string, bodyText: string, ctaText: string) {
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "flow",
-                    body: { text: bodyText },
-                    action: {
-                        name: "flow",
-                        parameters: {
-                            flow_message_version: "3",
-                            flow_action: "navigate",
-                            flow_token: "unused",
-                            flow_id: flowId,
-                            flow_cta: ctaText,
-                            flow_action_payload: { screen: "MAIN" },
-                        },
-                    },
+async function sendFlowMessage(to: string, flowId: string, bodyText: string, ctaText: string): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+            type: "flow",
+            body: { text: bodyText },
+            action: {
+                name: "flow",
+                parameters: {
+                    flow_message_version: "3",
+                    flow_action: "navigate",
+                    flow_token: "unused",
+                    flow_id: flowId,
+                    flow_cta: ctaText,
+                    flow_action_payload: { screen: "MAIN" },
                 },
-            }),
-        });
-    } catch (err) {
-        console.error("sendFlowMessage failed:", err);
-    }
+            },
+        },
+    }, "sendFlowMessage");
 }
 
 // Returns true if isoDate is strictly before today (server local midnight)
@@ -157,149 +164,117 @@ function formatDateDisplay(isoDate: string): string {
 
 // ── Send baby age list ────────────────────────────────────────────────────────
 
-async function sendBabyAgeListMessage(to: string) {
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "list",
-                    body: { text: "How old is your baby?" },
-                    action: {
-                        button: "Select Age",
-                        sections: [{
-                            title: "Baby Age",
-                            rows: [
-                                { id: "age_7d",  title: "0-7 days" },
-                                { id: "age_4w",  title: "1-4 weeks" },
-                                { id: "age_3m",  title: "1-3 months" },
-                                { id: "age_3mp", title: "3+ months" },
-                            ],
-                        }],
-                    },
-                },
-            }),
-        });
-    } catch (err) {
-        console.error("sendBabyAgeListMessage failed:", err);
-    }
+async function sendBabyAgeListMessage(to: string): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+            type: "list",
+            body: { text: "How old is your baby?" },
+            action: {
+                button: "Select Age",
+                sections: [{
+                    title: "Baby Age",
+                    rows: [
+                        { id: "age_7d",  title: "0-7 days" },
+                        { id: "age_4w",  title: "1-4 weeks" },
+                        { id: "age_3m",  title: "1-3 months" },
+                        { id: "age_3mp", title: "3+ months" },
+                    ],
+                }],
+            },
+        },
+    }, "sendBabyAgeListMessage");
 }
 
 // ── Send hospital selection list ─────────────────────────────────────────────
 
-async function sendHospitalListMessage(to: string) {
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "list",
-                    body: { text: "Which hospital welcomed your baby?" },
-                    action: {
-                        button: "Select Hospital",
-                        sections: [
-                            {
-                                title: "Hospitals",
-                                rows: [
-                                    { id: "hosp_cloudnine", title: "Cloudnine" },
-                                    { id: "hosp_motherhood", title: "Motherhood" },
-                                    { id: "hosp_apollo", title: "Apollo Cradle" },
-                                    { id: "hosp_rainbow", title: "Rainbow" },
-                                    { id: "hosp_aster", title: "Aster CMI" },
-                                    { id: "hosp_manipal", title: "Manipal" },
-                                    { id: "hosp_fortis", title: "Fortis" },
-                                    { id: "hosp_others", title: "Others" },
-                                ],
-                            },
+async function sendHospitalListMessage(to: string): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+            type: "list",
+            body: { text: "Which hospital welcomed your baby?" },
+            action: {
+                button: "Select Hospital",
+                sections: [
+                    {
+                        title: "Hospitals",
+                        rows: [
+                            { id: "hosp_cloudnine", title: "Cloudnine" },
+                            { id: "hosp_motherhood", title: "Motherhood" },
+                            { id: "hosp_apollo", title: "Apollo Cradle" },
+                            { id: "hosp_rainbow", title: "Rainbow" },
+                            { id: "hosp_aster", title: "Aster CMI" },
+                            { id: "hosp_manipal", title: "Manipal" },
+                            { id: "hosp_fortis", title: "Fortis" },
+                            { id: "hosp_others", title: "Others" },
                         ],
                     },
-                },
-            }),
-        });
-    } catch (err) {
-        console.error("sendHospitalListMessage failed:", err);
-    }
+                ],
+            },
+        },
+    }, "sendHospitalListMessage");
 }
 
 // ── Send baby weight selection list ──────────────────────────────────────────
 
-async function sendBabyWeightListMessage(to: string) {
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "list",
-                    body: { text: "What is your baby's current weight?" },
-                    action: {
-                        button: "Select Weight",
-                        sections: [
-                            {
-                                title: "Weight Range",
-                                rows: [
-                                    { id: "wt_lt2", title: "Less than 2 kg" },
-                                    { id: "wt_2to25", title: "2 – 2.5 kg" },
-                                    { id: "wt_25to3", title: "2.5 – 3 kg" },
-                                    { id: "wt_3to35", title: "3 – 3.5 kg" },
-                                    { id: "wt_gt35", title: "More than 3.5 kg" },
-                                ],
-                            },
+async function sendBabyWeightListMessage(to: string): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+            type: "list",
+            body: { text: "What is your baby's current weight?" },
+            action: {
+                button: "Select Weight",
+                sections: [
+                    {
+                        title: "Weight Range",
+                        rows: [
+                            { id: "wt_lt2", title: "Less than 2 kg" },
+                            { id: "wt_2to25", title: "2 – 2.5 kg" },
+                            { id: "wt_25to3", title: "2.5 – 3 kg" },
+                            { id: "wt_3to35", title: "3 – 3.5 kg" },
+                            { id: "wt_gt35", title: "More than 3.5 kg" },
                         ],
                     },
-                },
-            }),
-        });
-    } catch (err) {
-        console.error("sendBabyWeightListMessage failed:", err);
-    }
+                ],
+            },
+        },
+    }, "sendBabyWeightListMessage");
 }
 
 // ── Send Japa day hours list (8 / 10 / 12 hrs) ───────────────────────────────
 
-async function sendJapaHoursListMessage(to: string) {
-    try {
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to,
-                type: "interactive",
-                interactive: {
-                    type: "list",
-                    body: { text: "How many hours of day care do you need?" },
-                    action: {
-                        button: "Select Hours",
-                        sections: [
-                            {
-                                title: "Day Shift Options",
-                                rows: [
-                                    { id: "hours_8", title: "8 hours" },
-                                    { id: "hours_10", title: "10 hours" },
-                                    { id: "hours_12", title: "12 hours" },
-                                ],
-                            },
-                            { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
+async function sendJapaHoursListMessage(to: string): Promise<boolean> {
+    return callMetaAPI({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+            type: "list",
+            body: { text: "How many hours of day care do you need?" },
+            action: {
+                button: "Select Hours",
+                sections: [
+                    {
+                        title: "Day Shift Options",
+                        rows: [
+                            { id: "hours_8", title: "8 hours" },
+                            { id: "hours_10", title: "10 hours" },
+                            { id: "hours_12", title: "12 hours" },
                         ],
                     },
-                },
-            }),
-        });
-    } catch (err) {
-        console.error("sendJapaHoursListMessage failed:", err);
-    }
+                    { title: "Navigation", rows: [{ id: "main_menu", title: "Main Menu" }] },
+                ],
+            },
+        },
+    }, "sendJapaHoursListMessage");
 }
 
 // ── Store message in Supabase ─────────────────────────────────────────────────
@@ -672,6 +647,19 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     console.log(`[WA] phone=${waPhone} step=${session?.step ?? "NEW"} text="${text}"`);
 
+    // ── Opt-out: STOP and variants — MUST run before any other check ─────────
+    // Meta policy: opt-out must be honored immediately regardless of state.
+    const STOP_WORDS = ["stop", "unsubscribe", "opt out", "optout", "don't contact", "do not contact"];
+    if (STOP_WORDS.some(w => text.toLowerCase().includes(w))) {
+        await upsertSession(waPhone, { step: "opted_out" });
+        // Also clear agent_active so the CRM shows opted-out state correctly
+        await supabase.from("whatsapp_sessions").update({ agent_active: false }).eq("wa_phone", waPhone);
+        const msg = "You've been unsubscribed from Cradlewell messages. We won't contact you again.\n\nReply *START* anytime to re-subscribe.";
+        await sendMessage(waPhone, msg);
+        await storeMessage(waPhone, "outbound", msg);
+        return;
+    }
+
     // ── Agent takeover — notify once, then stay silent ───────────────────────
     if (session?.agent_active) {
         if (session.step !== "agent_handoff") {
@@ -683,24 +671,18 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // ── Opt-out: STOP and variants ────────────────────────────────────────────
-    const STOP_WORDS = ["stop", "unsubscribe", "opt out", "optout", "cancel", "don't contact", "do not contact"];
-    if (STOP_WORDS.some(w => text.toLowerCase().includes(w))) {
-        await upsertSession(waPhone, { step: "opted_out" });
-        const msg = "You've been unsubscribed from Cradlewell messages. We won't contact you again.\n\nReply *START* anytime to re-subscribe.";
-        await sendMessage(waPhone, msg);
-        await storeMessage(waPhone, "outbound", msg);
-        return;
-    }
-
-    // ── Opted-out users: block all except START/Hi ────────────────────────────
+    // ── Opted-out users: request explicit re-consent ─────────────────────────
     if (session?.step === "opted_out") {
         if (/^(start|hi|hello|hey)$/i.test(text.trim())) {
-            // Re-subscribe: fall through to new-user / restart logic below
-            await upsertSession(waPhone, { step: "completed" }); // treat as fresh
-        } else {
-            return; // silently ignore all other messages
+            await upsertSession(waPhone, { step: "confirm_resubscribe" });
+            const msg = "You previously unsubscribed from Cradlewell messages.\n\nWould you like to receive care-related updates again?";
+            await sendButtonMessage(waPhone, msg, [
+                { id: "resubscribe_yes", title: "Yes, subscribe me" },
+                { id: "resubscribe_no", title: "No thanks" },
+            ]);
+            await storeMessage(waPhone, "outbound", msg);
         }
+        return;
     }
 
     // ── Main Menu — restart flow ──────────────────────────────────────────────
@@ -721,6 +703,37 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         baby_status: "", location: "", hospital: "", birth_stage: "", baby_age: "", baby_weight: "",
         service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", care_start_date: "", service_days: "",
     };
+
+    // ── Confirm re-subscribe (explicit opt-in after previous opt-out) ─────────
+    if (session?.step === "confirm_resubscribe") {
+        const t = text.trim().toLowerCase();
+        if (t === "resubscribe_yes" || /^yes/.test(t)) {
+            const name = session.name || profileName;
+            await upsertSession(waPhone, { step: "ask_baby_status", ...CLEAR_FIELDS, ...(name ? { name } : {}) });
+            const greet = name
+                ? `Welcome back, ${name}! You're now re-subscribed to Cradlewell.`
+                : `Welcome back! You're now re-subscribed to Cradlewell.`;
+            await sendMessage(waPhone, greet);
+            await storeMessage(waPhone, "outbound", greet);
+            const msg = "Is your little one already home, or are you still expecting?";
+            await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
+            await storeMessage(waPhone, "outbound", msg);
+        } else if (t === "resubscribe_no" || /^no/.test(t)) {
+            await upsertSession(waPhone, { step: "opted_out" });
+            const msg = "No problem. You won't receive any messages from us.\n\nReply *START* anytime if you change your mind.";
+            await sendMessage(waPhone, msg);
+            await storeMessage(waPhone, "outbound", msg);
+        } else {
+            const msg = "Please tap one of the options below:";
+            await sendButtonMessage(waPhone, msg, [
+                { id: "resubscribe_yes", title: "Yes, subscribe me" },
+                { id: "resubscribe_no", title: "No thanks" },
+            ]);
+            await storeMessage(waPhone, "outbound", msg);
+        }
+        return;
+    }
+
     if (!session || session.step === "completed") {
         if (profileName) {
             await upsertSession(waPhone, { step: "ask_baby_status", name: profileName, ...CLEAR_FIELDS });
@@ -1071,13 +1084,15 @@ export async function POST(req: NextRequest) {
         const rawBody = await req.text();
         const sig = req.headers.get("x-hub-signature-256") ?? "";
         const appSecret = process.env.WHATSAPP_APP_SECRET;
-        if (appSecret) {
-            const expected = "sha256=" + createHmac("sha256", appSecret).update(rawBody).digest("hex");
-            const sigBuf = Buffer.from(sig.padEnd(expected.length));
-            const expBuf = Buffer.from(expected);
-            if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
-                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-            }
+        if (!appSecret) {
+            console.error("[WA] WHATSAPP_APP_SECRET is not configured — rejecting webhook");
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+        const expected = "sha256=" + createHmac("sha256", appSecret).update(rawBody).digest("hex");
+        const sigBuf = Buffer.from(sig.padEnd(expected.length));
+        const expBuf = Buffer.from(expected);
+        if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
         const body = JSON.parse(rawBody);
 
@@ -1111,7 +1126,11 @@ export async function POST(req: NextRequest) {
         // ── Handle GPS location share ─────────────────────────────────────────
         if (message.type === "location") {
             const { latitude, longitude, name, address } = message.location ?? {};
-            const stored = await storeMessage(waPhone, "inbound", "📍 location", waMessageId);
+            const locationText =
+                latitude != null && longitude != null
+                    ? `📍 location:${latitude},${longitude}`
+                    : "📍 location";
+            const stored = await storeMessage(waPhone, "inbound", locationText, waMessageId);
             if (!stored) {
                 console.log(`[WA] duplicate location skipped: ${waMessageId}`);
                 return NextResponse.json({ status: "ok" });

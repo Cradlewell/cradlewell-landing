@@ -104,7 +104,29 @@ function decodePayload(msg: string): string {
     if (PAYLOAD_LABELS[msg]) return PAYLOAD_LABELS[msg];
     const due = msg.match(/^due_(\d{4})_(\d{1,2})$/);
     if (due) return `${MONTHS[parseInt(due[2]) - 1] ?? ""} ${due[1]}`.trim();
+    if (/^📍 location:/.test(msg)) return "📍 Location shared";
     return msg;
+}
+
+function renderMessageContent(msg: string, isOut: boolean): React.ReactNode {
+    const locMatch = msg.match(/^📍 location:([-\d.]+),([-\d.]+)$/);
+    if (locMatch) {
+        const lat = locMatch[1];
+        const lng = locMatch[2];
+        const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+        return (
+            <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#1a73e8", textDecoration: "none", fontWeight: 500 }}
+                onClick={e => e.stopPropagation()}
+            >
+                📍 View on Google Maps
+            </a>
+        );
+    }
+    return !isOut ? decodePayload(msg) : msg;
 }
 
 function Avatar({ name, phone, size = 40 }: { name?: string; phone: string; size?: number }) {
@@ -547,7 +569,7 @@ export default function WhatsAppPage() {
                                             boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
                                         }}>
                                             <div style={{ fontSize: "0.855rem", whiteSpace: "pre-wrap", lineHeight: 1.45, color: "#1a1a1a", wordBreak: "break-word" }}>
-                                                {!isOut ? decodePayload(msg.message) : msg.message}
+                                                {renderMessageContent(msg.message, isOut)}
                                             </div>
                                             <div style={{ fontSize: "0.68rem", color: "#8a8a8a", textAlign: "right", marginTop: 2, lineHeight: 1 }}>
                                                 {fmtTime(msg.created_at)}

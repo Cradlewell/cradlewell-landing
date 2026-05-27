@@ -31,6 +31,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "send" && phone && message) {
+    const { data: session } = await supabase
+      .from("whatsapp_sessions")
+      .select("step")
+      .eq("wa_phone", phone)
+      .maybeSingle();
+    if (session?.step === "opted_out") {
+      return NextResponse.json({ error: "User has opted out — cannot send messages" }, { status: 403 });
+    }
+
     const { data: lastInbound } = await supabase
       .from("whatsapp_messages")
       .select("created_at")
