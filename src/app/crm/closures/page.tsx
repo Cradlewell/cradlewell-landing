@@ -1,17 +1,18 @@
 "use client";
 import { useState } from "react";
-import { useDB } from "@/lib/crm-store";
+import { useClosures, useLeads } from "@/lib/crm-store";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import { Trophy, XCircle } from "lucide-react";
 import { format } from "date-fns";
 
 export default function ClosuresPage() {
-  const db = useDB();
+  const closures = useClosures();
+  const leads = useLeads();
   const [tab, setTab] = useState<"won" | "lost">("won");
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
 
-  const won = db.closures.filter(c => c.type === "Won");
-  const lost = db.closures.filter(c => c.type === "Lost");
+  const won = closures.filter(c => c.type === "Won");
+  const lost = closures.filter(c => c.type === "Lost");
   const current = tab === "won" ? won : lost;
 
   const totalWon = won.reduce((s, c) => s + (c.finalAmount ?? 0), 0);
@@ -48,7 +49,7 @@ export default function ClosuresPage() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "0.75rem" }}>
           {current.map(c => {
-            const lead = db.leads.find(l => l.id === c.leadId);
+            const lead = leads.find(l => l.id === c.leadId);
             return (
               <div key={c.id} className="crm-card" style={{ padding: "1.25rem", cursor: "pointer" }}
                 onClick={() => lead && setSelectedLead(lead.id)}>

@@ -1,15 +1,16 @@
 "use client";
 import { useState } from "react";
-import { useDB } from "@/lib/crm-store";
+import { useQuotations, useLeads } from "@/lib/crm-store";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import { FileText } from "lucide-react";
 import { format } from "date-fns";
 
 export default function QuotationsPage() {
-  const db = useDB();
+  const rawQuotations = useQuotations();
+  const leads = useLeads();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
 
-  const quotations = [...db.quotations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const quotations = [...rawQuotations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const totalRevenue = quotations.reduce((s, q) => s + q.finalPrice, 0);
 
   return (
@@ -41,7 +42,7 @@ export default function QuotationsPage() {
             </thead>
             <tbody>
               {quotations.map(q => {
-                const lead = db.leads.find(l => l.id === q.leadId);
+                const lead = leads.find(l => l.id === q.leadId);
                 return (
                   <tr key={q.id} onClick={() => lead && setSelectedLead(lead.id)}>
                     <td>

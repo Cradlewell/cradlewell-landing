@@ -79,6 +79,10 @@ function reducer(state: State, action: Action): State {
   }
 }
 
+// Module-level 30s TTL cache — prevents redundant API calls on rapid re-mounts.
+const CACHE_TTL = 30_000;
+let _opsCache: { roster: OpsStaff[]; customers: OpsCustomer[]; ts: number } | null = null;
+
 export function useOpsData() {
   const [state, dispatch] = useReducer(reducer, {
     roster: [],
@@ -88,6 +92,10 @@ export function useOpsData() {
   });
 
   const load = useCallback(async () => {
+    if (_opsCache && Date.now() - _opsCache.ts < CACHE_TTL) {
+      dispatch({ type: "LOADED", roster: _opsCache.roster, customers: _opsCache.customers });
+      return;
+    }
     try {
       const [staffData, customersData, stateData] = await Promise.all([
         apiClient.get<OpsStaff[]>("/api/ops/staff"),
@@ -118,6 +126,7 @@ export function useOpsData() {
         };
       });
 
+      _opsCache = { roster: staffData, customers: merged, ts: Date.now() };
       dispatch({ type: "LOADED", roster: staffData, customers: merged });
     } catch (e) {
       dispatch({ type: "ERROR", message: e instanceof Error ? e.message : "Failed to load" });

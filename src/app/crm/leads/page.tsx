@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useDB, api, refreshStore } from "@/lib/crm-store";
+import { useLeads, api, refreshStore } from "@/lib/crm-store";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
@@ -29,7 +29,7 @@ function fmtCareDate(iso: string | null | undefined) {
 const PAGE_SIZE = 50;
 
 export default function LeadsPage() {
-  const db = useDB();
+  const leads = useLeads();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
   const [showWAImport, setShowWAImport] = useState(false);
@@ -47,13 +47,13 @@ export default function LeadsPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return db.leads.filter(l => {
+    return leads.filter(l => {
       if (q && !l.name.toLowerCase().includes(q) && !l.phone.includes(q)) return false;
       if (filterStage && l.stage !== filterStage) return false;
       if (filterSource && l.source !== filterSource) return false;
       return true;
     });
-  }, [db.leads, search, filterStage, filterSource]);
+  }, [leads, search, filterStage, filterSource]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -105,7 +105,7 @@ export default function LeadsPage() {
       <div className="crm-page-header">
         <div>
           <h1 className="crm-page-title">Leads</h1>
-          <p className="crm-page-subtitle">{filtered.length} of {db.leads.length} leads</p>
+          <p className="crm-page-subtitle">{filtered.length} of {leads.length} leads</p>
         </div>
         <div className="d-flex gap-2">
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={exportCSV}>

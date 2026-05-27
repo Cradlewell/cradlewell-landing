@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { haversineKm, fmtKm as fmtKmLib } from "@/lib/geo-utils";
 
 const OpsMap = dynamic(() => import("./OpsMap"), { ssr: false, loading: () => <div style={{ height: 320, borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f8fafc", color: "#94a3b8", fontSize: 13 }}>Loading map…</div> });
 
@@ -42,17 +43,7 @@ const MODE_RATE = {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function fmtKm(km) {
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
-}
+const fmtKm = fmtKmLib;
 
 function displayName(name) {
   return name.replace(/\s+Family\s*$/i, "").trim();
@@ -145,14 +136,16 @@ function buildRota(c, roster) {
   return out;
 }
 
+// Triggers a re-render when the calendar date changes (midnight rollover).
+// 1-minute polling is enough — "today" only changes once per day.
 function useClientNow() {
-  const [now, setNow] = useState(null);
+  const [today, setToday] = useState(null);
   useEffect(() => {
-    setNow(Date.now());
-    const i = setInterval(() => setNow(Date.now()), 1000);
+    setToday(todayISO());
+    const i = setInterval(() => setToday(todayISO()), 60_000);
     return () => clearInterval(i);
   }, []);
-  return now;
+  return today;
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────

@@ -338,9 +338,14 @@ async function getSession(waPhone: string): Promise<Session | null> {
 // Read-then-write is safe here because inbound message dedup (wa_message_id
 // unique constraint) guarantees only one handleMessage call runs per message.
 // Returns true on success, false on DB error (callers should abort if false).
-async function upsertSession(waPhone: string, updates: Record<string, string>): Promise<boolean> {
+// Pass `knownSession` from the caller to skip the redundant getSession() query.
+async function upsertSession(
+    waPhone: string,
+    updates: Record<string, string>,
+    knownSession?: Session | null
+): Promise<boolean> {
     const now = new Date().toISOString();
-    const existing = await getSession(waPhone);
+    const existing = knownSession !== undefined ? knownSession : await getSession(waPhone);
     if (existing) {
         const { error } = await supabase
             .from("whatsapp_sessions")
@@ -629,12 +634,12 @@ async function sendMainMenu(waPhone: string, name?: string) {
 // After location is collected, route based on baby status
 async function afterLocation(waPhone: string, session: Session, locationText: string) {
     if (session.baby_status === "Born") {
-        await upsertSession(waPhone, { location: locationText, step: "ask_hospital" });
+        await upsertSession(waPhone, { location: locationText, step: "ask_hospital" }, session);
         await sendHospitalListMessage(waPhone);
         await storeMessage(waPhone, "outbound", "🏥 Which hospital welcomed your baby?");
     } else {
         // Expecting — ask due date via date picker flow
-        await upsertSession(waPhone, { location: locationText, step: "ask_due_date" });
+        await upsertSession(waPhone, { location: locationText, step: "ask_due_date" }, session);
         const msg = "When is your baby due?";
         await sendFlowMessage(waPhone, FLOW_DUE_DATE_ID, msg, "Pick Due Date");
         await storeMessage(waPhone, "outbound", msg);
@@ -651,7 +656,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // Meta policy: opt-out must be honored immediately regardless of state.
     const STOP_WORDS = ["stop", "unsubscribe", "opt out", "optout", "don't contact", "do not contact"];
     if (STOP_WORDS.some(w => text.toLowerCase().includes(w))) {
-        await upsertSession(waPhone, { step: "opted_out" });
+        await upsertSession(waPhone, { step: "opted_out" }, session);
         // Also clear agent_active so the CRM shows opted-out state correctly
         await supabase.from("whatsapp_sessions").update({ agent_active: false }).eq("wa_phone", waPhone);
         const msg = "You've been unsubscribed from Cradlewell messages. We won't contact you again.\n\nReply *START* anytime to re-subscribe.";
@@ -663,7 +668,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Agent takeover — notify once, then stay silent ───────────────────────
     if (session?.agent_active) {
         if (session.step !== "agent_handoff") {
-            await upsertSession(waPhone, { step: "agent_handoff" });
+            await upsertSession(waPhone, { step: "agent_handoff" }, session);
             const msg = "You're now connected with our care advisor. They'll respond shortly.\n\nFor urgent help, call *+91 93638 93639*.";
             await sendMessage(waPhone, msg);
             await storeMessage(waPhone, "outbound", msg);
@@ -674,7 +679,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Opted-out users: request explicit re-consent ─────────────────────────
     if (session?.step === "opted_out") {
         if (/^(start|hi|hello|hey)$/i.test(text.trim())) {
-            await upsertSession(waPhone, { step: "confirm_resubscribe" });
+            await upsertSession(waPhone, { step: "confirm_resubscribe" }, session);
             const msg = "You previously unsubscribed from Cradlewell messages.\n\nWould you like to receive care-related updates again?";
             await sendButtonMessage(waPhone, msg, [
                 { id: "resubscribe_yes", title: "Yes, subscribe me" },
@@ -693,7 +698,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             ...(name ? { name } : {}),
             baby_status: "", location: "", hospital: "", birth_stage: "", baby_age: "", baby_weight: "",
             service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", care_start_date: "", service_days: "",
-        });
+        }, session ?? null);
         await sendMainMenu(waPhone, name);
         return;
     }
@@ -709,7 +714,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         const t = text.trim().toLowerCase();
         if (t === "resubscribe_yes" || /^yes/.test(t)) {
             const name = session.name || profileName;
-            await upsertSession(waPhone, { step: "ask_baby_status", ...CLEAR_FIELDS, ...(name ? { name } : {}) });
+            await upsertSession(waPhone, { step: "ask_baby_status", ...CLEAR_FIELDS, ...(name ? { name } : {}) }, session);
             const greet = name
                 ? `Welcome back, ${name}! You're now re-subscribed to Cradlewell.`
                 : `Welcome back! You're now re-subscribed to Cradlewell.`;
@@ -719,7 +724,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", msg);
         } else if (t === "resubscribe_no" || /^no/.test(t)) {
-            await upsertSession(waPhone, { step: "opted_out" });
+            await upsertSession(waPhone, { step: "opted_out" }, session);
             const msg = "No problem. You won't receive any messages from us.\n\nReply *START* anytime if you change your mind.";
             await sendMessage(waPhone, msg);
             await storeMessage(waPhone, "outbound", msg);
@@ -736,7 +741,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
 
     if (!session || session.step === "completed") {
         if (profileName) {
-            await upsertSession(waPhone, { step: "ask_baby_status", name: profileName, ...CLEAR_FIELDS });
+            await upsertSession(waPhone, { step: "ask_baby_status", name: profileName, ...CLEAR_FIELDS }, session ?? null);
             const greet = `Hi ${profileName}! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.`;
             await sendMessage(waPhone, greet);
             await storeMessage(waPhone, "outbound", greet);
@@ -744,7 +749,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
             await storeMessage(waPhone, "outbound", msg);
         } else {
-            await upsertSession(waPhone, { step: "ask_name", ...CLEAR_FIELDS });
+            await upsertSession(waPhone, { step: "ask_name", ...CLEAR_FIELDS }, session ?? null);
             const greet = "Hi! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.";
             await sendMessage(waPhone, greet);
             await storeMessage(waPhone, "outbound", greet);
@@ -758,7 +763,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Collect name ──────────────────────────────────────────────────────────
     if (session.step === "ask_name") {
         const name = profileName || text;
-        await upsertSession(waPhone, { name, step: "ask_baby_status" });
+        await upsertSession(waPhone, { name, step: "ask_baby_status" }, session);
         const msg = `Nice to meet you, ${name}.\n\nIs your little one already home, or are you still expecting?`;
         await sendButtonMessage(waPhone, msg, BABY_STATUS_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
@@ -774,7 +779,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             return;
         }
         // Both paths ask location first
-        await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_location" });
+        await upsertSession(waPhone, { baby_status: babyStatus, step: "ask_location" }, session);
         const msg = "To check caregiver availability near you, please share your current location.";
         await sendLocationRequest(waPhone, msg);
         await storeMessage(waPhone, "outbound", msg);
@@ -803,7 +808,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", retry);
             return;
         }
-        await upsertSession(waPhone, { due_date: text, step: "ask_service" });
+        await upsertSession(waPhone, { due_date: text, step: "ask_service" }, session);
         const msg = "What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
@@ -826,7 +831,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", retry);
             return;
         }
-        const saved = await upsertSession(waPhone, { care_start_date: text, step: "ask_service_days" });
+        const saved = await upsertSession(waPhone, { care_start_date: text, step: "ask_service_days" }, session);
         if (!saved) return; // DB error — don't advance; user will retry
         const msg = "How many days of support would you like?";
         await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
@@ -837,7 +842,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Collect hospital name (Baby is Home path only) ────────────────────────
     if (session.step === "ask_hospital") {
         const hospital = matchHospital(text);
-        await upsertSession(waPhone, { hospital, step: "ask_birth_stage" });
+        await upsertSession(waPhone, { hospital, step: "ask_birth_stage" }, session);
         const msg = "What was your baby's birth stage?";
         await sendButtonMessage(waPhone, msg, BIRTH_STAGE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
@@ -852,7 +857,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please select your baby's birth stage:");
             return;
         }
-        await upsertSession(waPhone, { birth_stage, step: "ask_baby_age" });
+        await upsertSession(waPhone, { birth_stage, step: "ask_baby_age" }, session);
         await sendBabyAgeListMessage(waPhone);
         await storeMessage(waPhone, "outbound", "How old is your baby?");
         return;
@@ -866,7 +871,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please select your baby's age:");
             return;
         }
-        await upsertSession(waPhone, { baby_age, step: "ask_baby_weight" });
+        await upsertSession(waPhone, { baby_age, step: "ask_baby_weight" }, session);
         await sendBabyWeightListMessage(waPhone);
         await storeMessage(waPhone, "outbound", "⚖️ What is your baby's current weight?");
         return;
@@ -875,7 +880,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Collect baby weight ───────────────────────────────────────────────────
     if (session.step === "ask_baby_weight") {
         const baby_weight = matchBabyWeight(text);
-        await upsertSession(waPhone, { baby_weight, step: "ask_service" });
+        await upsertSession(waPhone, { baby_weight, step: "ask_service" }, session);
         const msg = "What kind of care are you looking for?";
         await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
@@ -893,11 +898,11 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         const isJapa = service.includes("Japa");
         if (isJapa) {
             // Japa is day-only — skip shift question, go straight to hours
-            await upsertSession(waPhone, { service, shift: "Day", step: "ask_japa_hours" });
+            await upsertSession(waPhone, { service, shift: "Day", step: "ask_japa_hours" }, session);
             await sendJapaHoursListMessage(waPhone);
             await storeMessage(waPhone, "outbound", "How many hours of day care do you need?");
         } else {
-            await upsertSession(waPhone, { service, step: "ask_shift" });
+            await upsertSession(waPhone, { service, step: "ask_shift" }, session);
             const msg = "Would you need *Day care* or *Night care*?";
             await sendButtonMessage(waPhone, msg, NURSE_SHIFT_BUTTONS);
             await storeMessage(waPhone, "outbound", msg);
@@ -926,7 +931,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
                 return;
             }
             // Japa + Day → ask hours
-            await upsertSession(waPhone, { shift, step: "ask_japa_hours" });
+            await upsertSession(waPhone, { shift, step: "ask_japa_hours" }, session);
             await sendJapaHoursListMessage(waPhone);
             await storeMessage(waPhone, "outbound", "How many hours of day care do you need?");
         } else {
@@ -934,19 +939,19 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             if (shift === "Night") {
                 const timeSlot = "9 PM – 6 AM";
                 if (session.baby_status === "Born") {
-                    await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_care_date" });
+                    await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_care_date" }, session);
                     const msg = "When would you like care to start?";
                     await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
                     await storeMessage(waPhone, "outbound", msg);
                 } else {
-                    await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_service_days" });
+                    await upsertSession(waPhone, { shift, time_slot: timeSlot, step: "ask_service_days" }, session);
                     const msg = "How many days of support would you like?";
                     await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
                     await storeMessage(waPhone, "outbound", msg);
                 }
             } else {
                 // Nurse + Day → time slot
-                await upsertSession(waPhone, { shift, step: "ask_time_slot" });
+                await upsertSession(waPhone, { shift, step: "ask_time_slot" }, session);
                 await sendDaySlotListMessage(waPhone);
                 await storeMessage(waPhone, "outbound", "Please select your preferred start time:");
             }
@@ -964,18 +969,18 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         }
 
         if (hours === "8") {
-            await upsertSession(waPhone, { japa_hours: hours, step: "ask_time_slot" });
+            await upsertSession(waPhone, { japa_hours: hours, step: "ask_time_slot" }, session);
             await sendDaySlotListMessage(waPhone);
             await storeMessage(waPhone, "outbound", "Please select your preferred start time:");
         } else {
             const timeSlot = hours === "10" ? "9 AM – 7 PM" : "8 AM – 8 PM";
             if (session.baby_status === "Born") {
-                await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "ask_care_date" });
+                await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "ask_care_date" }, session);
                 const msg = "When would you like care to start?";
                 await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
                 await storeMessage(waPhone, "outbound", msg);
             } else {
-                await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "ask_service_days" });
+                await upsertSession(waPhone, { japa_hours: hours, time_slot: timeSlot, step: "ask_service_days" }, session);
                 const msg = "How many days of support would you like?";
                 await sendButtonMessage(waPhone, msg, SERVICE_DAYS_BUTTONS);
                 await storeMessage(waPhone, "outbound", msg);
@@ -993,12 +998,12 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             return;
         }
         if (session.baby_status === "Born") {
-            await upsertSession(waPhone, { time_slot: timeSlot, step: "ask_care_date" });
+            await upsertSession(waPhone, { time_slot: timeSlot, step: "ask_care_date" }, session);
             const msg = "When would you like care to start?";
             await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
             await storeMessage(waPhone, "outbound", msg);
         } else {
-            await upsertSession(waPhone, { time_slot: timeSlot, step: "ask_service_days" });
+            await upsertSession(waPhone, { time_slot: timeSlot, step: "ask_service_days" }, session);
             const daysMsg = "How many days of support would you like?";
             await sendButtonMessage(waPhone, daysMsg, SERVICE_DAYS_BUTTONS);
             await storeMessage(waPhone, "outbound", daysMsg);
@@ -1010,7 +1015,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     if (session.step === "ask_service_days") {
         // Guard: Born users must have care_start_date before reaching this step
         if (session.baby_status === "Born" && !session.care_start_date) {
-            await upsertSession(waPhone, { step: "ask_care_date" });
+            await upsertSession(waPhone, { step: "ask_care_date" }, session);
             const msg = "When would you like care to start?";
             await sendFlowMessage(waPhone, FLOW_CARE_DATE_ID, msg, "Pick Start Date");
             await storeMessage(waPhone, "outbound", msg);
@@ -1022,7 +1027,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", "Please select your preferred support duration:");
             return;
         }
-        await upsertSession(waPhone, { service_days, step: "completed" });
+        await upsertSession(waPhone, { service_days, step: "completed" }, session);
         const finalSession: Session = { ...session, service_days };
         const summary = buildSummary(finalSession);
         await sendMessage(waPhone, summary);

@@ -7,18 +7,21 @@ export async function GET(req: NextRequest) {
   if (authErr) return authErr;
 
   const [leadsRes, followupsRes, quotationsRes, closuresRes, activityRes] = await Promise.all([
-    supabase.from("leads").select("*").order("created_at", { ascending: false }).range(0, 9999),
-    supabase.from("followups").select("*").order("created_at", { ascending: false }).range(0, 9999),
-    supabase.from("quotations").select("*").order("date", { ascending: false }).range(0, 4999),
-    supabase.from("closures").select("*").order("closure_date", { ascending: false }).range(0, 4999),
-    supabase.from("activity_logs").select("*").order("at", { ascending: false }).limit(500),
+    supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(500),
+    supabase.from("followups").select("*").order("created_at", { ascending: false }).limit(500),
+    supabase.from("quotations").select("*").order("date", { ascending: false }).limit(200),
+    supabase.from("closures").select("*").order("closure_date", { ascending: false }).limit(200),
+    supabase.from("activity_logs").select("*").order("at", { ascending: false }).limit(200),
   ]);
 
-  return NextResponse.json({
-    leads: (leadsRes.data ?? []).map(dbToLead),
-    followups: (followupsRes.data ?? []).map(dbToFollowup),
-    quotations: (quotationsRes.data ?? []).map(dbToQuotation),
-    closures: (closuresRes.data ?? []).map(dbToClosure),
-    activity: (activityRes.data ?? []).map(dbToActivity),
-  });
+  return NextResponse.json(
+    {
+      leads: (leadsRes.data ?? []).map(dbToLead),
+      followups: (followupsRes.data ?? []).map(dbToFollowup),
+      quotations: (quotationsRes.data ?? []).map(dbToQuotation),
+      closures: (closuresRes.data ?? []).map(dbToClosure),
+      activity: (activityRes.data ?? []).map(dbToActivity),
+    },
+    { headers: { "Cache-Control": "private, max-age=30" } }
+  );
 }

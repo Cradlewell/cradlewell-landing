@@ -1,15 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useDB, api } from "@/lib/crm-store";
+import { useLeads, api } from "@/lib/crm-store";
 import { LEAD_STAGES } from "@/lib/crm-types";
-import type { LeadStage } from "@/lib/crm-types";
+import type { Lead, LeadStage } from "@/lib/crm-types";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
 import { Plus, StickyNote } from "lucide-react";
 
 export default function PipelinePage() {
-  const db = useDB();
+  const leads = useLeads();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -20,9 +20,9 @@ export default function PipelinePage() {
 
   useEffect(() => () => stopScroll(), []);
 
-  const grouped: Record<LeadStage, typeof db.leads> = {} as Record<LeadStage, typeof db.leads>;
+  const grouped: Record<LeadStage, Lead[]> = {} as Record<LeadStage, Lead[]>;
   LEAD_STAGES.forEach(s => { grouped[s] = []; });
-  db.leads.forEach(l => { if (grouped[l.stage]) grouped[l.stage].push(l); });
+  leads.forEach(l => { if (grouped[l.stage]) grouped[l.stage].push(l); });
 
   const stopScroll = () => {
     if (scrollTimerRef.current) { clearInterval(scrollTimerRef.current); scrollTimerRef.current = null; }
@@ -73,7 +73,7 @@ export default function PipelinePage() {
       <div className="crm-page-header">
         <div>
           <h1 className="crm-page-title">Pipeline</h1>
-          <p className="crm-page-subtitle">{db.leads.length} leads across {LEAD_STAGES.length} stages</p>
+          <p className="crm-page-subtitle">{leads.length} leads across {LEAD_STAGES.length} stages</p>
         </div>
         <button className="crm-btn crm-btn-primary" onClick={() => setShowNewLead(true)}>
           <Plus size={16} /> New Lead

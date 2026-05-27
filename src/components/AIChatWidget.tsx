@@ -21,6 +21,14 @@ type LeadForm = {
 const INITIAL_MESSAGE =
     "Hi, I'm Aria 🌸 So glad you reached out. Is your little one already home, or are you getting ready for delivery?\n[[OPTIONS:Baby is home|Still expecting]]";
 
+const BENGALURU_AREAS = [
+    "Whitefield", "Koramangala", "Indiranagar", "HSR Layout", "Marathahalli",
+    "Electronic City", "Jayanagar", "JP Nagar", "Bannerghatta Road", "Sarjapur Road",
+    "Hebbal", "Yelahanka", "Rajajinagar", "Malleswaram", "Basavanagudi",
+    "Banashankari", "BTM Layout", "Bellandur", "Domlur", "Frazer Town",
+    "KR Puram", "Bommanahalli", "Nagarabhavi", "Vijayanagar", "Other",
+];
+
 function cleanReply(text: string) {
     return text
         .replace("\n[[COLLECT_LEAD]]", "")
@@ -168,14 +176,6 @@ export default function AIChatWidget() {
     const [focusedField, setFocusedField] = useState<string | null>(null);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    const BENGALURU_AREAS = [
-        "Whitefield", "Koramangala", "Indiranagar", "HSR Layout", "Marathahalli",
-        "Electronic City", "Jayanagar", "JP Nagar", "Bannerghatta Road", "Sarjapur Road",
-        "Hebbal", "Yelahanka", "Rajajinagar", "Malleswaram", "Basavanagudi",
-        "Banashankari", "BTM Layout", "Bellandur", "Domlur", "Frazer Town",
-        "KR Puram", "Bommanahalli", "Nagarabhavi", "Vijayanagar", "Other",
-    ];
-
     const [leadForm, setLeadForm] = useState<LeadForm>({
         name: "",
         phone: "",
@@ -191,12 +191,14 @@ export default function AIChatWidget() {
 
     const [isMobile, setIsMobile] = useState(false);
 
-    // Detect mobile
+    // Detect mobile — debounced so rapid resizes don't trigger setState on every pixel
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth <= 480);
         check();
-        window.addEventListener("resize", check);
-        return () => window.removeEventListener("resize", check);
+        let timer: ReturnType<typeof setTimeout>;
+        const debounced = () => { clearTimeout(timer); timer = setTimeout(check, 150); };
+        window.addEventListener("resize", debounced);
+        return () => { window.removeEventListener("resize", debounced); clearTimeout(timer); };
     }, []);
 
     // Lock background scroll when mobile chat is open

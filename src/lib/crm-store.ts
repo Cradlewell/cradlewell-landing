@@ -9,10 +9,28 @@ const now = () => new Date().toISOString();
 let _db: CRMDb = { leads: [], followups: [], quotations: [], closures: [], activity: [] };
 let _initialized = false;
 let _fetching = false;
-const listeners = new Set<() => void>();
+let _retryCount = 0;
+const RETRY_DELAYS = [5_000, 15_000, 30_000];
 
-function notify() {
-  listeners.forEach((cb) => cb());
+// ─── Per-slice listener system ────────────────────────────────────────────────
+// Each slice has its own Set. "_all" listeners fire on every notify call.
+// This lets useLeads/useFollowups/etc. subscribe narrowly so unrelated mutations
+// don't trigger re-renders in uninterested pages.
+type DBSlice = keyof CRMDb;
+const sliceListeners: Record<DBSlice | "_all", Set<() => void>> = {
+  leads: new Set(),
+  followups: new Set(),
+  quotations: new Set(),
+  closures: new Set(),
+  activity: new Set(),
+  _all: new Set(),
+};
+
+function notify(...slices: DBSlice[]) {
+  const fired = new Set<() => void>();
+  for (const s of slices) sliceListeners[s].forEach(cb => fired.add(cb));
+  sliceListeners._all.forEach(cb => fired.add(cb));
+  fired.forEach(cb => cb());
 }
 
 async function syncAll() {
@@ -23,20 +41,41 @@ async function syncAll() {
     if (res.ok) {
       _db = await res.json();
       _initialized = true;
+      _retryCount = 0;
     } else if (res.status === 401) {
       if (typeof window !== "undefined" && !window.location.pathname.startsWith("/crm/login")) {
         window.location.href = "/crm/login";
       }
       return;
     } else {
-      _initialized = true; // show empty CRM rather than infinite spinner
+      _initialized = true;
     }
   } catch {
-    _initialized = true; // network failure — show empty state
+    _initialized = true;
+    // Schedule retry with exponential backoff — don't strand users on flaky connections
+    if (_retryCount < RETRY_DELAYS.length) {
+      setTimeout(syncAll, RETRY_DELAYS[_retryCount++]);
+    }
   } finally {
     _fetching = false;
-    notify();
+    notify("leads", "followups", "quotations", "closures", "activity");
   }
+}
+
+// Re-sync when the user returns to this tab after it was hidden.
+// Only fires when there are active CRM components on the page.
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible" || _fetching) return;
+    const hasListeners =
+      sliceListeners._all.size > 0 ||
+      sliceListeners.leads.size > 0 ||
+      sliceListeners.followups.size > 0 ||
+      sliceListeners.quotations.size > 0 ||
+      sliceListeners.closures.size > 0 ||
+      sliceListeners.activity.size > 0;
+    if (hasListeners) syncAll();
+  });
 }
 
 async function apiPost(path: string, data: unknown) {
@@ -79,13 +118,13 @@ export const api = {
     const act: ActivityLog = { id: uid(), leadId: id, type: "created", message: `Lead created from ${input.source}`, at: now() };
     _db.leads.unshift(lead);
     _db.activity.unshift(act);
-    notify();
+    notify("leads", "activity");
     apiPost("/api/crm/leads", lead)
       .then(() => apiPost("/api/crm/activity", act).catch(console.error))
       .catch(() => {
         _db.leads = _db.leads.filter((l) => l.id !== id);
         _db.activity = _db.activity.filter((a) => a.id !== act.id);
-        notify();
+        notify("leads", "activity");
       });
   },
 
@@ -94,10 +133,10 @@ export const api = {
     if (!lead) return;
     const prev = { ...lead };
     Object.assign(lead, patch, { lastActivityAt: now() });
-    notify();
+    notify("leads");
     apiPut(`/api/crm/leads/${id}`, patch).catch(() => {
       Object.assign(lead, prev);
-      notify();
+      notify("leads");
     });
   },
 
@@ -114,10 +153,10 @@ export const api = {
     _db.quotations = _db.quotations.filter((q) => q.leadId !== id);
     _db.closures = _db.closures.filter((c) => c.leadId !== id);
     _db.activity = _db.activity.filter((a) => a.leadId !== id);
-    notify();
+    notify("leads", "followups", "quotations", "closures", "activity");
     apiDelete(`/api/crm/leads/${id}`).catch(() => {
       Object.assign(_db, snap);
-      notify();
+      notify("leads", "followups", "quotations", "closures", "activity");
     });
   },
 
@@ -141,7 +180,7 @@ export const api = {
       };
       _db.followups.unshift(newFollowup);
     }
-    notify();
+    notify("leads", "activity", "followups");
     Promise.all([
       apiPut(`/api/crm/leads/${id}`, { stage, lastActivityAt: now() }),
       newFollowup ? apiPost("/api/crm/followups", newFollowup) : Promise.resolve(),
@@ -151,7 +190,7 @@ export const api = {
       lead.stage = prevStage;
       _db.activity = _db.activity.filter((a) => a.id !== actId);
       if (newFollowup) _db.followups = _db.followups.filter((f) => f.id !== newFollowup!.id);
-      notify();
+      notify("leads", "activity", "followups");
     });
   },
 
@@ -160,10 +199,10 @@ export const api = {
     _db.followups.unshift(followup);
     const lead = _db.leads.find((l) => l.id === input.leadId);
     if (lead) lead.lastActivityAt = now();
-    notify();
+    notify("leads", "followups");
     apiPost("/api/crm/followups", followup).catch(() => {
       _db.followups = _db.followups.filter((f) => f.id !== followup.id);
-      notify();
+      notify("followups");
     });
   },
 
@@ -175,11 +214,11 @@ export const api = {
     f.completedAt = now();
     const lead = _db.leads.find((l) => l.id === f.leadId);
     if (lead) lead.lastActivityAt = now();
-    notify();
+    notify("leads", "followups");
     apiPut(`/api/crm/followups/${id}`, { completed: true, completedAt: f.completedAt }).catch(() => {
       f.completed = prev.completed;
       f.completedAt = prev.completedAt;
-      notify();
+      notify("leads", "followups");
     });
   },
 
@@ -188,10 +227,10 @@ export const api = {
     if (!f) return;
     const prevDue = f.dueAt;
     f.dueAt = dueAt;
-    notify();
+    notify("followups");
     apiPut(`/api/crm/followups/${id}`, { dueAt }).catch(() => {
       f.dueAt = prevDue;
-      notify();
+      notify("followups");
     });
   },
 
@@ -205,13 +244,13 @@ export const api = {
     }
     const act: ActivityLog = { id: uid(), leadId: q.leadId, type: "quotation", message: `Quotation: ${q.package} — ₹${q.finalPrice.toLocaleString("en-IN")}`, at: now() };
     _db.activity.unshift(act);
-    notify();
+    notify("leads", "quotations", "activity");
     apiPost("/api/crm/quotations", quotation)
       .then(() => apiPost("/api/crm/activity", act).catch(console.error))
       .catch(() => {
         _db.quotations = _db.quotations.filter((qt) => qt.id !== quotation.id);
         _db.activity = _db.activity.filter((a) => a.id !== act.id);
-        notify();
+        notify("leads", "quotations", "activity");
       });
   },
 
@@ -226,21 +265,21 @@ export const api = {
       : `Closed Lost — ${c.lostReason ?? ""}`;
     const act: ActivityLog = { id: uid(), leadId: c.leadId, type: "closure", message: actMsg, at: now() };
     _db.activity.unshift(act);
-    notify();
+    notify("leads", "closures", "activity");
     apiPost("/api/crm/closures", closure)
       .then(() => apiPost("/api/crm/activity", act).catch(console.error))
       .catch(() => {
         _db.closures = _db.closures.filter((cl) => cl.id !== closure.id);
         _db.activity = _db.activity.filter((a) => a.id !== act.id);
-        notify();
+        notify("leads", "closures", "activity");
       });
   },
 
   updateClosure(id: string, patch: Partial<Closure>) {
     _db.closures = _db.closures.map((c) => c.id === id ? { ...c, ...patch } : c);
-    notify();
+    notify("closures");
     apiPut(`/api/crm/closures/${id}`, patch).catch(() => {
-      notify();
+      notify("closures");
     });
   },
 
@@ -248,11 +287,11 @@ export const api = {
     const ts = Date.now();
     rows.forEach((r, i) => { if (!r.id) r.id = `IMP-${ts}-${i}`; });
     _db.leads.unshift(...rows);
-    notify();
+    notify("leads");
     apiPost("/api/crm/leads/bulk", rows).catch(() => {
       const ids = new Set(rows.map((r) => r.id));
       _db.leads = _db.leads.filter((l) => !ids.has(l.id));
-      notify();
+      notify("leads");
     });
   },
 
@@ -267,18 +306,75 @@ export function refreshStore() {
   syncAll();
 }
 
-// ─── React hook ───────────────────────────────────────────────────────────────
+// ─── React hooks ──────────────────────────────────────────────────────────────
+
+// Full-store hook — subscribes to all slices. Use only when you need multiple
+// slices in the same component. Prefer the targeted slice hooks below.
 export function useDB() {
   const [db, setDb] = useState<CRMDb>(_db);
-
   useEffect(() => {
     const cb = () => setDb({ ..._db });
-    listeners.add(cb);
+    sliceListeners._all.add(cb);
     if (!_initialized && !_fetching) syncAll();
-    return () => { listeners.delete(cb); };
+    return () => { sliceListeners._all.delete(cb); };
   }, []);
-
   return db;
+}
+
+// Targeted slice hooks — only re-render when their specific slice changes.
+export function useLeads() {
+  const [leads, setLeads] = useState<Lead[]>(_db.leads);
+  useEffect(() => {
+    const cb = () => setLeads([..._db.leads]);
+    sliceListeners.leads.add(cb);
+    if (!_initialized && !_fetching) syncAll();
+    return () => { sliceListeners.leads.delete(cb); };
+  }, []);
+  return leads;
+}
+
+export function useFollowups() {
+  const [followups, setFollowups] = useState<Followup[]>(_db.followups);
+  useEffect(() => {
+    const cb = () => setFollowups([..._db.followups]);
+    sliceListeners.followups.add(cb);
+    if (!_initialized && !_fetching) syncAll();
+    return () => { sliceListeners.followups.delete(cb); };
+  }, []);
+  return followups;
+}
+
+export function useQuotations() {
+  const [quotations, setQuotations] = useState<Quotation[]>(_db.quotations);
+  useEffect(() => {
+    const cb = () => setQuotations([..._db.quotations]);
+    sliceListeners.quotations.add(cb);
+    if (!_initialized && !_fetching) syncAll();
+    return () => { sliceListeners.quotations.delete(cb); };
+  }, []);
+  return quotations;
+}
+
+export function useClosures() {
+  const [closures, setClosures] = useState<Closure[]>(_db.closures);
+  useEffect(() => {
+    const cb = () => setClosures([..._db.closures]);
+    sliceListeners.closures.add(cb);
+    if (!_initialized && !_fetching) syncAll();
+    return () => { sliceListeners.closures.delete(cb); };
+  }, []);
+  return closures;
+}
+
+export function useActivity() {
+  const [activity, setActivity] = useState<ActivityLog[]>(_db.activity);
+  useEffect(() => {
+    const cb = () => setActivity([..._db.activity]);
+    sliceListeners.activity.add(cb);
+    if (!_initialized && !_fetching) syncAll();
+    return () => { sliceListeners.activity.delete(cb); };
+  }, []);
+  return activity;
 }
 
 export function useDBReady() {
@@ -289,14 +385,12 @@ export function useDBReady() {
       if (_initialized) {
         setReady(true);
       } else if (!_fetching) {
-        // Previous fetch finished (e.g. 401 on login page) but we're now
-        // authenticated — retry immediately.
         syncAll();
       }
     };
-    listeners.add(cb);
+    sliceListeners._all.add(cb);
     if (!_fetching) syncAll();
-    return () => { listeners.delete(cb); };
+    return () => { sliceListeners._all.delete(cb); };
   }, []);
   return ready;
 }

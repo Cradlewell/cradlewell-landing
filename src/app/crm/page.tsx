@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useDB, isOverdue, isToday, isStale, isUrgentNew } from "@/lib/crm-store";
+import { useState, useMemo } from "react";
+import { useLeads, useFollowups, useClosures, isOverdue, isToday, isStale, isUrgentNew } from "@/lib/crm-store";
 import StageBadge from "@/components/crm/StageBadge";
 import TempBadge from "@/components/crm/TempBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
@@ -13,31 +13,49 @@ import {
 import { format } from "date-fns";
 
 export default function DashboardPage() {
-  const db = useDB();
+  const leads = useLeads();
+  const followups = useFollowups();
+  const closures = useClosures();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
 
-  const today = db.followups.filter(f => !f.completed && isToday(f.dueAt));
-  const overdue = db.followups.filter(f => !f.completed && isOverdue(f.dueAt) && !isToday(f.dueAt));
-  const hot = db.leads.filter(l => l.temperature === "Hot" && l.stage !== "Closed Won" && l.stage !== "Closed Lost");
-  const inNegotiation = db.leads.filter(l => l.stage === "Negotiation");
-  const inFollowup = db.leads.filter(l => l.stage === "Follow-up");
-  const wonLeads = db.leads.filter(l => l.stage === "Closed Won");
-  const lostLeads = db.leads.filter(l => l.stage === "Closed Lost");
-  const newToday = db.leads.filter(l => isToday(l.createdAt));
+  const today = useMemo(
+    () => followups.filter(f => !f.completed && isToday(f.dueAt)),
+    [followups]
+  );
+  const overdue = useMemo(
+    () => followups.filter(f => !f.completed && isOverdue(f.dueAt) && !isToday(f.dueAt)),
+    [followups]
+  );
+  const hot = useMemo(
+    () => leads.filter(l => l.temperature === "Hot" && l.stage !== "Closed Won" && l.stage !== "Closed Lost"),
+    [leads]
+  );
+  const inNegotiation = useMemo(() => leads.filter(l => l.stage === "Negotiation"), [leads]);
+  const inFollowup = useMemo(() => leads.filter(l => l.stage === "Follow-up"), [leads]);
+  const wonLeads = useMemo(() => leads.filter(l => l.stage === "Closed Won"), [leads]);
+  const lostLeads = useMemo(() => leads.filter(l => l.stage === "Closed Lost"), [leads]);
+  const newToday = useMemo(() => leads.filter(l => isToday(l.createdAt)), [leads]);
 
-  const monthRevenue = db.closures
-    .filter(c => c.type === "Won" && new Date(c.closureDate).getMonth() === new Date().getMonth())
-    .reduce((sum, c) => sum + (c.finalAmount ?? 0), 0);
+  const monthRevenue = useMemo(() => {
+    const thisMonth = new Date().getMonth();
+    return closures
+      .filter(c => c.type === "Won" && new Date(c.closureDate).getMonth() === thisMonth)
+      .reduce((sum, c) => sum + (c.finalAmount ?? 0), 0);
+  }, [closures]);
 
-  const conversionRate = db.leads.length > 0
-    ? Math.round((wonLeads.length / db.leads.length) * 100)
-    : 0;
+  const conversionRate = useMemo(
+    () => leads.length > 0 ? Math.round((wonLeads.length / leads.length) * 100) : 0,
+    [leads.length, wonLeads.length]
+  );
 
-  const pipelineLeads = db.leads.filter(l => l.stage !== "Closed Won" && l.stage !== "Closed Lost" && l.stage !== "Invalid Lead");
+  const pipelineLeads = useMemo(
+    () => leads.filter(l => l.stage !== "Closed Won" && l.stage !== "Closed Lost" && l.stage !== "Invalid Lead"),
+    [leads]
+  );
 
-  const stats = [
-    { label: "Total Leads", value: db.leads.length, icon: Users, bg: "#EEF1FF", color: "#6388FF" },
+  const stats = useMemo(() => [
+    { label: "Total Leads", value: leads.length, icon: Users, bg: "#EEF1FF", color: "#6388FF" },
     { label: "New Today", value: newToday.length, icon: UserPlus, bg: "#F0FDF4", color: "#16A34A" },
     { label: "Follow-ups Today", value: today.length, icon: CalendarClock, bg: "#FFFBEB", color: "#B45309" },
     { label: "Overdue", value: overdue.length, icon: AlertTriangle, bg: "#FEF2F2", color: "#DC2626" },
@@ -46,7 +64,8 @@ export default function DashboardPage() {
     { label: "Follow-up Stage", value: inFollowup.length, icon: RotateCcw, bg: "#FFFBEB", color: "#92400E" },
     { label: "Closed Won", value: wonLeads.length, icon: Trophy, bg: "#F0FDF4", color: "#15803D" },
     { label: "Closed Lost", value: lostLeads.length, icon: XCircle, bg: "#F1F5F9", color: "#64748B" },
-  ];
+  ], [leads.length, newToday.length, today.length, overdue.length, hot.length,
+      inNegotiation.length, inFollowup.length, wonLeads.length, lostLeads.length]);
 
   return (
     <>
@@ -119,7 +138,7 @@ export default function DashboardPage() {
               <div className="crm-empty" style={{ padding: "1.5rem" }}>No follow-ups today</div>
             ) : (
               today.slice(0, 5).map(f => {
-                const lead = db.leads.find(l => l.id === f.leadId);
+                const lead = leads.find(l => l.id === f.leadId);
                 return (
                   <div key={f.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0", borderBottom: "1px solid var(--crm-border)", cursor: "pointer" }}
                     onClick={() => lead && setSelectedLead(lead.id)}>

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useDB, api, isOverdue, isToday } from "@/lib/crm-store";
+import { useFollowups, useLeads, api, isOverdue, isToday } from "@/lib/crm-store";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import { Check, Clock, Calendar, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
@@ -8,15 +8,16 @@ import { format } from "date-fns";
 type Tab = "today" | "overdue" | "upcoming" | "completed";
 
 export default function FollowupsPage() {
-  const db = useDB();
+  const followups = useFollowups();
+  const leads = useLeads();
   const [tab, setTab] = useState<Tab>("today");
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
 
-  const pending = db.followups.filter(f => !f.completed);
+  const pending = followups.filter(f => !f.completed);
   const todayList = pending.filter(f => isToday(f.dueAt)).sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
   const overdueList = pending.filter(f => isOverdue(f.dueAt) && !isToday(f.dueAt)).sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
   const upcomingList = pending.filter(f => !isOverdue(f.dueAt) && !isToday(f.dueAt)).sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
-  const completedList = db.followups.filter(f => f.completed).sort((a, b) => new Date(b.completedAt ?? b.createdAt).getTime() - new Date(a.completedAt ?? a.createdAt).getTime());
+  const completedList = followups.filter(f => f.completed).sort((a, b) => new Date(b.completedAt ?? b.createdAt).getTime() - new Date(a.completedAt ?? a.createdAt).getTime());
 
   const tabs: { key: Tab; label: string; count: number; icon: React.ElementType; color?: string }[] = [
     { key: "today",     label: "Today",     count: todayList.length,     icon: Calendar },
@@ -59,7 +60,7 @@ export default function FollowupsPage() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
           {currentList.map(f => {
-            const lead = db.leads.find(l => l.id === f.leadId);
+            const lead = leads.find(l => l.id === f.leadId);
             const over = isOverdue(f.dueAt);
             return (
               <div key={f.id} className="crm-card" style={{ padding: "1rem 1.25rem" }}>

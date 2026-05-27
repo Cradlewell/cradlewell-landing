@@ -1,7 +1,7 @@
 "use client";
-import { useDB } from "@/lib/crm-store";
+import { useState, useMemo } from "react";
+import { useLeads, useFollowups, useClosures } from "@/lib/crm-store";
 import LeadDrawer from "@/components/crm/LeadDrawer";
-import { useState } from "react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
@@ -10,43 +10,53 @@ import {
 const COLORS = ["#6388FF", "#5F47FF", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7"];
 
 export default function ReportsPage() {
-  const db = useDB();
+  const leads = useLeads();
+  const followups = useFollowups();
+  const closures = useClosures();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
 
-  // Stats
-  const total = db.leads.length;
-  const won = db.leads.filter(l => l.stage === "Closed Won").length;
-  const convRate = total > 0 ? Math.round((won / total) * 100) : 0;
-  const fuDone = db.followups.filter(f => f.completed).length;
-  const fuTotal = db.followups.length;
-  const fuRate = fuTotal > 0 ? Math.round((fuDone / fuTotal) * 100) : 0;
-  const revenue = db.closures.filter(c => c.type === "Won").reduce((s, c) => s + (c.finalAmount ?? 0), 0);
-  const hot = db.leads.filter(l => l.temperature === "Hot" && l.stage !== "Closed Won" && l.stage !== "Closed Lost").length;
+  const wonCount = useMemo(() => leads.filter(l => l.stage === "Closed Won").length, [leads]);
+  const convRate = leads.length > 0 ? Math.round((wonCount / leads.length) * 100) : 0;
 
-  // Source chart
-  const sourceMap: Record<string, number> = {};
-  db.leads.forEach(l => { sourceMap[l.source] = (sourceMap[l.source] ?? 0) + 1; });
-  const sourceData = Object.entries(sourceMap).map(([name, value]) => ({ name, value }));
+  const fuDone = useMemo(() => followups.filter(f => f.completed).length, [followups]);
+  const fuRate = followups.length > 0 ? Math.round((fuDone / followups.length) * 100) : 0;
 
-  // Salesperson chart
-  const ownerMap: Record<string, { total: number; won: number }> = {};
-  db.leads.forEach(l => {
-    if (!l.owner) return;
-    if (!ownerMap[l.owner]) ownerMap[l.owner] = { total: 0, won: 0 };
-    ownerMap[l.owner].total++;
-    if (l.stage === "Closed Won") ownerMap[l.owner].won++;
-  });
-  const ownerData = Object.entries(ownerMap).map(([name, d]) => ({ name, Total: d.total, Won: d.won }));
+  const revenue = useMemo(
+    () => closures.filter(c => c.type === "Won").reduce((s, c) => s + (c.finalAmount ?? 0), 0),
+    [closures]
+  );
 
-  // Lost reasons chart
-  const lostMap: Record<string, number> = {};
-  db.closures.filter(c => c.type === "Lost").forEach(c => {
-    if (c.lostReason) lostMap[c.lostReason] = (lostMap[c.lostReason] ?? 0) + 1;
-  });
-  const lostData = Object.entries(lostMap).map(([name, value]) => ({ name, value }));
+  const hot = useMemo(
+    () => leads.filter(l => l.temperature === "Hot" && l.stage !== "Closed Won" && l.stage !== "Closed Lost").length,
+    [leads]
+  );
 
-  // Follow-up stage leads
-  const fuLeads = db.leads.filter(l => l.stage === "Follow-up");
+  const sourceData = useMemo(() => {
+    const map: Record<string, number> = {};
+    leads.forEach(l => { map[l.source] = (map[l.source] ?? 0) + 1; });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [leads]);
+
+  const ownerData = useMemo(() => {
+    const map: Record<string, { total: number; won: number }> = {};
+    leads.forEach(l => {
+      if (!l.owner) return;
+      if (!map[l.owner]) map[l.owner] = { total: 0, won: 0 };
+      map[l.owner].total++;
+      if (l.stage === "Closed Won") map[l.owner].won++;
+    });
+    return Object.entries(map).map(([name, d]) => ({ name, Total: d.total, Won: d.won }));
+  }, [leads]);
+
+  const lostData = useMemo(() => {
+    const map: Record<string, number> = {};
+    closures.filter(c => c.type === "Lost").forEach(c => {
+      if (c.lostReason) map[c.lostReason] = (map[c.lostReason] ?? 0) + 1;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [closures]);
+
+  const fuLeads = useMemo(() => leads.filter(l => l.stage === "Follow-up"), [leads]);
 
   return (
     <>

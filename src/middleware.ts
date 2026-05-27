@@ -79,16 +79,16 @@ async function checkAuth(
   let validToken: string | null = null;
   let newSession: RefreshedSession | null = null;
 
+  // Trust the Supabase-signed JWT when it hasn't expired — no network round-trip.
+  // Only call Supabase for token refresh, where we need the new tokens anyway.
   if (accessToken && !tokenExpired(accessToken)) {
-    const ok = await verifyToken(accessToken);
-    if (ok) validToken = accessToken;
+    validToken = accessToken;
   }
 
   if (!validToken && refreshToken) {
     newSession = await refreshSession(refreshToken);
-    if (newSession) {
-      const ok = await verifyToken(newSession.access_token);
-      if (ok) validToken = newSession.access_token;
+    if (newSession && !tokenExpired(newSession.access_token)) {
+      validToken = newSession.access_token;
     }
   }
 
