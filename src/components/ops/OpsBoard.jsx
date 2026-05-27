@@ -285,7 +285,7 @@ function ZoneSection({ zone, customers, selectedId, onSelect }) {
 
 // ─── Detail Dialog ─────────────────────────────────────────────────────────────
 
-function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaDay, onCreateRota, onClearRota, allStaff, assignedElsewhereIds, onTogglePauseDay, onToggleLeaveDay, onExtendRota, onDeleteCustomer }) {
+function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaDay, onCreateRota, onClearRota, allStaff, assignedElsewhereIds, onTogglePauseDay, onToggleLeaveDay, onExtendRota, onDeleteCustomer, conflictMap }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [editDay, setEditDay] = useState(null);
@@ -627,11 +627,32 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                             </div>
                           )}
                         </div>
-                        {customer.rotaReasons?.[r.date] ? (
-                          <span style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, color: "#5F47FF", backgroundColor: "rgba(95,71,255,0.08)", fontWeight: 500, display: "inline-block", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={customer.rotaReasons[r.date]}>
-                            {customer.rotaReasons[r.date]}
-                          </span>
-                        ) : null}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                          {customer.rotaReasons?.[r.date] && (
+                            <span style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, color: "#5F47FF", backgroundColor: "rgba(95,71,255,0.08)", fontWeight: 500, display: "inline-block", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={customer.rotaReasons[r.date]}>
+                              {customer.rotaReasons[r.date]}
+                            </span>
+                          )}
+                          {(() => {
+                            if (!r.staff || r.paused || r.leave || r.weeklyOff) return null;
+                            const entries = conflictMap?.get(r.staff.id)?.get(r.date) ?? [];
+                            const others = entries.filter(e => e.customerId !== customer.id);
+                            if (others.length === 0) return null;
+                            return others.map((o, i) => {
+                              const dist = (customer.homeLat != null && customer.homeLng != null && o.homeLat != null && o.homeLng != null)
+                                ? haversineKm(customer.homeLat, customer.homeLng, o.homeLat, o.homeLng)
+                                : null;
+                              const label = dist != null
+                                ? `Also at ${o.customerName.replace(/\s+Family\s*$/i,"").trim()} · ${fmtKm(dist)} away`
+                                : `Also at ${o.customerName.replace(/\s+Family\s*$/i,"").trim()}`;
+                              return (
+                                <span key={i} title={label} style={{ fontSize: 11, padding: "3px 7px", borderRadius: 6, color: "#ea580c", backgroundColor: "#fff7ed", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+                                  ⚠ {label}
+                                </span>
+                              );
+                            });
+                          })()}
+                        </div>
                       </div>
                     );
                   })}
@@ -1647,6 +1668,33 @@ export function OpsBoard({ onLogout }) {
     attention: customers.filter(c => c.status === "attention" || c.staff.length === 0).length,
   }), [customers]);
 
+  // staffId → Map<date, [{customerId, customerName, homeLat, homeLng}]>
+  const conflictMap = useMemo(() => {
+    const map = new Map();
+    for (const c of customers) {
+      const rota = buildRota(c, roster);
+      for (const row of rota) {
+        if (!row.staff || row.paused || row.leave || row.weeklyOff) continue;
+        const sid = row.staff.id;
+        if (!map.has(sid)) map.set(sid, new Map());
+        const dateMap = map.get(sid);
+        if (!dateMap.has(row.date)) dateMap.set(row.date, []);
+        dateMap.get(row.date).push({ customerId: c.id, customerName: c.name, homeLat: c.homeLat, homeLng: c.homeLng });
+      }
+    }
+    return map;
+  }, [customers, roster]);
+
+  const conflictCount = useMemo(() => {
+    let n = 0;
+    for (const dateMap of conflictMap.values()) {
+      for (const entries of dateMap.values()) {
+        if (entries.length > 1) n++;
+      }
+    }
+    return n;
+  }, [conflictMap]);
+
   const grouped = useMemo(() => {
     const m = new Map();
     for (const c of filtered) { const arr = m.get(c.zone) ?? []; arr.push(c); m.set(c.zone, arr); }
@@ -1871,6 +1919,17 @@ export function OpsBoard({ onLogout }) {
                       </div>
                     </div>
 
+                    {/* Conflict banner */}
+                    {conflictCount > 0 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: "12px 16px", borderRadius: 12, backgroundColor: "#fff7ed", border: "1px solid #fed7aa" }}>
+                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#ea580c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2L1.5 13h13L8 2z" /><path d="M8 6.5v3M8 11.5v.5" /></svg>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#ea580c" }}>
+                          {conflictCount} scheduling conflict{conflictCount > 1 ? "s" : ""} detected
+                        </span>
+                        <span style={{ fontSize: 12, color: "#c2410c" }}>— A caregiver is double-booked on the same day. Open a client card to see details.</span>
+                      </div>
+                    )}
+
                     {/* Filters */}
                     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 20, marginBottom: 40, padding: "16px 20px", borderRadius: 16, backgroundColor: "#fff", border: "1px solid #e8edf2", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
                       {[["Zone", zoneFilter, v => { setZoneFilter(v); setAreaFilter("All"); }, ["All", ...ZONE_ORDER]],
@@ -1938,6 +1997,7 @@ export function OpsBoard({ onLogout }) {
         onToggleLeaveDay={toggleRotaLeave}
         onExtendRota={extendRota}
         onDeleteCustomer={deleteCustomer}
+        conflictMap={conflictMap}
       />
     </div>
   );
