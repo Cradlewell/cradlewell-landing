@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+
+const OpsMap = dynamic(() => import("./OpsMap"), { ssr: false, loading: () => <div style={{ height: 320, borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f8fafc", color: "#94a3b8", fontSize: 13 }}>Loading map…</div> });
 
 // ─── Types (as JSDoc) ──────────────────────────────────────────────────────────
 
@@ -284,6 +287,7 @@ function ZoneSection({ zone, customers, selectedId, onSelect }) {
 
 function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaDay, onCreateRota, onClearRota, allStaff, assignedElsewhereIds, onTogglePauseDay, onToggleLeaveDay, onExtendRota, onDeleteCustomer }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [editDay, setEditDay] = useState(null);
   const editDayRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -383,9 +387,17 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
               {customer.area}
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 1l12 12M13 1L1 13" /></svg>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {(customer.homeLat != null || allStaff.some(s => s.home_lat != null)) && (
+              <button onClick={() => setMapOpen(v => !v)} title="Toggle map view"
+                style={{ height: 32, padding: "0 12px", borderRadius: 8, border: `1px solid ${mapOpen ? "#5F47FF" : "#e2e8f0"}`, background: mapOpen ? "#5F47FF" : "#fff", cursor: "pointer", color: mapOpen ? "#fff" : "#5F47FF", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                🗺 Map
+              </button>
+            )}
+            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 1l12 12M13 1L1 13" /></svg>
+            </button>
+          </div>
         </div>
 
         {/* Info strip */}
@@ -418,6 +430,13 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
           </div>
         </div>
 
+        {/* Map view */}
+        {mapOpen && (
+          <div style={{ marginBottom: 20 }}>
+            <OpsMap customer={customer} allStaff={allStaff} />
+          </div>
+        )}
+
         {/* Staff section */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "#7a7a86" }}>Assigned Staff ({customer.staff.length})</span>
@@ -425,6 +444,29 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
             {pickerOpen ? "Cancel" : "+ Add Staff"}
           </button>
         </div>
+
+        {/* Auto-suggest: top 3 nearest available staff */}
+        {hasCustomerCoords && available.filter(s => s.distKm != null).length > 0 && customer.staff.length === 0 && (
+          <div style={{ borderRadius: 10, marginBottom: 12, padding: 12, backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#16a34a", marginBottom: 8 }}>Nearest Available</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {available.filter(s => s.distKm != null).slice(0, 3).map(s => (
+                <button key={s.id} onClick={() => { onAddStaff(customer.id, s.id); }}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 8, border: "1px solid #bbf7d0", background: "#fff", cursor: "pointer", textAlign: "left" }}>
+                  <Avatar s={s} size={28} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#0f1115" }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: "#7a7a86" }}>{s.role}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: s.distKm <= 5 ? "#16a34a" : s.distKm <= 12 ? "#d97706" : "#dc2626", background: s.distKm <= 5 ? "#f0fdf4" : s.distKm <= 12 ? "#fffbeb" : "#fef2f2", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
+                    📍 {fmtKm(s.distKm)}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#16a34a" }}>Assign</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {pickerOpen && (
           <div style={{ borderRadius: 10, marginBottom: 12, padding: 8, maxHeight: 220, overflowY: "auto", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
