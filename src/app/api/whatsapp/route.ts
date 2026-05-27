@@ -1061,6 +1061,10 @@ async function handleLocation(waPhone: string, latitude: number, longitude: numb
         ? [name, address].filter(Boolean).join(", ")
         : await reverseGeocode(latitude, longitude);
 
+    // Save coordinates to leads so Ops can do proximity ranking
+    const phone = waPhone.replace(/\D/g, "").slice(-10);
+    await supabase.from("leads").update({ home_lat: latitude, home_lng: longitude }).eq("phone", phone);
+
     await afterLocation(waPhone, session, locationText);
 }
 

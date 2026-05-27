@@ -39,6 +39,18 @@ const MODE_RATE = {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function fmtKm(km) {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+}
+
 function displayName(name) {
   return name.replace(/\s+Family\s*$/i, "").trim();
 }
@@ -311,7 +323,21 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
   if (!customer) return null;
 
   const assignedIds = new Set(customer.staff.map(s => s.id));
-  const available = allStaff.filter(s => !assignedIds.has(s.id) && (s.role === "Nurse" || !assignedElsewhereIds.has(s.id)));
+  const hasCustomerCoords = customer.homeLat != null && customer.homeLng != null;
+  const available = allStaff
+    .filter(s => !assignedIds.has(s.id) && (s.role === "Nurse" || !assignedElsewhereIds.has(s.id)))
+    .map(s => ({
+      ...s,
+      distKm: (hasCustomerCoords && s.home_lat != null && s.home_lng != null)
+        ? haversineKm(customer.homeLat, customer.homeLng, s.home_lat, s.home_lng)
+        : null,
+    }))
+    .sort((a, b) => {
+      if (a.distKm == null && b.distKm == null) return 0;
+      if (a.distKm == null) return 1;
+      if (b.distKm == null) return -1;
+      return a.distKm - b.distKm;
+    });
   const rotaPickList = allStaff.filter(s => !assignedElsewhereIds.has(s.id));
   const rota = buildRota(customer, allStaff);
   const today = todayISO();
@@ -411,6 +437,11 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                   <div style={{ fontSize: 12, fontWeight: 500, color: "#0f1115" }}>{s.name}</div>
                   <div style={{ fontSize: 11, color: "#7a7a86" }}>{s.role}</div>
                 </div>
+                {s.distKm != null && (
+                  <span style={{ fontSize: 11, fontWeight: 600, color: s.distKm <= 5 ? "#16a34a" : s.distKm <= 12 ? "#d97706" : "#dc2626", background: s.distKm <= 5 ? "#f0fdf4" : s.distKm <= 12 ? "#fffbeb" : "#fef2f2", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
+                    📍 {fmtKm(s.distKm)}
+                  </span>
+                )}
                 <span style={{ color: "#22c55e", fontSize: 16 }}>+</span>
               </button>
             ))}

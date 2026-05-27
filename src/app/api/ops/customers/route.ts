@@ -98,6 +98,8 @@ export async function GET(req: NextRequest) {
       paymentStatus: closure?.payment_status ?? null,
       closureDate: closure?.closure_date ?? null,
       phone: lead.phone ?? null,
+      homeLat: lead.home_lat ?? null,
+      homeLng: lead.home_lng ?? null,
     };
   });
 
