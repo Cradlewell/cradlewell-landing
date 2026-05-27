@@ -24,7 +24,7 @@ async function syncAll() {
       _db = await res.json();
       _initialized = true;
     } else if (res.status === 401) {
-      if (!window.location.pathname.startsWith("/crm/login")) {
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/crm/login")) {
         window.location.href = "/crm/login";
       }
       return;
