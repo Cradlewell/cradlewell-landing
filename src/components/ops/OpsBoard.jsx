@@ -168,24 +168,22 @@ function StatTile({ value, label, accent, icon }) {
   const isAccent = !!accent;
   return (
     <div style={{
-      background: isAccent ? "linear-gradient(135deg,#fff1f2,#ffe4e6)" : "#ffffff",
-      border: `1px solid ${isAccent ? "#fecdd3" : "#e8edf2"}`,
-      borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14,
-      boxShadow: isAccent
-        ? "0 2px 12px rgba(239,68,68,0.10)"
-        : "0 1px 3px rgba(15,23,42,0.05), 0 8px 20px rgba(15,23,42,0.06)",
-      minWidth: 148,
+      background: "#FFFFFF",
+      border: `1px solid ${isAccent ? "rgba(229,72,77,0.18)" : "rgba(0,0,0,0.07)"}`,
+      borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12,
+      boxShadow: "0 1px 3px rgba(17,17,16,0.04)",
+      minWidth: 144,
     }}>
       {icon && (
         <div style={{
-          width: 36, height: 36, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center",
-          backgroundColor: isAccent ? "rgba(239,68,68,0.09)" : "rgba(95,71,255,0.08)", flexShrink: 0,
-          color: isAccent ? "#e11d48" : "#5F47FF",
+          width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+          backgroundColor: isAccent ? "rgba(229,72,77,0.08)" : "rgba(95,71,255,0.07)", flexShrink: 0,
+          color: isAccent ? "#E5484D" : "#5F47FF",
         }}>{icon}</div>
       )}
       <div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: isAccent ? "#e11d48" : "#0f172a", letterSpacing: "-0.02em", lineHeight: 1 }}>{value}</div>
-        <div style={{ fontSize: 10, marginTop: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: isAccent ? "#fb7185" : "#94a3b8" }}>{label}</div>
+        <div className="ops-stat-value" style={{ fontSize: 21, fontWeight: 700, color: isAccent ? "#E5484D" : "#111110", letterSpacing: "-0.03em", lineHeight: 1 }}>{value}</div>
+        <div style={{ fontSize: 11, marginTop: 5, fontWeight: 500, color: isAccent ? "#E5484D" : "#9E9E9C", letterSpacing: "0.01em" }}>{label}</div>
       </div>
     </div>
   );
@@ -194,25 +192,25 @@ function StatTile({ value, label, accent, icon }) {
 function CustomerCard({ c, selected, onSelect }) {
   const cs = cardStatus(c);
   return (
-    <button onClick={onSelect} style={{
+    <button onClick={onSelect} className="ops-customer-card" style={{
       position: "relative", textAlign: "left", display: "flex", overflow: "hidden",
-      borderRadius: 16, minHeight: 130, cursor: "pointer",
-      background: selected ? "linear-gradient(160deg,#fdfcff 0%,#f5f3ff 100%)" : "#ffffff",
-      border: selected ? "1.5px solid #5F47FF" : "1px solid #e8edf2",
+      borderRadius: 14, minHeight: 126, cursor: "pointer",
+      background: selected ? "#FDFCFF" : "#FFFFFF",
+      border: selected ? "1.5px solid #5F47FF" : "1px solid rgba(0,0,0,0.08)",
       boxShadow: selected
-        ? "0 0 0 3px rgba(95,71,255,0.12), 0 8px 24px rgba(95,71,255,0.10)"
-        : "0 1px 3px rgba(15,23,42,0.05), 0 6px 18px rgba(15,23,42,0.06)",
-      transition: "all 0.2s",
+        ? "0 0 0 3px rgba(95,71,255,0.10), 0 4px 16px rgba(95,71,255,0.08)"
+        : "0 1px 3px rgba(17,17,16,0.04)",
+      fontFamily: "inherit",
     }}>
       <div style={{ width: 4, flexShrink: 0, backgroundColor: cs.color }} />
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, padding: "16px" }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: selected ? "#5F47FF" : "#0f172a", letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: selected ? "#5F47FF" : "#111110", letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {displayName(c.name)}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-            <svg width="9" height="9" viewBox="0 0 10 13" fill="#c8d3df"><path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.8A1.8 1.8 0 1 1 5 3.2a1.8 1.8 0 0 1 0 3.6z" /></svg>
-            <span style={{ fontSize: 11, fontWeight: 500, color: "#94a3b8" }}>{c.area}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+            <svg width="8" height="8" viewBox="0 0 10 13" fill="#C0C0BE"><path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.8A1.8 1.8 0 1 1 5 3.2a1.8 1.8 0 0 1 0 3.6z" /></svg>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "#A8A8A6" }}>{c.area}</span>
           </div>
           {c.badge && (
             <div style={{ marginTop: 8 }}>
@@ -256,18 +254,16 @@ function ZoneSection({ zone, customers, selectedId, onSelect }) {
   if (customers.length === 0) return null;
   const zoneColor = ZONE_COLORS[zone];
   return (
-    <section style={{ marginBottom: 48 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: zoneColor, boxShadow: `0 0 10px ${zoneColor}99`, flexShrink: 0 }} />
-          <h2 style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#1e293b", margin: 0 }}>{zone}</h2>
-        </div>
-        <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, ${zoneColor}40, #e2e8f0 60%)` }} />
-        <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 999, backgroundColor: `${zoneColor}12`, color: zoneColor, border: `1px solid ${zoneColor}28`, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-          {customers.length} {customers.length === 1 ? "Client" : "Clients"}
+    <section style={{ marginBottom: 40 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: zoneColor, flexShrink: 0 }} />
+        <h2 style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6B6B6A", margin: 0 }}>{zone}</h2>
+        <div style={{ flex: 1, height: 1, backgroundColor: "rgba(0,0,0,0.07)" }} />
+        <span style={{ fontSize: 10.5, fontWeight: 500, padding: "3px 10px", borderRadius: 999, backgroundColor: `${zoneColor}10`, color: zoneColor, border: `1px solid ${zoneColor}22` }}>
+          {customers.length}
         </span>
       </div>
-      <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+      <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
         {customers.map(c => (
           <CustomerCard key={c.id} c={c} selected={selectedId === c.id} onSelect={() => onSelect(c.id)} />
         ))}
@@ -360,7 +356,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "rgba(15,17,21,0.32)", backdropFilter: "blur(6px)" }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 880, maxHeight: "92vh", overflowY: "auto", padding: 28, borderRadius: 16, backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 24px 60px rgba(15,17,21,0.12)" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 880, maxHeight: "92vh", overflowY: "auto", padding: 28, borderRadius: 16, backgroundColor: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 20px 60px rgba(17,17,16,0.14), 0 0 0 1px rgba(0,0,0,0.04)" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
@@ -383,8 +379,9 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {(customer.homeLat != null || allStaff.some(s => s.home_lat != null)) && (
               <button onClick={() => setMapOpen(v => !v)} title="Toggle map view"
-                style={{ height: 32, padding: "0 12px", borderRadius: 8, border: `1px solid ${mapOpen ? "#5F47FF" : "#e2e8f0"}`, background: mapOpen ? "#5F47FF" : "#fff", cursor: "pointer", color: mapOpen ? "#fff" : "#5F47FF", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
-                🗺 Map
+                style={{ height: 32, padding: "0 12px", borderRadius: 8, border: `1px solid ${mapOpen ? "#5F47FF" : "rgba(0,0,0,0.1)"}`, background: mapOpen ? "#5F47FF" : "#fff", cursor: "pointer", color: mapOpen ? "#fff" : "#5F47FF", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4l4-2 6 2 4-2v10l-4 2-6-2-4 2V4z" /><path d="M5 2v10M11 4v10" /></svg>
+                Map
               </button>
             )}
             <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -394,7 +391,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
         </div>
 
         {/* Info strip */}
-        <div style={{ borderRadius: 12, padding: 16, marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, backgroundColor: "#f8fafc", border: "1px solid #e8edf2" }}>
+        <div style={{ borderRadius: 10, padding: 16, marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, backgroundColor: "#F9F8F6", border: "1px solid rgba(0,0,0,0.07)" }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, color: "#94a3b8" }}>Phone</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#0f1115" }}>
@@ -452,7 +449,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                     <div style={{ fontSize: 11, color: "#7a7a86" }}>{s.role}</div>
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: s.distKm <= 5 ? "#16a34a" : s.distKm <= 12 ? "#d97706" : "#dc2626", background: s.distKm <= 5 ? "#f0fdf4" : s.distKm <= 12 ? "#fffbeb" : "#fef2f2", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
-                    📍 {fmtKm(s.distKm)}
+                    {fmtKm(s.distKm)}
                   </span>
                   <span style={{ fontSize: 11, fontWeight: 600, color: "#16a34a" }}>Assign</span>
                 </button>
@@ -474,7 +471,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                 </div>
                 {s.distKm != null && (
                   <span style={{ fontSize: 11, fontWeight: 600, color: s.distKm <= 5 ? "#16a34a" : s.distKm <= 12 ? "#d97706" : "#dc2626", background: s.distKm <= 5 ? "#f0fdf4" : s.distKm <= 12 ? "#fffbeb" : "#fef2f2", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
-                    📍 {fmtKm(s.distKm)}
+                    {fmtKm(s.distKm)}
                   </span>
                 )}
                 <span style={{ color: "#22c55e", fontSize: 16 }}>+</span>
@@ -558,7 +555,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                 <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "2px 8px", borderRadius: 999, backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600 }}>{rota.length} days</span>
               </div>
               <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #e2e8f0" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1.5fr 0.9fr 1.1fr 1.2fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.5fr 0.9fr 1.1fr 1.2fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#F9F8F6", color: "#A8A8A6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
                   <span>Date</span><span>Time</span><span>Caregiver</span><span>Reason</span>
                 </div>
                 <div ref={scrollContainerRef} style={{ maxHeight: 360, overflowY: "auto" }}>
@@ -775,7 +772,7 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
           <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#5F47FF", boxShadow: "0 0 8px #5F47FF" }} />
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "#5F47FF" }}>Roster</span>
         </div>
-        <h1 style={{ fontSize: 44, fontWeight: 700, color: "#0f1115", letterSpacing: "-0.02em", lineHeight: 1, margin: 0 }}>Staff</h1>
+        <h1 style={{ fontSize: 36, fontWeight: 700, color: "#111110", letterSpacing: "-0.025em", lineHeight: 1, margin: 0 }}>Staff</h1>
         <p style={{ fontSize: 12, marginTop: 8, color: "#7a7a86" }}>{roster.length} caregivers · Manage your team</p>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 24 }}>
@@ -807,7 +804,7 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
           <button onClick={handleAdd} disabled={!name.trim()} style={{ width: "100%", fontSize: 13, fontWeight: 600, padding: 10, borderRadius: 8, backgroundColor: "#5F47FF", color: "#fff", border: "none", cursor: "pointer", opacity: name.trim() ? 1 : 0.5, marginTop: 4 }}>+ Add to Roster</button>
         </div>
         <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 32px -20px rgba(15,17,21,0.18)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.5fr 1fr 1fr 1fr 1.2fr 110px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.5fr 1fr 1fr 1fr 1.2fr 110px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#F9F8F6", color: "#A8A8A6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
             <span>Caregiver</span><span>Role</span><span>Phone</span><span>Location</span><span>Languages</span><span>Active assignments</span><span></span>
           </div>
           {roster.map((s, idx) => {
@@ -989,7 +986,7 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
             <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#22c55e" }} />
             <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "#5F47FF" }}>Insights</span>
           </div>
-          <h1 style={{ fontSize: 44, fontWeight: 700, color: "#0f1115", letterSpacing: "-0.02em", lineHeight: 1, margin: 0 }}>Utilisation Report</h1>
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: "#111110", letterSpacing: "-0.025em", lineHeight: 1, margin: 0 }}>Utilisation Report</h1>
           <p style={{ fontSize: 12, marginTop: 8, color: "#7a7a86" }}>Planned vs completed service days (Sundays are weekly off)</p>
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -1032,7 +1029,7 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
             <Avatar s={selectedStaff} size={32} />
             <div><div style={{ fontSize: 14, fontWeight: 600, color: "#0f1115" }}>{selectedStaff.name}</div><div style={{ fontSize: 11, color: "#7a7a86" }}>Monthly utilisation · {selectedStaff.role}</div></div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#F9F8F6", color: "#A8A8A6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
             <span>Month</span><span>Planned</span><span>Completed</span><span>Travel (₹)</span><span>Utilisation %</span><span>Leave Rate %</span>
           </div>
           {monthlyRows.map((m, i) => (
@@ -1050,7 +1047,7 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
       )}
 
       <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#F9F8F6", color: "#A8A8A6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
           <span>Caregiver</span><span>Role</span><span>Planned</span><span>Completed</span><span>Travel (₹)</span><span>Utilisation %</span><span>Leave Rate %</span><span>Status</span>
         </div>
         {filteredRows.map((r, idx) => {
@@ -1184,7 +1181,7 @@ function TravelExpensesView({ roster, customers, entries, onAdd, onDelete }) {
         </form>
 
         <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr 32px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr 32px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#F9F8F6", color: "#A8A8A6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
             <span>Caregiver</span><span>Date</span><span>Customer</span><span>Route</span><span>Km</span><span>Amount</span><span>Rcpt</span><span />
           </div>
           {entries.length === 0 && <div style={{ textAlign: "center", padding: 48, fontSize: 13, color: "#7a7a86" }}>No expenses logged yet.</div>}
@@ -1330,7 +1327,7 @@ function AttendanceView({ roster, customers }) {
         </button>
       </div>
       <div style={{ borderRadius: 14, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #e2e8f0" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#f8fafc", color: "#9a9aa6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em", padding: "12px 16px", backgroundColor: "#F9F8F6", color: "#A8A8A6", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}>
           <span>Caregiver</span><span>Clients</span><span>Scheduled</span><span>Present</span><span>Leave</span><span>Attendance</span>
         </div>
         {filteredRows.map((r, idx) => {
@@ -1818,49 +1815,49 @@ export function OpsBoard({ onLogout }) {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", width: "100%", background: "linear-gradient(160deg,#f5f7ff 0%,#f8fafc 40%,#f8fafc 100%)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", width: "100%", background: "#F9F8F6", fontFamily: "'DM Sans', system-ui, -apple-system, sans-serif" }}>
       {/* Mobile overlay */}
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30, backgroundColor: "rgba(15,17,21,0.4)", backdropFilter: "blur(2px)" }} />}
 
       {/* Sidebar */}
       <aside style={{
-        width: 260, height: "100vh", display: "flex", flexDirection: "column", zIndex: 40,
-        backgroundColor: "#ffffff", borderRight: "1px solid #e8edf2",
-        boxShadow: "2px 0 8px rgba(15,23,42,0.05)",
+        width: 256, height: "100vh", display: "flex", flexDirection: "column", zIndex: 40,
+        backgroundColor: "#FFFFFF", borderRight: "1px solid rgba(0,0,0,0.07)",
         position: "fixed", top: 0, left: 0,
       }}>
-        <div style={{ padding: "28px 24px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ height: 32, width: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#5F47FF,#a855f7)", flexShrink: 0 }}>
-              <div style={{ height: 16, width: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.9)" }} />
+        <div style={{ padding: "24px 20px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <div style={{ height: 28, width: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "#5F47FF", flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" /><circle cx="7" cy="7" r="2" fill="rgba(255,255,255,0.85)" /></svg>
             </div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", letterSpacing: "0.04em" }}>CRADLEWELL</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#111110", letterSpacing: "-0.01em" }}>Cradlewell</span>
           </div>
-          <p style={{ margin: "8px 0 0", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#94a3b8" }}>Operations</p>
+          <p style={{ margin: "6px 0 0 37px", fontSize: 10.5, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8A8A6" }}>Operations</p>
         </div>
 
-        <nav style={{ padding: "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <nav style={{ padding: "0 10px", display: "flex", flexDirection: "column", gap: 2 }}>
           {navTabs.map(tab => {
             const active = view === tab.id;
             return (
               <button key={tab.id} onClick={() => { setView(tab.id); setSidebarOpen(false); }}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderRadius: 12, border: "none", textAlign: "left", cursor: "pointer", backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent", color: active ? "#5F47FF" : "#475569", fontWeight: active ? 600 : 400, transition: "background 0.15s" }}>
-                <span style={{ color: active ? "#5F47FF" : "#94a3b8", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
-                <span style={{ fontSize: 13, flex: 1 }}>{tab.label}</span>
-                <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, fontWeight: 700, minWidth: 24, textAlign: "center", backgroundColor: active ? "#5F47FF" : "#f1f5f9", color: active ? "#fff" : "#64748b" }}>{tab.count}</span>
+                className={`ops-nav-tab${active ? " ops-nav-active" : ""}`}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderRadius: 10, border: "none", textAlign: "left", cursor: "pointer", backgroundColor: active ? "rgba(95,71,255,0.08)" : "transparent", color: active ? "#5F47FF" : "#5C5C5A", fontWeight: active ? 600 : 400, fontFamily: "inherit" }}>
+                <span style={{ color: active ? "#5F47FF" : "#9E9E9C", display: "flex", flexShrink: 0 }}>{tab.icon}</span>
+                <span style={{ fontSize: 13, flex: 1, letterSpacing: "-0.005em" }}>{tab.label}</span>
+                <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, fontWeight: 600, minWidth: 22, textAlign: "center", backgroundColor: active ? "#5F47FF" : "rgba(0,0,0,0.06)", color: active ? "#fff" : "#6B6B6A" }}>{tab.count}</span>
               </button>
             );
           })}
         </nav>
 
-        <div style={{ marginTop: "auto", padding: "16px 16px 20px", borderTop: "1px solid #e8edf2" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 8px" }}>
-            <div style={{ height: 32, width: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, background: "linear-gradient(135deg,#5F47FF,#a855f7)", flexShrink: 0 }}>A</div>
+        <div style={{ marginTop: "auto", padding: "12px 14px 18px", borderTop: "1px solid rgba(0,0,0,0.07)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", borderRadius: 10 }}>
+            <div style={{ height: 30, width: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11.5, fontWeight: 700, background: "#5F47FF", flexShrink: 0, letterSpacing: "0.02em" }}>A</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Admin</div>
-              <div style={{ fontSize: 11, color: "#64748b" }}>Cradlewell</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: "#111110", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Admin</div>
+              <div style={{ fontSize: 11, color: "#A8A8A6" }}>Cradlewell</div>
             </div>
-            <button onClick={onLogout} title="Sign out" style={{ padding: 6, borderRadius: 8, border: "none", background: "transparent", color: "#94a3b8", cursor: "pointer", display: "flex" }} onMouseEnter={e => e.currentTarget.style.color = "#ef4444"} onMouseLeave={e => e.currentTarget.style.color = "#94a3b8"}>
+            <button onClick={onLogout} title="Sign out" style={{ padding: 6, borderRadius: 7, border: "none", background: "transparent", color: "#C0C0BE", cursor: "pointer", display: "flex", fontFamily: "inherit" }} onMouseEnter={e => e.currentTarget.style.color = "#E5484D"} onMouseLeave={e => e.currentTarget.style.color = "#C0C0BE"}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l4-3-4-3M14 8H6" /></svg>
             </button>
           </div>
@@ -1868,7 +1865,7 @@ export function OpsBoard({ onLogout }) {
       </aside>
 
       {/* Main content */}
-      <div style={{ marginLeft: 260, padding: "24px 32px", minWidth: 0 }}>
+      <div style={{ marginLeft: 256, padding: "28px 36px 48px", minWidth: 0 }}>
         {view === "attendance" ? <AttendanceView roster={roster} customers={customers} />
           : view === "travel" ? <TravelExpensesView roster={roster} customers={customers} entries={travelEntries} onAdd={e => {
               setTravelEntries(prev => [e, ...prev]);
@@ -1896,14 +1893,14 @@ export function OpsBoard({ onLogout }) {
                 : (
                   <>
                     {/* Header */}
-                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 24, marginBottom: 40, paddingBottom: 24, borderBottom: "1px solid #f1f5f9" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 24, marginBottom: 36, paddingBottom: 24, borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
                       <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#10b981", boxShadow: "0 0 8px #10b981" }} />
-                          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#10b981" }}>Live Operations</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#30A46C" }} />
+                          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#30A46C" }}>Live</span>
                         </div>
-                        <h1 style={{ fontSize: 44, fontWeight: 700, color: "#0f1115", letterSpacing: "-0.02em", lineHeight: 1, margin: 0 }}>Customers</h1>
-                        <p style={{ fontSize: 13, marginTop: 8, color: "#64748b" }}>{customers.length} clients · All zones</p>
+                        <h1 style={{ fontSize: 36, fontWeight: 700, color: "#111110", letterSpacing: "-0.025em", lineHeight: 1, margin: 0 }}>Customers</h1>
+                        <p style={{ fontSize: 13, marginTop: 7, color: "#9E9E9C" }}>{customers.length} clients · All zones</p>
                       </div>
                       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                         <StatTile value={stats.activeStations} label="Active clients" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="5" r="2.5" /><path d="M1 14c0-2.76 2.24-5 5-5s5 2.24 5 5" /><circle cx="12.5" cy="5" r="2" /><path d="M15 14c0-2.21-1.57-4-3.5-4" /></svg>} />
@@ -1914,27 +1911,27 @@ export function OpsBoard({ onLogout }) {
 
                     {/* Conflict banner */}
                     {conflictCount > 0 && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: "12px 16px", borderRadius: 12, backgroundColor: "#fff7ed", border: "1px solid #fed7aa" }}>
-                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#ea580c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2L1.5 13h13L8 2z" /><path d="M8 6.5v3M8 11.5v.5" /></svg>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#ea580c" }}>
-                          {conflictCount} scheduling conflict{conflictCount > 1 ? "s" : ""} detected
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, padding: "11px 16px", borderRadius: 10, backgroundColor: "#FFF5E9", border: "1px solid rgba(214,103,37,0.2)" }}>
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#C94010" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2L1.5 13h13L8 2z" /><path d="M8 6.5v3M8 11.5v.5" /></svg>
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: "#C94010" }}>
+                          {conflictCount} scheduling {conflictCount > 1 ? "conflicts" : "conflict"}
                         </span>
-                        <span style={{ fontSize: 12, color: "#c2410c" }}>— A caregiver is double-booked on the same day. Open a client card to see details.</span>
+                        <span style={{ fontSize: 12, color: "#A03A0C" }}>— A caregiver is double-booked. Open a client card to review.</span>
                       </div>
                     )}
 
                     {/* Filters */}
-                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 20, marginBottom: 40, padding: "16px 20px", borderRadius: 16, backgroundColor: "#fff", border: "1px solid #e8edf2", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 16, marginBottom: 32, padding: "14px 18px", borderRadius: 12, backgroundColor: "#FFFFFF", border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 1px 3px rgba(17,17,16,0.04)" }}>
                       {[["Zone", zoneFilter, v => { setZoneFilter(v); setAreaFilter("All"); }, ["All", ...ZONE_ORDER]],
                       ["Area", areaFilter, setAreaFilter, ["All", ...areasForZone]]].map(([label, val, onChange, opts]) => (
-                        <div key={label} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 220 }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", color: "#94a3b8" }}>{label}</label>
+                        <div key={label} style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 200 }}>
+                          <label style={{ fontSize: 10.5, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.1em", color: "#A8A8A6" }}>{label}</label>
                           <div style={{ position: "relative" }}>
-                            <select value={val} onChange={e => onChange(e.target.value)} style={{ fontSize: 13, fontWeight: 500, borderRadius: 12, padding: "12px 36px 12px 16px", outline: "none", cursor: "pointer", width: "100%", backgroundColor: "#fff", color: "#1e293b", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(15,23,42,0.06)", appearance: "none", WebkitAppearance: "none" }}>
+                            <select value={val} onChange={e => onChange(e.target.value)} style={{ fontSize: 13, fontWeight: 500, borderRadius: 9, padding: "9px 32px 9px 14px", outline: "none", cursor: "pointer", width: "100%", backgroundColor: "#F9F8F6", color: "#111110", border: "1px solid rgba(0,0,0,0.09)", appearance: "none", WebkitAppearance: "none", fontFamily: "inherit" }}>
                               {opts.map(o => <option key={o} value={o}>{o}</option>)}
                             </select>
-                            <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8" }}>
-                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5l4 4 4-4" /></svg>
+                            <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#A8A8A6" }}>
+                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5l4 4 4-4" /></svg>
                             </div>
                           </div>
                         </div>
@@ -1963,14 +1960,9 @@ export function OpsBoard({ onLogout }) {
                       )}
                     </div>
 
-                    <div style={{ marginTop: 32, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: "#94a3b8" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <b style={{ color: "#475569" }}>Cradlewell Ops</b>
-                        <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#22c55e" }}>
-                          <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#22c55e", display: "inline-block" }} /> Live
-                        </span>
-                      </span>
-                      <span style={{ fontSize: 10 }}>Click a card to view details</span>
+                    <div style={{ marginTop: 40, display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#C0C0BE" }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: "#30A46C", display: "inline-block" }} />
+                      <span>All data live</span>
                     </div>
                   </>
                 )}

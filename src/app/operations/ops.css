@@ -1,10 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Scope Bootstrap resets inside .ops-shell only */
+/* ── Design tokens ───────────────────────────────────────── */
+:root {
+  --ops-canvas:    #F9F8F6;
+  --ops-surface:   #FFFFFF;
+  --ops-border:    rgba(0, 0, 0, 0.07);
+  --ops-border-md: rgba(0, 0, 0, 0.10);
+  --ops-text:      #111110;
+  --ops-text-2:    #6B6B6A;
+  --ops-text-3:    #A8A8A6;
+  --ops-accent:    #5F47FF;
+  --ops-accent-bg: rgba(95, 71, 255, 0.07);
+  --ops-shadow-sm: 0 1px 2px rgba(17, 17, 16, 0.04);
+  --ops-shadow-md: 0 2px 8px rgba(17, 17, 16, 0.06), 0 0 0 1px rgba(0,0,0,0.04);
+  --ops-radius-sm: 8px;
+  --ops-radius-md: 12px;
+  --ops-radius-lg: 16px;
+}
+
+/* ── Scope resets inside .ops-shell only ─────────────────── */
 .ops-shell *,
 .ops-shell *::before,
 .ops-shell *::after {
@@ -12,8 +30,17 @@
 }
 
 .ops-shell {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  color: var(--ops-text);
+}
+
+/* Tabular figures for all numeric data */
+.ops-shell .ops-num,
+.ops-shell [data-stat] {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .ops-shell button {
@@ -77,4 +104,56 @@
 .ops-shell p {
   margin: 0;
   padding: 0;
+}
+
+/* ── Customer card hover ─────────────────────────────────── */
+.ops-customer-card {
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, transform 0.1s ease-out;
+  will-change: transform;
+}
+.ops-customer-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(17, 17, 16, 0.08), 0 0 0 1px rgba(0,0,0,0.05) !important;
+}
+.ops-customer-card:active {
+  transform: scale(0.985);
+}
+
+/* ── Nav tab hover ───────────────────────────────────────── */
+.ops-nav-tab {
+  transition: background-color 0.12s ease-out, color 0.12s ease-out;
+}
+.ops-nav-tab:not(.ops-nav-active):hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  color: #1e1e1d !important;
+}
+
+/* ── Button press feedback ───────────────────────────────── */
+.ops-shell button:not(:disabled):active {
+  transform: scale(0.97);
+  transition: transform 0.08s ease-out;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+.ops-sidebar {
+  border-right: 1px solid var(--ops-border);
+}
+
+/* ── Stat tile ───────────────────────────────────────────── */
+.ops-stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+.ops-shell ::-webkit-scrollbar { width: 5px; height: 5px; }
+.ops-shell ::-webkit-scrollbar-track { background: transparent; }
+.ops-shell ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 999px; }
+.ops-shell ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
+
+/* ── Table refinement ────────────────────────────────────── */
+.ops-shell select:focus-visible {
+  outline: 2px solid var(--ops-accent);
+  outline-offset: 0;
+  border-radius: 8px;
 }
