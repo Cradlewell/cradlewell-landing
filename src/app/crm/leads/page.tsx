@@ -1,6 +1,9 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useLeads, api, refreshStore } from "@/lib/crm-store";
+import { confirm } from "@/components/ui/confirm-dialog";
+import { toast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
@@ -35,11 +38,15 @@ export default function LeadsPage() {
   const [showWAImport, setShowWAImport] = useState(false);
   const [page, setPage] = useState(1);
 
-  const handleDelete = (e: React.MouseEvent, id: string, name: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
-    if (confirm(`Delete lead "${name}"? This cannot be undone.`)) {
-      api.deleteLead(id);
-    }
+    const ok = await confirm({
+      title: `Delete "${name}"?`,
+      body: "All related follow-ups, quotations, and activity will be permanently removed.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (ok) { api.deleteLead(id); toast.success(`"${name}" deleted`); }
   };
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "">("");
@@ -145,7 +152,11 @@ export default function LeadsPage() {
       {/* Table */}
       <div className="crm-table-wrap">
         {filtered.length === 0 ? (
-          <div className="crm-empty"><div>No leads match your filters.</div></div>
+          <EmptyState
+            title={leads.length === 0 ? "No leads yet" : "No leads match your filters"}
+            description={leads.length === 0 ? "Add your first lead to get started." : "Try clearing your search or filter."}
+            action={leads.length === 0 ? { label: "Add lead", onClick: () => setShowNewLead(true) } : undefined}
+          />
         ) : (
           <table className="crm-table">
             <thead>

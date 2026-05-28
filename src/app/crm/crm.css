@@ -959,3 +959,35 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.75); }
 }
+
+/* ─── Skeleton loader ────────────────────────────────────────────────────────── */
+@keyframes crm-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.crm-skeleton {
+  background: linear-gradient(
+    90deg,
+    #F1F5F9 25%,
+    #E8EDF3 50%,
+    #F1F5F9 75%
+  );
+  background-size: 200% 100%;
+  animation: crm-shimmer 1.5s ease-in-out infinite;
+  display: block;
+}
+
+/* ─── Focus-visible ring — accessibility ─────────────────────────────────────── */
+.crm-app *:focus-visible {
+  outline: 2px solid var(--crm-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* d-none d-md-none responsive helpers */
+@media (min-width: 768px) {
+  .d-md-none { display: none !important; }
+  .d-md-block { display: block !important; }
+  .d-md-table-cell { display: table-cell !important; }
+}

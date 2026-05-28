@@ -5,6 +5,9 @@ import { api, useDB, isOverdue, isToday } from "@/lib/crm-store";
 import type { Lead, LeadStage, FollowupType, LostReason } from "@/lib/crm-types";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import StageBadge from "./StageBadge";
+import { toast } from "@/components/ui/toast";
+import { confirm } from "@/components/ui/confirm-dialog";
+import { Avatar } from "@/components/ui/avatar";
 import { format } from "date-fns";
 
 const FOLLOWUP_TYPES: FollowupType[] = ["First call", "Call back", "Quotation reminder", "Payment reminder", "Trial decision", "Closure follow-up"];
@@ -42,7 +45,6 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("profile");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Partial<Lead>>({});
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const [fuType, setFuType] = useState<FollowupType>("Call back");
   const [fuDue, setFuDue] = useState("");
@@ -68,7 +70,6 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
     if (lead) setDraft({ ...lead });
     setTab("profile");
     setEditing(false);
-    setDeleteConfirm(false);
   }, [leadId]);
 
   if (!lead) return null;
@@ -78,25 +79,40 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const leadClosure = db.closures.find(c => c.leadId === lead.id);
   const leadActivity = db.activity.filter(a => a.leadId === lead.id).reverse();
 
-  const initials = (lead.name || "U").split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-  const saveEdits = () => { api.updateLead(lead.id, draft); setEditing(false); };
-  const handleDelete = () => { api.deleteLead(lead.id); onClose(); };
+  const saveEdits = () => {
+    api.updateLead(lead.id, draft);
+    setEditing(false);
+    toast.success("Lead updated");
+  };
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: "Delete lead?",
+      body: `"${lead.name}" and all related data will be permanently removed. This cannot be undone.`,
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (ok) { api.deleteLead(lead.id); onClose(); toast.success(`"${lead.name}" deleted`); }
+  };
   const addFollowup = () => {
     if (!fuDue) return;
     api.addFollowup({ leadId: lead.id, type: fuType, dueAt: fuDue, note: fuNote });
     setFuDue(""); setFuNote("");
+    toast.success("Follow-up scheduled");
   };
   const addQuotation = () => {
     const p = Number(qPrice); if (!p) return;
     const d = Number(qDiscount) || 0;
     api.addQuotation({ leadId: lead.id, package: qPkg, shiftHours: qHours, quotedPrice: p, discount: d, finalPrice: p - d, date: new Date().toISOString(), notes: qNotes });
     setQPrice(""); setQDiscount("0"); setQNotes("");
+    toast.success("Quotation saved", { description: `₹${(p - d).toLocaleString("en-IN")} — ${qPkg}` });
   };
   const submitClosure = () => {
     if (closureType === "Won") {
       api.closeLead({ leadId: lead.id, type: "Won", finalPackage: cPkg, finalAmount: Number(cAmount) || undefined, advanceReceived: Number(cAdvance) || undefined, paymentStatus: cPayStatus, closureDate: new Date().toISOString() });
+      toast.success("Closed Won!", { description: cAmount ? `₹${Number(cAmount).toLocaleString("en-IN")} · ${cPayStatus}` : undefined });
     } else {
       api.closeLead({ leadId: lead.id, type: "Lost", lostReason: cLostReason, competitorName: cCompetitor, notes: cNotes, closureDate: new Date().toISOString() });
+      toast.warning("Marked as Lost", { description: cLostReason });
     }
   };
   const fmtDt = (iso: string) => { try { return format(new Date(iso), "dd MMM, hh:mm a"); } catch { return iso; } };
@@ -114,14 +130,17 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
         }}>
           {/* Avatar + Name row */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem", marginBottom: "1rem" }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 14,
-              background: "rgba(255,255,255,0.2)",
-              backdropFilter: "blur(8px)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "1rem", fontWeight: 700, color: "#fff",
-              flexShrink: 0, border: "1.5px solid rgba(255,255,255,0.3)",
-            }}>{initials}</div>
+            <Avatar
+              name={lead.name}
+              size={48}
+              shape="rounded"
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                backdropFilter: "blur(8px)",
+                color: "#fff",
+                border: "1.5px solid rgba(255,255,255,0.3)",
+              }}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
               <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{lead.name}</h3>
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
@@ -306,15 +325,9 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               {/* Danger Zone */}
               <div>
                 <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#EF4444", marginBottom: "0.875rem" }}>Danger Zone</div>
-                {deleteConfirm ? (
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "0.8rem", color: "var(--crm-text-muted)" }}>This cannot be undone.</span>
-                    <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={handleDelete}><Trash2 size={14} /> Yes, Delete</button>
-                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setDeleteConfirm(false)}>Cancel</button>
-                  </div>
-                ) : (
-                  <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={() => setDeleteConfirm(true)}><Trash2 size={14} /> Delete Lead</button>
-                )}
+                <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={handleDelete}>
+                  <Trash2 size={14} /> Delete Lead
+                </button>
               </div>
             </div>
           )}

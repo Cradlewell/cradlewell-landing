@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useFollowups, useLeads, api, isOverdue, isToday } from "@/lib/crm-store";
 import LeadDrawer from "@/components/crm/LeadDrawer";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Check, Clock, Calendar, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -51,11 +52,11 @@ export default function FollowupsPage() {
 
       {currentList.length === 0 ? (
         <div className="crm-card">
-          <div className="crm-empty">
-            <CheckCircle2 size={40} className="crm-empty-icon" />
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>All clear!</div>
-            <div style={{ fontSize: "0.875rem" }}>No follow-ups in this category.</div>
-          </div>
+          <EmptyState
+            icon={<CheckCircle2 size={40} />}
+            title="All clear!"
+            description="No follow-ups in this category."
+          />
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>

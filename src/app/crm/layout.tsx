@@ -4,6 +4,10 @@ import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import CRMSidebar from "@/components/crm/CRMSidebar";
 import { useDBReady } from "@/lib/crm-store";
+import { ToastContainer } from "@/components/ui/toast";
+import { ConfirmDialogRoot } from "@/components/ui/confirm-dialog";
+import { PageLoader } from "@/components/ui/page-loader";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import "./crm.css";
 
 export default function CRMLayout({ children }: { children: React.ReactNode }) {
@@ -35,26 +39,25 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
             >
               <Menu size={20} />
             </button>
-            <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--crm-text)", display: "none" }} className="d-md-block">
+            <span
+              style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--crm-text)", display: "none" }}
+              className="d-md-block"
+            >
               Cradlewell Sales CRM
             </span>
           </header>
 
           <div className="crm-content">
-            {ready ? children : (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", flexDirection: "column", gap: "1rem" }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: "50%",
-                  border: "3px solid #E2E8F0",
-                  borderTopColor: "#6388FF",
-                  animation: "crm-spin 0.7s linear infinite",
-                }} />
-                <p style={{ color: "var(--crm-text-muted)", fontSize: "0.9rem" }}>Loading CRM data…</p>
-              </div>
-            )}
+            <ErrorBoundary>
+              {ready ? children : <PageLoader message="Loading CRM data…" />}
+            </ErrorBoundary>
           </div>
         </main>
       </div>
+
+      {/* Global providers — no Context needed, module-level APIs */}
+      <ToastContainer />
+      <ConfirmDialogRoot />
     </div>
   );
 }

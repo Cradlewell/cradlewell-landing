@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useClosures, useLeads } from "@/lib/crm-store";
 import LeadDrawer from "@/components/crm/LeadDrawer";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Trophy, XCircle } from "lucide-react";
 import { format } from "date-fns";
 
@@ -45,7 +46,13 @@ export default function ClosuresPage() {
       </div>
 
       {current.length === 0 ? (
-        <div className="crm-card"><div className="crm-empty">No closures yet in this category.</div></div>
+        <div className="crm-card">
+          <EmptyState
+            icon={tab === "won" ? <Trophy size={40} /> : <XCircle size={40} />}
+            title={tab === "won" ? "No wins yet" : "No lost leads"}
+            description={tab === "won" ? "Close a lead as Won from the lead drawer." : "Leads marked as Lost will appear here."}
+          />
+        </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "0.75rem" }}>
           {current.map(c => {

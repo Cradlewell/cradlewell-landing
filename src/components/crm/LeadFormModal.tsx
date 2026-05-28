@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { X, UserPlus } from "lucide-react";
 import { api } from "@/lib/crm-store";
+import { toast } from "@/components/ui/toast";
 import type { LeadSource, BabyStatus, Shift } from "@/lib/crm-types";
 
 const SOURCES: LeadSource[] = ["Website", "WhatsApp", "Aria Chat", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
@@ -64,6 +65,7 @@ export default function LeadFormModal({ open, onClose }: Props) {
       owner: "Unassigned",
     });
     setSaving(false);
+    toast.success(`Lead "${form.name.trim()}" added`, { description: `Source: ${form.source}` });
     setForm({ ...INIT });
     onClose();
   };

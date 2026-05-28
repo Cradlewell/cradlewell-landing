@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useQuotations, useLeads } from "@/lib/crm-store";
 import LeadDrawer from "@/components/crm/LeadDrawer";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FileText } from "lucide-react";
 import { format } from "date-fns";
 
@@ -25,7 +26,14 @@ export default function QuotationsPage() {
       </div>
 
       {quotations.length === 0 ? (
-        <div className="crm-card"><div className="crm-empty"><FileText size={40} className="crm-empty-icon" /><div>No quotations yet. Add one from a lead drawer.</div></div></div>
+        <div className="crm-card">
+          <EmptyState
+            icon={<FileText size={40} />}
+            title="No quotations yet"
+            description="Send a quotation from any lead's drawer to see it here."
+            action={{ label: "Go to Leads", href: "/crm/leads" }}
+          />
+        </div>
       ) : (
         <div className="crm-table-wrap">
           <table className="crm-table">
