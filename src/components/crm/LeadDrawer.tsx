@@ -122,34 +122,34 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
       <div className="crm-drawer-overlay open" onClick={onClose} />
       <aside className="crm-drawer open" role="dialog" aria-label={`Lead: ${lead.name}`}>
 
-        {/* ── Premium Header ── */}
+        {/* ── Header ── */}
         <div style={{
-          background: "linear-gradient(135deg, #4F6EF7 0%, #6C3FC5 100%)",
-          padding: "1.5rem 1.25rem 0",
-          position: "relative",
+          background: "#FFFFFF",
+          padding: "1.25rem 1.25rem 0",
+          borderBottom: "1px solid rgba(0,0,0,0.07)",
         }}>
           {/* Avatar + Name row */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem", marginBottom: "1rem" }}>
             <Avatar
               name={lead.name}
-              size={48}
+              size={44}
               shape="rounded"
               style={{
-                background: "rgba(255,255,255,0.2)",
-                backdropFilter: "blur(8px)",
-                color: "#fff",
-                border: "1.5px solid rgba(255,255,255,0.3)",
+                background: "rgba(95,71,255,0.08)",
+                color: "#5F47FF",
+                border: "1px solid rgba(95,71,255,0.18)",
+                fontWeight: 700,
               }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{lead.name}</h3>
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#111110", lineHeight: 1.2, letterSpacing: "-0.015em" }}>{lead.name}</h3>
+              <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
                 <a href={`tel:${lead.phone}`} onClick={e => e.stopPropagation()} style={{
                   display: "flex", alignItems: "center", gap: 5,
-                  background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
-                  color: "#fff", fontSize: "0.78rem", textDecoration: "none",
-                  padding: "4px 10px", borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.25)",
+                  background: "rgba(0,0,0,0.04)",
+                  color: "#6B6B6A", fontSize: "0.78rem", textDecoration: "none",
+                  padding: "3px 10px", borderRadius: 6,
+                  border: "1px solid rgba(0,0,0,0.08)",
                   fontWeight: 500,
                 }}>
                   <Phone size={12} />{lead.phone}
@@ -157,10 +157,10 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                 {lead.whatsapp && (
                   <a href={`https://wa.me/91${lead.whatsapp}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{
                     display: "flex", alignItems: "center", gap: 5,
-                    background: "rgba(37,211,102,0.25)", backdropFilter: "blur(8px)",
-                    color: "#fff", fontSize: "0.78rem", textDecoration: "none",
-                    padding: "4px 10px", borderRadius: 999,
-                    border: "1px solid rgba(37,211,102,0.4)",
+                    background: "rgba(48,164,108,0.07)",
+                    color: "#30A46C", fontSize: "0.78rem", textDecoration: "none",
+                    padding: "3px 10px", borderRadius: 6,
+                    border: "1px solid rgba(48,164,108,0.2)",
                     fontWeight: 500,
                   }}>
                     <MessageCircle size={12} />WhatsApp
@@ -168,6 +168,17 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                 )}
               </div>
             </div>
+            <button onClick={onClose} aria-label="Close" style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "transparent", color: "#A8A8A6",
+              border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", flexShrink: 0,
+              transition: "background-color 0.12s ease-out, color 0.12s ease-out",
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,0,0,0.05)"; (e.currentTarget as HTMLButtonElement).style.color = "#111110"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#A8A8A6"; }}
+            >
+              <X size={16} />
+            </button>
           </div>
 
           {/* Stage selector + Edit/Close action bar */}
@@ -178,55 +189,32 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                 onChange={e => api.moveStage(lead.id, e.target.value as LeadStage)}
                 style={{
                   width: "100%", appearance: "none",
-                  background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
-                  color: "#fff", border: "1px solid rgba(255,255,255,0.25)",
+                  background: "#F9F8F6",
+                  color: "#111110", border: "1px solid rgba(0,0,0,0.09)",
                   borderRadius: 8, padding: "0.45rem 2rem 0.45rem 0.75rem",
                   fontSize: "0.8rem", fontWeight: 600, cursor: "pointer",
+                  fontFamily: "inherit",
                 }}
               >
-                {LEAD_STAGES.map(s => <option key={s} value={s} style={{ color: "#1E293B", background: "#fff" }}>{s}</option>)}
+                {LEAD_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <ChevronDown size={14} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.7)", pointerEvents: "none" }} />
+              <ChevronDown size={14} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#A8A8A6", pointerEvents: "none" }} />
             </div>
 
             {editing ? (
               <>
-                <button onClick={saveEdits} style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  background: "rgba(255,255,255,0.9)", color: "#4F6EF7",
-                  border: "none", borderRadius: 8, padding: "0.45rem 0.875rem",
-                  fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-                }}>
+                <button onClick={saveEdits} className="crm-btn crm-btn-primary crm-btn-sm">
                   <Save size={13} /> Save
                 </button>
-                <button onClick={() => { setEditing(false); setDraft({ ...lead }); }} style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  background: "rgba(255,255,255,0.15)", color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8,
-                  padding: "0.45rem 0.75rem", fontSize: "0.78rem", cursor: "pointer",
-                }}>
+                <button onClick={() => { setEditing(false); setDraft({ ...lead }); }} className="crm-btn crm-btn-ghost crm-btn-sm crm-btn-icon">
                   <X size={13} />
                 </button>
               </>
             ) : (
-              <button onClick={() => setEditing(true)} style={{
-                display: "flex", alignItems: "center", gap: 5,
-                background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
-                color: "#fff", border: "1px solid rgba(255,255,255,0.25)",
-                borderRadius: 8, padding: "0.45rem 0.875rem",
-                fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-              }}>
+              <button onClick={() => setEditing(true)} className="crm-btn crm-btn-ghost crm-btn-sm">
                 <Edit2 size={13} /> Edit
               </button>
             )}
-            <button onClick={onClose} aria-label="Close" style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
-              color: "#fff", border: "1px solid rgba(255,255,255,0.25)",
-              borderRadius: 8, width: 34, height: 34, cursor: "pointer", flexShrink: 0,
-            }}>
-              <X size={16} />
-            </button>
           </div>
         </div>
 

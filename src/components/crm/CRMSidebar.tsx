@@ -44,7 +44,12 @@ export default function CRMSidebar({ collapsed, onToggle, mobileOpen, onMobileCl
       <aside className={`crm-sidebar ${collapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
         {/* Header */}
         <div className="crm-sidebar-header">
-          <div className="crm-sidebar-logo-placeholder">C</div>
+          <div className="crm-sidebar-logo-placeholder">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="5.5" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" />
+              <circle cx="8" cy="8" r="2.25" fill="rgba(255,255,255,0.85)" />
+            </svg>
+          </div>
           {!collapsed && (
             <div className="crm-sidebar-title">
               <h2>Cradlewell</h2>

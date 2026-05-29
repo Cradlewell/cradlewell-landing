@@ -55,15 +55,15 @@ export default function DashboardPage() {
   );
 
   const stats = useMemo(() => [
-    { label: "Total Leads", value: leads.length, icon: Users, bg: "#EEF1FF", color: "#6388FF" },
-    { label: "New Today", value: newToday.length, icon: UserPlus, bg: "#F0FDF4", color: "#16A34A" },
-    { label: "Follow-ups Today", value: today.length, icon: CalendarClock, bg: "#FFFBEB", color: "#B45309" },
-    { label: "Overdue", value: overdue.length, icon: AlertTriangle, bg: "#FEF2F2", color: "#DC2626" },
-    { label: "Hot Leads", value: hot.length, icon: Flame, bg: "#FEF2F2", color: "#EF4444" },
-    { label: "Negotiation", value: inNegotiation.length, icon: TrendingUp, bg: "#F5F3FF", color: "#7C3AED" },
-    { label: "Follow-up Stage", value: inFollowup.length, icon: RotateCcw, bg: "#FFFBEB", color: "#92400E" },
-    { label: "Closed Won", value: wonLeads.length, icon: Trophy, bg: "#F0FDF4", color: "#15803D" },
-    { label: "Closed Lost", value: lostLeads.length, icon: XCircle, bg: "#F1F5F9", color: "#64748B" },
+    { label: "Total leads", value: leads.length, icon: Users, bg: "rgba(95,71,255,0.07)", color: "#5F47FF" },
+    { label: "New today", value: newToday.length, icon: UserPlus, bg: "rgba(48,164,108,0.08)", color: "#30A46C" },
+    { label: "Follow-ups today", value: today.length, icon: CalendarClock, bg: "rgba(229,146,10,0.08)", color: "#B45309" },
+    { label: "Overdue", value: overdue.length, icon: AlertTriangle, bg: "rgba(229,72,77,0.07)", color: "#DC2626" },
+    { label: "Hot leads", value: hot.length, icon: Flame, bg: "rgba(229,72,77,0.07)", color: "#E5484D" },
+    { label: "Negotiation", value: inNegotiation.length, icon: TrendingUp, bg: "rgba(124,58,237,0.07)", color: "#7C3AED" },
+    { label: "Follow-up stage", value: inFollowup.length, icon: RotateCcw, bg: "rgba(229,146,10,0.08)", color: "#92400E" },
+    { label: "Closed won", value: wonLeads.length, icon: Trophy, bg: "rgba(48,164,108,0.08)", color: "#30A46C" },
+    { label: "Closed lost", value: lostLeads.length, icon: XCircle, bg: "rgba(0,0,0,0.04)", color: "#6B6B6A" },
   ], [leads.length, newToday.length, today.length, overdue.length, hot.length,
       inNegotiation.length, inFollowup.length, wonLeads.length, lostLeads.length]);
 
@@ -84,25 +84,25 @@ export default function DashboardPage() {
 
       {/* Revenue Hero */}
       <div className="crm-hero-card mb-4">
-        <div className="crm-section-title" style={{ color: "rgba(255,255,255,0.7)", marginBottom: "0.5rem" }}>
-          THIS MONTH&apos;S REVENUE
+        <div className="crm-section-title" style={{ marginBottom: "0.5rem" }}>
+          This month&apos;s revenue
         </div>
-        <div className="crm-hero-amount">
-          <IndianRupee size={28} style={{ display: "inline", verticalAlign: "middle" }} />
+        <div className="crm-hero-amount" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <IndianRupee size={26} style={{ flexShrink: 0, marginTop: 2 }} />
           {monthRevenue.toLocaleString("en-IN")}
         </div>
         <div className="d-flex gap-4 mt-3 flex-wrap">
           <div>
-            <div style={{ fontSize: "0.72rem", opacity: 0.7 }}>CONVERSIONS</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>{wonLeads.length}</div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Conversions</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{wonLeads.length}</div>
           </div>
           <div>
-            <div style={{ fontSize: "0.72rem", opacity: 0.7 }}>IN PIPELINE</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>{pipelineLeads.length}</div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>In pipeline</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{pipelineLeads.length}</div>
           </div>
           <div>
-            <div style={{ fontSize: "0.72rem", opacity: 0.7 }}>WIN RATE</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>{conversionRate}%</div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Win rate</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-primary)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{conversionRate}%</div>
           </div>
         </div>
       </div>
