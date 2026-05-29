@@ -58,13 +58,13 @@ const StepsSection = () => {
           {steps.map((step, i) => (
             <ScrollReveal key={i} direction="up" delay={i * 110}>
               <div style={{
-                background: '#F6F7FF',
+                background: 'rgba(95,71,255,0.04)',
                 borderRadius: 20,
                 padding: '36px 28px 32px',
                 position: 'relative',
                 height: '100%',
                 border: '1px solid rgba(95,71,255,0.08)',
-                transition: 'box-shadow 220ms ease, transform 220ms ease',
+                transition: 'box-shadow 220ms cubic-bezier(0.23,1,0.32,1), transform 220ms cubic-bezier(0.23,1,0.32,1)',
               }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLDivElement).style.boxShadow = '0 10px 36px rgba(95,71,255,0.13)';
@@ -124,16 +124,15 @@ const StepsSection = () => {
                   {step.desc}
                 </p>
 
-                {/* Bottom accent line */}
+                {/* Bottom accent line — solid, no gradient */}
                 <div style={{
                   position: 'absolute',
                   bottom: 0,
                   left: 0,
                   right: 0,
                   height: 3,
-                  background: 'linear-gradient(90deg, #5F47FF, #6388FF)',
+                  background: 'rgba(95,71,255,0.45)',
                   borderRadius: '0 0 20px 20px',
-                  opacity: 0.5,
                 }} />
               </div>
             </ScrollReveal>

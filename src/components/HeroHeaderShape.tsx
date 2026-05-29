@@ -45,7 +45,7 @@ const HeroHeader1 = () => {
           <Col lg={6} className="pe-xl-5 text-center text-lg-start">
 
             {/* Trust bar — above-fold social proof */}
-            <div className="d-flex justify-content-center justify-content-lg-start mb-4">
+            <div className="d-flex justify-content-center justify-content-lg-start mb-4 hero-enter hero-enter-d1">
               <div className="hero-trust-bar">
                 <span style={{ color: "#F59E0B" }}>★</span>
                 <span>4.8 Rated</span>
@@ -56,18 +56,18 @@ const HeroHeader1 = () => {
               </div>
             </div>
 
-            <h1 className="ezy__header1-heading mb-4">
+            <h1 className="ezy__header1-heading mb-4 hero-enter hero-enter-d2">
               <span className="primary-color">Expert</span>{" "}
               <br />
               Newborn &amp; Mother Care
             </h1>
 
-            <p className="ezy__header1-sub-heading mb-5">
+            <p className="ezy__header1-sub-heading mb-5 hero-enter hero-enter-d3">
               Certified postpartum nurses visit your home to support mother
               and baby with feeding, sleep, hygiene, and recovery.
             </p>
 
-            <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start">
+            <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start hero-enter hero-enter-d4">
               <button
                 onClick={() => openModal()}
                 className="btn btn-primary fs-6 px-4 py-3"
@@ -106,7 +106,7 @@ const HeroHeader1 = () => {
 
             {/* Micro trust line */}
             <p
-              className="mt-3"
+              className="mt-3 hero-enter hero-enter-d5"
               style={{
                 fontSize: "0.8rem",
                 color: "#94A3B8",
@@ -118,7 +118,7 @@ const HeroHeader1 = () => {
           </Col>
 
           {/* Hero image with floating badges */}
-          <Col lg={6} className="mt-5 mt-lg-0">
+          <Col lg={6} className="mt-5 mt-lg-0 hero-enter-img">
             <div className="hero-image-wrap">
               <img
                 src="/images/website_Hero_Image.png"

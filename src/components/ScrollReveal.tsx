@@ -18,6 +18,12 @@ export default function ScrollReveal({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mq.matches);
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -36,11 +42,19 @@ export default function ScrollReveal({
   }, []);
 
   const initial: Record<string, string> = {
-    up: 'translateY(32px)',
-    left: 'translateX(-32px)',
-    right: 'translateX(32px)',
-    none: 'translateY(0)',
+    up:    'translateY(20px)',
+    left:  'translateX(-20px)',
+    right: 'translateX(20px)',
+    none:  'translateY(0)',
   };
+
+  if (reducedMotion) {
+    return (
+      <div ref={ref} className={className} style={style}>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -50,7 +64,8 @@ export default function ScrollReveal({
         ...style,
         opacity: visible ? 1 : 0,
         transform: visible ? 'none' : initial[direction],
-        transition: `opacity 0.65s cubic-bezier(0.4,0,0.2,1) ${delay}ms, transform 0.65s cubic-bezier(0.4,0,0.2,1) ${delay}ms`,
+        /* Emil: strong ease-out — starts fast, lands naturally */
+        transition: `opacity 0.65s cubic-bezier(0.23,1,0.32,1) ${delay}ms, transform 0.65s cubic-bezier(0.23,1,0.32,1) ${delay}ms`,
         willChange: 'opacity, transform',
       }}
     >

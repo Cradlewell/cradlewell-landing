@@ -64,8 +64,8 @@ const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: numbe
           display: 'flex',
           alignItems: 'center',
           gap: 5,
-          background: '#F8FAFC',
-          borderRadius: 8,
+          background: '#F2F1EF',
+          borderRadius: 6,
           padding: '4px 8px',
         }}>
           <GoogleIcon />
@@ -125,7 +125,7 @@ const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: numbe
 );
 
 const TestimonialsSection = () => (
-  <section className="py-5" id="testimonials" style={{ backgroundColor: '#EDF3FF' }}>
+  <section className="py-5" id="testimonials" style={{ backgroundColor: '#F0EEFF' }}>
     <Container>
       <ScrollReveal direction="none">
         <div className="text-center mb-5">
@@ -133,7 +133,7 @@ const TestimonialsSection = () => (
             display: 'inline-block',
             background: 'rgba(95,71,255,0.08)',
             border: '1px solid rgba(95,71,255,0.18)',
-            borderRadius: 100,
+            borderRadius: 6,
             padding: '5px 18px',
             fontSize: '0.72rem',
             fontFamily: "'Lexend', system-ui, sans-serif",

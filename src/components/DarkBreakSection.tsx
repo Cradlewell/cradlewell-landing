@@ -54,7 +54,7 @@ export default function DarkBreakSection() {
               display: 'inline-block',
               background: 'rgba(95,71,255,0.25)',
               border: '1px solid rgba(95,71,255,0.45)',
-              borderRadius: 100,
+              borderRadius: 6,
               padding: '5px 18px',
               fontSize: '0.72rem',
               fontFamily: "'Lexend', system-ui, sans-serif",
@@ -102,7 +102,7 @@ export default function DarkBreakSection() {
                 <div key={i} style={{
                   background: 'rgba(255,255,255,0.06)',
                   border: '1px solid rgba(255,255,255,0.10)',
-                  borderRadius: 18,
+                  borderRadius: 12,
                   padding: '22px 36px',
                   textAlign: 'center',
                   minWidth: 130,
@@ -135,7 +135,7 @@ export default function DarkBreakSection() {
             <button
               onClick={() => openModal()}
               style={{
-                background: 'linear-gradient(135deg, #F97316 0%, #fb923c 100%)',
+                background: '#F97316',
                 border: 'none',
                 color: '#fff',
                 fontFamily: "'Lexend', system-ui, sans-serif",
@@ -143,10 +143,21 @@ export default function DarkBreakSection() {
                 fontSize: '1rem',
                 padding: '14px 40px',
                 borderRadius: 12,
-                boxShadow: '0 4px 24px rgba(249,115,22,0.48)',
+                boxShadow: '0 4px 16px rgba(249,115,22,0.32)',
                 cursor: 'pointer',
                 letterSpacing: '0.01em',
+                transition: 'background-color 220ms cubic-bezier(0.23,1,0.32,1), box-shadow 220ms cubic-bezier(0.23,1,0.32,1), transform 0.1s ease-out',
               }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = '#EA6C0A';
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 24px rgba(249,115,22,0.40)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = '#F97316';
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(249,115,22,0.32)';
+              }}
+              onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.97)'; }}
+              onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
             >
               Book Free Consultation
             </button>

@@ -111,10 +111,10 @@ const HeroBelow = () => {
             <ScrollReveal direction="right" delay={100}>
               <div
                 style={{
-                  background: "#F8FAFC",
+                  background: "#F9F8F6",
                   borderRadius: 20,
                   padding: "32px 16px",
-                  border: "1px solid rgba(15,23,42,0.07)",
+                  border: "1px solid rgba(17,17,16,0.07)",
                 }}
               >
                 <div className="d-flex align-items-center justify-content-center">
