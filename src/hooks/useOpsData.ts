@@ -45,7 +45,7 @@ export interface OpsCustomer {
   // Merged from ops_customer_state
   packageDays?: number;
   startDate?: string;
-  rota?: Record<string, string>;
+  rota?: Record<string, string | string[]>;
   rotaReasons?: Record<string, string>;
   pausedDates?: string[];
   leaveDates?: string[];
@@ -118,7 +118,7 @@ export function useOpsData() {
           packageDays: (st.package_days as number) ?? undefined,
           startDate: (st.start_date as string) ?? undefined,
           shiftTime: (st.shift_time as string) ?? undefined,
-          rota: (st.rota as Record<string, string>) ?? undefined,
+          rota: (st.rota as Record<string, string | string[]>) ?? undefined,
           rotaReasons: (st.rota_reasons as Record<string, string>) ?? undefined,
           pausedDates: (st.paused_dates as string[]) ?? undefined,
           leaveDates: (st.leave_dates as string[]) ?? undefined,

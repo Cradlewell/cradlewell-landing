@@ -45,6 +45,12 @@ const MODE_RATE = {
 
 const fmtKm = fmtKmLib;
 
+// Normalize rota[date] — stored as string (legacy) or string[] (new)
+function rotaIds(val) {
+  if (!val) return null;
+  return Array.isArray(val) ? val : [val];
+}
+
 function displayName(name) {
   return name.replace(/\s+Family\s*$/i, "").trim();
 }
@@ -115,19 +121,21 @@ function buildRota(c, roster) {
   while (consumed < c.packageDays && offset < cap) {
     const date = addDaysISO(c.startDate, offset);
     const wouldBe = pool.length > 0 ? pool[workIdx % pool.length] : null;
+    const wouldBeArr = wouldBe ? [wouldBe] : [];
     const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
-    const sundayOverrideId = c.rota?.[date];
+    const overrideIds = rotaIds(c.rota?.[date]);
     if (leaveSet.has(date)) {
-      out.push({ date, time, staff: null, paused: false, leave: true, weeklyOff: false, wouldBe });
+      out.push({ date, time, staff: [], paused: false, leave: true, weeklyOff: false, wouldBe: wouldBeArr });
     } else if (pausedSet.has(date)) {
-      out.push({ date, time, staff: null, paused: true, leave: false, weeklyOff: false, wouldBe });
-    } else if (isSunday && !sundayOverrideId) {
-      out.push({ date, time, staff: null, paused: false, leave: false, weeklyOff: true, wouldBe });
+      out.push({ date, time, staff: [], paused: true, leave: false, weeklyOff: false, wouldBe: wouldBeArr });
+    } else if (isSunday && !overrideIds) {
+      out.push({ date, time, staff: [], paused: false, leave: false, weeklyOff: true, wouldBe: wouldBeArr });
       consumed++;
     } else {
-      const overrideId = c.rota?.[date];
-      const override = overrideId ? roster.find(s => s.id === overrideId) ?? null : null;
-      out.push({ date, time, staff: override ?? wouldBe, paused: false, leave: false, weeklyOff: false, wouldBe });
+      const staffForDay = overrideIds
+        ? overrideIds.map(id => roster.find(s => s.id === id)).filter(Boolean)
+        : wouldBeArr;
+      out.push({ date, time, staff: staffForDay, paused: false, leave: false, weeklyOff: false, wouldBe: wouldBeArr });
       workIdx++;
       consumed++;
     }
@@ -341,7 +349,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
     const rows = [["Day", "Date", "Time", "Caregiver", "Reason"]];
     rota.forEach((r, idx) => {
       rows.push([String(idx + 1), r.date, r.time,
-      r.paused ? "— Paused —" : r.leave ? "— Leave —" : r.staff?.name ?? "Unassigned",
+      r.paused ? "— Paused —" : r.leave ? "— Leave —" : r.staff.length > 0 ? r.staff.map(s => s.name).join(" + ") : "Unassigned",
       customer.rotaReasons?.[r.date] ?? ""]);
     });
     const csv = rows.map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -583,37 +591,87 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                           </div>
                         </div>
                         <span style={{ color: "#7a7a86" }}>{r.time}</span>
-                        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 6 }} ref={editDay === r.date ? editDayRef : undefined}>
+                        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 4 }} ref={(editDay === r.date || editDay === r.date + ":2") ? editDayRef : undefined}>
+                          {/* Primary staff button — click to open replace-primary picker */}
                           <button onClick={() => { if (!r.paused && !r.leave) setEditDay(editDay === r.date ? null : r.date); }}
                             disabled={r.paused || r.leave}
-                            style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, textAlign: "left", borderRadius: 6, padding: "4px 6px", border: "none", background: "transparent", cursor: r.paused || r.leave ? "default" : "pointer" }}>
+                            style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, textAlign: "left", borderRadius: 6, padding: "4px 6px", border: "none", background: "transparent", cursor: r.paused || r.leave ? "default" : "pointer", minWidth: 0 }}>
                             {r.paused ? <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.10)" }}>PAUSED</span>
                               : r.leave ? <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#a855f7", backgroundColor: "rgba(168,85,247,0.10)" }}>LEAVE</span>
                                 : r.weeklyOff ? <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#0ea5e9", backgroundColor: "rgba(14,165,233,0.10)" }}>WEEKLY OFF</span>
-                                  : r.staff ? <><Avatar s={r.staff} size={22} /><span style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{r.staff.name.split(" ")[0]}</span></>
+                                  : r.staff.length > 0
+                                    ? <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap", overflow: "hidden" }}>
+                                        {r.staff.map((s, i) => (
+                                          <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: i > 0 ? 1 : 0 }}>
+                                            {i > 0 && <span style={{ fontSize: 9, color: "#c8d3df", fontWeight: 700 }}>+</span>}
+                                            <Avatar s={s} size={20} />
+                                            <span style={{ fontSize: 12, fontWeight: 500, color: "#0f1115", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name.split(" ")[0]}</span>
+                                          </div>
+                                        ))}
+                                      </div>
                                     : <span style={{ fontSize: 11, fontWeight: 500, color: "#ef4444" }}>Unassigned</span>
                             }
-                            {!r.paused && !r.leave && <span style={{ marginLeft: "auto", fontSize: 11, color: "#7a7a86", opacity: 0.6 }}>▾</span>}
+                            {!r.paused && !r.leave && <span style={{ marginLeft: "auto", fontSize: 10, color: "#7a7a86", opacity: 0.5, flexShrink: 0 }}>▾</span>}
                           </button>
+
+                          {/* "+" button — add second staff (only when exactly 1 staff and day is active) */}
+                          {!r.paused && !r.leave && !r.weeklyOff && r.staff.length === 1 && (
+                            <button
+                              onClick={() => setEditDay(editDay === r.date + ":2" ? null : r.date + ":2")}
+                              title="Add second caregiver"
+                              style={{ width: 20, height: 20, borderRadius: 4, border: `1px dashed ${editDay === r.date + ":2" ? "#5F47FF" : "#c8d3df"}`, background: editDay === r.date + ":2" ? "rgba(95,71,255,0.08)" : "transparent", cursor: "pointer", color: editDay === r.date + ":2" ? "#5F47FF" : "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                              +
+                            </button>
+                          )}
+
                           {r.paused ? (
-                            <button onClick={() => onTogglePauseDay(customer.id, r.date)} style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)", border: "none", cursor: "pointer" }}>Resume</button>
+                            <button onClick={() => onTogglePauseDay(customer.id, r.date)} style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)", border: "none", cursor: "pointer", flexShrink: 0 }}>Resume</button>
                           ) : r.leave ? (
-                            <button onClick={() => onToggleLeaveDay(customer.id, r.date)} style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)", border: "none", cursor: "pointer" }}>Resume</button>
+                            <button onClick={() => onToggleLeaveDay(customer.id, r.date)} style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)", border: "none", cursor: "pointer", flexShrink: 0 }}>Resume</button>
                           ) : !r.weeklyOff ? (
                             <>
                               <button onClick={() => { setReasonText(""); setPendingChange({ date: r.date, action: "pause" }); }} style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#7a7a86", backgroundColor: "#f1f5f9", border: "none", cursor: "pointer", flexShrink: 0 }}>Pause</button>
                               <button onClick={() => { setReasonText(""); setPendingChange({ date: r.date, action: "leave" }); }} style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, color: "#a855f7", backgroundColor: "rgba(168,85,247,0.10)", border: "none", cursor: "pointer", flexShrink: 0 }}>Leave</button>
                             </>
                           ) : null}
+
+                          {/* Replace primary dropdown */}
                           {!r.paused && !r.leave && editDay === r.date && (
-                            <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 6, zIndex: 10, width: 200, maxHeight: 220, overflowY: "auto", borderRadius: 10, padding: 6, backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 16px 36px -12px rgba(15,17,21,0.18)" }}>
+                            <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 6, zIndex: 10, width: 210, maxHeight: 260, overflowY: "auto", borderRadius: 10, padding: 6, backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 16px 36px -12px rgba(15,17,21,0.18)" }}>
+                              {r.staff.length === 2 && (
+                                <>
+                                  <button onClick={() => { setEditDay(null); setReasonText(""); setPendingChange({ date: r.date, action: "remove-secondary", existingIds: r.staff.map(s => s.id) }); }}
+                                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, border: "none", background: "rgba(239,68,68,0.06)", cursor: "pointer", textAlign: "left", marginBottom: 4 }}>
+                                    <span style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>× Remove {r.staff[1].name.split(" ")[0]}</span>
+                                  </button>
+                                  <div style={{ fontSize: 10, padding: "2px 8px 4px", color: "#a8a8a6", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Replace primary</div>
+                                </>
+                              )}
                               {(r.weeklyOff ? available : rotaPickList).map(s => (
-                                <button key={s.id} onClick={() => { setEditDay(null); if (r.staff && r.staff.id === s.id) return; setReasonText(""); setPendingChange({ date: r.date, action: "change", staffId: s.id }); }}
+                                <button key={s.id} onClick={() => { setEditDay(null); if (r.staff.length > 0 && r.staff[0].id === s.id) return; setReasonText(""); setPendingChange({ date: r.date, action: "change", staffId: s.id, existingIds: r.staff.map(x => x.id) }); }}
+                                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", textAlign: "left" }}>
+                                  <Avatar s={s} size={20} />
+                                  <span style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{s.name}</span>
+                                  {r.staff.length > 0 && r.staff[0].id === s.id && <span style={{ marginLeft: "auto", fontSize: 10, color: "#5F47FF", fontWeight: 700 }}>Current</span>}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Add secondary staff dropdown */}
+                          {!r.paused && !r.leave && editDay === r.date + ":2" && (
+                            <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 6, zIndex: 10, width: 210, maxHeight: 260, overflowY: "auto", borderRadius: 10, padding: 6, backgroundColor: "#fff", border: "1px solid #5F47FF44", boxShadow: "0 16px 36px -12px rgba(95,71,255,0.20)" }}>
+                              <div style={{ fontSize: 10, padding: "2px 8px 6px", color: "#5F47FF", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Add second caregiver</div>
+                              {rotaPickList.filter(s => !r.staff.some(x => x.id === s.id)).map(s => (
+                                <button key={s.id} onClick={() => { setEditDay(null); setReasonText(""); setPendingChange({ date: r.date, action: "add-secondary", staffId: s.id, existingIds: r.staff.map(x => x.id) }); }}
                                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", textAlign: "left" }}>
                                   <Avatar s={s} size={20} />
                                   <span style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{s.name}</span>
                                 </button>
                               ))}
+                              {rotaPickList.filter(s => !r.staff.some(x => x.id === s.id)).length === 0 && (
+                                <div style={{ fontSize: 12, color: "#a8a8a6", padding: "8px", textAlign: "center" }}>No other staff available</div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -624,22 +682,25 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                             </span>
                           )}
                           {(() => {
-                            if (!r.staff || r.paused || r.leave || r.weeklyOff) return null;
-                            const entries = conflictMap?.get(r.staff.id)?.get(r.date) ?? [];
-                            const others = entries.filter(e => e.customerId !== customer.id);
-                            if (others.length === 0) return null;
-                            return others.map((o, i) => {
-                              const dist = (customer.homeLat != null && customer.homeLng != null && o.homeLat != null && o.homeLng != null)
-                                ? haversineKm(customer.homeLat, customer.homeLng, o.homeLat, o.homeLng)
-                                : null;
-                              const label = dist != null
-                                ? `Also at ${o.customerName.replace(/\s+Family\s*$/i,"").trim()} · ${fmtKm(dist)} away`
-                                : `Also at ${o.customerName.replace(/\s+Family\s*$/i,"").trim()}`;
-                              return (
-                                <span key={i} title={label} style={{ fontSize: 11, padding: "3px 7px", borderRadius: 6, color: "#ea580c", backgroundColor: "#fff7ed", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
-                                  ⚠ {label}
-                                </span>
-                              );
+                            if (!r.staff || r.staff.length === 0 || r.paused || r.leave || r.weeklyOff) return null;
+                            return r.staff.flatMap((staffMember, si) => {
+                              const entries = conflictMap?.get(staffMember.id)?.get(r.date) ?? [];
+                              const others = entries.filter(e => e.customerId !== customer.id);
+                              if (others.length === 0) return [];
+                              return others.map((o, i) => {
+                                const dist = (customer.homeLat != null && customer.homeLng != null && o.homeLat != null && o.homeLng != null)
+                                  ? haversineKm(customer.homeLat, customer.homeLng, o.homeLat, o.homeLng)
+                                  : null;
+                                const who = r.staff.length > 1 ? `${staffMember.name.split(" ")[0]}: ` : "";
+                                const label = dist != null
+                                  ? `${who}Also at ${o.customerName.replace(/\s+Family\s*$/i,"").trim()} · ${fmtKm(dist)} away`
+                                  : `${who}Also at ${o.customerName.replace(/\s+Family\s*$/i,"").trim()}`;
+                                return (
+                                  <span key={`${si}-${i}`} title={label} style={{ fontSize: 11, padding: "3px 7px", borderRadius: 6, color: "#ea580c", backgroundColor: "#fff7ed", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+                                    ⚠ {label}
+                                  </span>
+                                );
+                              });
                             });
                           })()}
                         </div>
@@ -662,7 +723,13 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
             <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 420, borderRadius: 14, padding: 20, backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 20px 40px rgba(15,17,21,0.18)" }}>
               <h4 style={{ fontSize: 15, fontWeight: 600, color: "#0f1115", margin: "0 0 4px" }}>Reason</h4>
               <p style={{ fontSize: 11, color: "#7a7a86", margin: "0 0 12px" }}>
-                {fmtLongDate(pendingChange.date)} — {pendingChange.action === "pause" ? "please record why this day is being paused." : pendingChange.action === "leave" ? "please record why the caregiver is on leave." : "please record why this change is being made."}
+                {fmtLongDate(pendingChange.date)} — {
+                  pendingChange.action === "pause" ? "please record why this day is being paused."
+                  : pendingChange.action === "leave" ? "please record why the caregiver is on leave."
+                  : pendingChange.action === "add-secondary" ? "please record why a second caregiver is being added."
+                  : pendingChange.action === "remove-secondary" ? "please record why the second caregiver is being removed."
+                  : "please record why this change is being made."
+                }
               </p>
               <textarea autoFocus value={reasonText} onChange={e => setReasonText(e.target.value)}
                 placeholder={pendingChange.action === "pause" ? "e.g. Client travelling, family event…" : pendingChange.action === "leave" ? "e.g. Sick leave, planned leave…" : "e.g. Original caregiver on leave, client request…"}
@@ -670,12 +737,26 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
                 <button onClick={() => setPendingChange(null)} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "1px solid #e2e8f0", background: "transparent", color: "#7a7a86", cursor: "pointer" }}>Cancel</button>
                 <button disabled={!reasonText.trim()} onClick={() => {
-                  if (pendingChange.action === "change") onSetRotaDay(customer.id, pendingChange.date, pendingChange.staffId, reasonText.trim());
-                  else if (pendingChange.action === "pause") onTogglePauseDay(customer.id, pendingChange.date, reasonText.trim());
-                  else onToggleLeaveDay(customer.id, pendingChange.date, reasonText.trim());
+                  if (pendingChange.action === "change") {
+                    // Replace primary; preserve existing secondary if any
+                    const secondary = (pendingChange.existingIds ?? []).slice(1);
+                    onSetRotaDay(customer.id, pendingChange.date, [pendingChange.staffId, ...secondary], reasonText.trim());
+                  } else if (pendingChange.action === "add-secondary") {
+                    onSetRotaDay(customer.id, pendingChange.date, [...(pendingChange.existingIds ?? []), pendingChange.staffId], reasonText.trim());
+                  } else if (pendingChange.action === "remove-secondary") {
+                    onSetRotaDay(customer.id, pendingChange.date, [(pendingChange.existingIds ?? [])[0]].filter(Boolean), reasonText.trim());
+                  } else if (pendingChange.action === "pause") {
+                    onTogglePauseDay(customer.id, pendingChange.date, reasonText.trim());
+                  } else {
+                    onToggleLeaveDay(customer.id, pendingChange.date, reasonText.trim());
+                  }
                   setPendingChange(null); setReasonText("");
                 }} style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "none", backgroundColor: "#5F47FF", color: "#fff", cursor: "pointer", opacity: reasonText.trim() ? 1 : 0.5 }}>
-                  {pendingChange.action === "pause" ? "Pause day" : pendingChange.action === "leave" ? "Mark leave" : "Save Change"}
+                  {pendingChange.action === "pause" ? "Pause day"
+                    : pendingChange.action === "leave" ? "Mark leave"
+                    : pendingChange.action === "add-secondary" ? "Add Caregiver"
+                    : pendingChange.action === "remove-secondary" ? "Remove Caregiver"
+                    : "Save Change"}
                 </button>
               </div>
             </div>
@@ -903,15 +984,14 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
           const date = addDaysISO(c.startDate, offset);
           const wouldBe = pool[workIdx % pool.length];
           const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
-          const sundayOverrideId = c.rota?.[date];
+          const overrideIds = rotaIds(c.rota?.[date]);
           const inScope = dateInScope(date);
-          if (isSunday && !sundayOverrideId) { consumed++; }
+          if (isSunday && !overrideIds) { consumed++; }
           else if (leaveSet.has(date)) { if (inScope && wouldBe?.id === staff.id) { planned++; leaveDays++; } consumed++; }
           else if (pausedSet.has(date)) { /* skip */ }
           else {
-            const overrideId = c.rota?.[date];
-            const actual = overrideId ? (roster.find(s => s.id === overrideId) ?? wouldBe) : wouldBe;
-            if (inScope && actual?.id === staff.id) { planned++; if (date <= today) completed++; }
+            const actualIds = overrideIds ? overrideIds : (wouldBe ? [wouldBe.id] : []);
+            if (inScope && actualIds.includes(staff.id)) { planned++; if (date <= today) completed++; }
             workIdx++; consumed++;
           }
           offset++;
@@ -949,15 +1029,14 @@ function UtilisationView({ roster, customers, travelEntries = [] }) {
         const ym = date.slice(0, 7);
         const wouldBe = pool[workIdx % pool.length];
         const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
-        const sundayOverrideId = c.rota?.[date];
+        const overrideIds = rotaIds(c.rota?.[date]);
         const get = () => { let b = buckets.get(ym); if (!b) { b = { planned: 0, completed: 0, leave: 0, travelAmount: 0 }; buckets.set(ym, b); } return b; };
-        if (isSunday && !sundayOverrideId) { consumed++; }
+        if (isSunday && !overrideIds) { consumed++; }
         else if (leaveSet.has(date)) { if (wouldBe?.id === selectedStaff.id) { const b = get(); b.planned++; b.leave++; } consumed++; }
         else if (pausedSet.has(date)) { /* skip */ }
         else {
-          const overrideId = c.rota?.[date];
-          const actual = overrideId ? (roster.find(s => s.id === overrideId) ?? wouldBe) : wouldBe;
-          if (actual?.id === selectedStaff.id) { const b = get(); b.planned++; if (date <= today) b.completed++; }
+          const actualIds = overrideIds ? overrideIds : (wouldBe ? [wouldBe.id] : []);
+          if (actualIds.includes(selectedStaff.id)) { const b = get(); b.planned++; if (date <= today) b.completed++; }
           workIdx++; consumed++;
         }
         offset++;
@@ -1261,15 +1340,14 @@ function AttendanceView({ roster, customers }) {
           const date = addDaysISO(c.startDate, offset);
           const wouldBe = pool[workIdx % pool.length];
           const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
-          const sundayOverrideId = c.rota?.[date];
+          const overrideIds = rotaIds(c.rota?.[date]);
           const inScope = dateInScope(date);
           if (leaveSet.has(date)) { if (inScope && wouldBe?.id === staff.id && date <= today) leave++; consumed++; }
           else if (pausedSet.has(date)) { /* skip */ }
-          else if (isSunday && !sundayOverrideId) { consumed++; }
+          else if (isSunday && !overrideIds) { consumed++; }
           else {
-            const overrideId = c.rota?.[date];
-            const actual = overrideId ? (roster.find(s => s.id === overrideId) ?? wouldBe) : wouldBe;
-            if (inScope && actual?.id === staff.id && date <= today) present++;
+            const actualIds = overrideIds ? overrideIds : (wouldBe ? [wouldBe.id] : []);
+            if (inScope && actualIds.includes(staff.id) && date <= today) present++;
             workIdx++; consumed++;
           }
           offset++;
@@ -1664,12 +1742,13 @@ export function OpsBoard({ onLogout }) {
     for (const c of customers) {
       const rota = buildRota(c, roster);
       for (const row of rota) {
-        if (!row.staff || row.paused || row.leave || row.weeklyOff) continue;
-        const sid = row.staff.id;
-        if (!map.has(sid)) map.set(sid, new Map());
-        const dateMap = map.get(sid);
-        if (!dateMap.has(row.date)) dateMap.set(row.date, []);
-        dateMap.get(row.date).push({ customerId: c.id, customerName: c.name, homeLat: c.homeLat, homeLng: c.homeLng });
+        if (!row.staff || row.staff.length === 0 || row.paused || row.leave || row.weeklyOff) continue;
+        for (const s of row.staff) {
+          if (!map.has(s.id)) map.set(s.id, new Map());
+          const dateMap = map.get(s.id);
+          if (!dateMap.has(row.date)) dateMap.set(row.date, []);
+          dateMap.get(row.date).push({ customerId: c.id, customerName: c.name, homeLat: c.homeLat, homeLng: c.homeLng });
+        }
       }
     }
     return map;
@@ -1727,7 +1806,14 @@ export function OpsBoard({ onLogout }) {
       if (c.id !== cid) return c;
       const nextStaff = c.staff.filter(x => x.id !== sid);
       const nextRota = {}, nextReasons = {};
-      for (const [d, sId] of Object.entries(c.rota ?? {})) { if (sId !== sid) { nextRota[d] = sId; if (c.rotaReasons?.[d]) nextReasons[d] = c.rotaReasons[d]; } }
+      for (const [d, val] of Object.entries(c.rota ?? {})) {
+        const ids = rotaIds(val) ?? [];
+        const filtered = ids.filter(id => id !== sid);
+        if (filtered.length > 0) {
+          nextRota[d] = filtered;
+          if (c.rotaReasons?.[d]) nextReasons[d] = c.rotaReasons[d];
+        }
+      }
       const up = nextStaff.length === 0
         ? { ...c, staff: [], packageDays: undefined, startDate: undefined, shiftTime: undefined, rota: undefined, rotaReasons: undefined, pausedDates: undefined, status: "attention", badge: "Unassigned" }
         : { ...c, staff: nextStaff, rota: nextRota, rotaReasons: nextReasons };
@@ -1735,9 +1821,10 @@ export function OpsBoard({ onLogout }) {
       return up;
     }));
   };
-  const setRotaDay = (cid, date, sid, reason) => setCustomers(prev => prev.map(c => {
+  // staffIds is string[] — first element is primary, optional second is secondary
+  const setRotaDay = (cid, date, staffIds, reason) => setCustomers(prev => prev.map(c => {
     if (c.id !== cid) return c;
-    const up = { ...c, rota: { ...(c.rota ?? {}), [date]: sid }, rotaReasons: { ...(c.rotaReasons ?? {}), [date]: reason } };
+    const up = { ...c, rota: { ...(c.rota ?? {}), [date]: staffIds }, rotaReasons: { ...(c.rotaReasons ?? {}), [date]: reason } };
     persistState(up);
     return up;
   }));

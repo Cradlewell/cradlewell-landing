@@ -12,7 +12,7 @@ import { haversineKm } from "@/lib/geo-utils";
 
 interface RotaRow {
   date: string;
-  staff: { id: string } | null;
+  staff: { id: string }[];
   paused: boolean;
   leave: boolean;
   weeklyOff: boolean;
@@ -50,17 +50,18 @@ export function useRotaConflicts(
     const map: ConflictMap = new Map();
     for (const c of customers) {
       for (const row of c.rotaRows) {
-        if (!row.staff || row.paused || row.leave || row.weeklyOff) continue;
-        const sid = row.staff.id;
-        if (!map.has(sid)) map.set(sid, new Map());
-        const dateMap = map.get(sid)!;
-        if (!dateMap.has(row.date)) dateMap.set(row.date, []);
-        dateMap.get(row.date)!.push({
-          customerId: c.id,
-          customerName: c.name,
-          homeLat: c.homeLat,
-          homeLng: c.homeLng,
-        });
+        if (!row.staff || row.staff.length === 0 || row.paused || row.leave || row.weeklyOff) continue;
+        for (const s of row.staff) {
+          if (!map.has(s.id)) map.set(s.id, new Map());
+          const dateMap = map.get(s.id)!;
+          if (!dateMap.has(row.date)) dateMap.set(row.date, []);
+          dateMap.get(row.date)!.push({
+            customerId: c.id,
+            customerName: c.name,
+            homeLat: c.homeLat,
+            homeLng: c.homeLng,
+          });
+        }
       }
     }
     return map;
