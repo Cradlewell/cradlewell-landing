@@ -577,7 +577,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                         display: "grid", gridTemplateColumns: "1.5fr 0.9fr 1.1fr 1.2fr", alignItems: "center", gap: 8,
                         padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9",
                         backgroundColor: rowBg,
-                        opacity: isPast && !isToday ? 0.78 : 1,
+                        opacity: (isPast && !isToday && editDay !== r.date && editDay !== r.date + ":2") ? 0.78 : 1,
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <span style={{ width: 26, height: 22, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, borderRadius: 6, backgroundColor: isToday ? "#5F47FF" : isPast ? "#e2e8f0" : "#f1f5f9", color: isToday ? "#fff" : isPast ? "#9a9aa6" : "#7a7a86", flexShrink: 0 }}>
