@@ -117,7 +117,7 @@ function SpeedDial({ onOpenAria, isMobile }: { onOpenAria: () => void; isMobile:
                         aria-label="Chat with Aria"
                     >
                         <span style={label("Chat with Aria")}>Chat with Aria</span>
-                        <div style={iconCircle("linear-gradient(135deg, #7B61FF, #4F46E5)")}>
+                        <div style={iconCircle("#5F47FF")}>
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                                 <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white"/>
                             </svg>
@@ -135,7 +135,7 @@ function SpeedDial({ onOpenAria, isMobile }: { onOpenAria: () => void; isMobile:
                     height: 60,
                     borderRadius: "50%",
                     border: "none",
-                    background: expanded ? "#6B7280" : "linear-gradient(135deg, #7B61FF, #4F46E5)",
+                    background: expanded ? "#6B7280" : "#5F47FF",
                     color: "#fff",
                     cursor: "pointer",
                     boxShadow: "0 8px 32px rgba(99,136,255,0.45)",
@@ -505,7 +505,7 @@ export default function AIChatWidget() {
                             maxHeight: isMobile ? "100%" : "none",
                             background: "#fff",
                             borderRadius: isMobile ? 0 : 24,
-                            boxShadow: isMobile ? "none" : "0 24px 64px rgba(79,70,229,0.18), 0 4px 16px rgba(0,0,0,0.08)",
+                            boxShadow: isMobile ? "none" : "0 24px 64px rgba(95,71,255,0.18), 0 4px 16px rgba(0,0,0,0.08)",
                             overflow: "hidden",
                             display: "flex",
                             flexDirection: "column",
@@ -517,7 +517,7 @@ export default function AIChatWidget() {
                             className="aria-header"
                             style={{
                                 padding: "16px 18px",
-                                background: "linear-gradient(135deg, #7B61FF 0%, #4F46E5 100%)",
+                                background: "#5F47FF",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 12,
@@ -554,7 +554,7 @@ export default function AIChatWidget() {
                                         height: 11,
                                         borderRadius: "50%",
                                         background: "#4ade80",
-                                        border: "2px solid #4F46E5",
+                                        border: "2px solid #4A35E0",
                                     }}
                                 />
                             </div>
@@ -629,7 +629,7 @@ export default function AIChatWidget() {
                                                 <div
                                                     style={{
                                                         width: 28, height: 28, borderRadius: "50%",
-                                                        background: "linear-gradient(135deg, #7B61FF, #4F46E5)",
+                                                        background: "#5F47FF",
                                                         display: "flex", alignItems: "center", justifyContent: "center",
                                                         fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0,
                                                     }}
@@ -642,9 +642,9 @@ export default function AIChatWidget() {
                                                     maxWidth: "78%",
                                                     padding: "11px 14px",
                                                     borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                                                    background: msg.role === "user" ? "linear-gradient(135deg, #7B61FF, #4F46E5)" : "#fff",
+                                                    background: msg.role === "user" ? "#5F47FF" : "#fff",
                                                     color: msg.role === "user" ? "#fff" : "#1a1a2e",
-                                                    boxShadow: msg.role === "assistant" ? "0 2px 12px rgba(0,0,0,0.07)" : "0 2px 12px rgba(79,70,229,0.25)",
+                                                    boxShadow: msg.role === "assistant" ? "0 2px 12px rgba(0,0,0,0.07)" : "0 2px 12px rgba(95,71,255,0.25)",
                                                     fontSize: 14,
                                                     lineHeight: 1.55,
                                                     whiteSpace: "pre-wrap",
@@ -664,21 +664,21 @@ export default function AIChatWidget() {
                                                         style={{
                                                             padding: "8px 16px",
                                                             borderRadius: 20,
-                                                            border: "1.5px solid #7B61FF",
+                                                            border: "1.5px solid #5F47FF",
                                                             background: "#fff",
-                                                            color: "#4F46E5",
+                                                            color: "#4A35E0",
                                                             fontSize: 13,
                                                             fontWeight: 600,
                                                             cursor: "pointer",
                                                             letterSpacing: "0.01em",
                                                         }}
                                                         onMouseEnter={(e) => {
-                                                            (e.currentTarget).style.background = "linear-gradient(135deg, #7B61FF, #4F46E5)";
+                                                            (e.currentTarget).style.background = "#5F47FF";
                                                             (e.currentTarget).style.color = "#fff";
                                                         }}
                                                         onMouseLeave={(e) => {
                                                             (e.currentTarget).style.background = "#fff";
-                                                            (e.currentTarget).style.color = "#4F46E5";
+                                                            (e.currentTarget).style.color = "#4A35E0";
                                                         }}
                                                     >
                                                         {opt}
@@ -696,7 +696,7 @@ export default function AIChatWidget() {
                                     <div
                                         style={{
                                             width: 28, height: 28, borderRadius: "50%",
-                                            background: "linear-gradient(135deg, #7B61FF, #4F46E5)",
+                                            background: "#5F47FF",
                                             display: "flex", alignItems: "center", justifyContent: "center",
                                             fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0,
                                         }}
@@ -728,7 +728,7 @@ export default function AIChatWidget() {
                                         background: "#fff",
                                         borderRadius: 18,
                                         padding: "16px",
-                                        boxShadow: "0 4px 24px rgba(79,70,229,0.1)",
+                                        boxShadow: "0 4px 24px rgba(95,71,255,0.1)",
                                         border: "1px solid rgba(99,136,255,0.18)",
                                         marginTop: 4,
                                     }}
@@ -737,7 +737,7 @@ export default function AIChatWidget() {
                                         <div
                                             style={{
                                                 width: 36, height: 36, borderRadius: "50%",
-                                                background: "linear-gradient(135deg, #7B61FF, #4F46E5)",
+                                                background: "#5F47FF",
                                                 display: "flex", alignItems: "center", justifyContent: "center",
                                                 fontSize: 16,
                                             }}
@@ -766,7 +766,7 @@ export default function AIChatWidget() {
                                                 onFocus={() => setFocusedField("name")}
                                                 onBlur={() => setFocusedField(null)}
                                                 onChange={(e) => { setLeadForm((p) => ({ ...p, name: e.target.value })); setFormErrors((p) => ({ ...p, name: "" })); }}
-                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.name ? "1.5px solid #ef4444" : focusedField === "name" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.name ? "1.5px solid #ef4444" : focusedField === "name" ? "1.5px solid #5F47FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
                                             />
                                             {formErrors.name && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>{formErrors.name}</div>}
                                         </div>
@@ -783,7 +783,7 @@ export default function AIChatWidget() {
                                                 onFocus={() => setFocusedField("phone")}
                                                 onBlur={() => setFocusedField(null)}
                                                 onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 10); setLeadForm((p) => ({ ...p, phone: v })); setFormErrors((p) => ({ ...p, phone: "" })); }}
-                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.phone ? "1.5px solid #ef4444" : focusedField === "phone" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.phone ? "1.5px solid #ef4444" : focusedField === "phone" ? "1.5px solid #5F47FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
                                             />
                                             {formErrors.phone && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>{formErrors.phone}</div>}
                                         </div>
@@ -799,7 +799,7 @@ export default function AIChatWidget() {
                                                 onFocus={() => setFocusedField("email")}
                                                 onBlur={() => setFocusedField(null)}
                                                 onChange={(e) => { setLeadForm((p) => ({ ...p, email: e.target.value })); setFormErrors((p) => ({ ...p, email: "" })); }}
-                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.email ? "1.5px solid #ef4444" : focusedField === "email" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.email ? "1.5px solid #ef4444" : focusedField === "email" ? "1.5px solid #5F47FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: "#1a1a2e", background: "#fafafa" }}
                                             />
                                             {formErrors.email && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>{formErrors.email}</div>}
                                         </div>
@@ -813,7 +813,7 @@ export default function AIChatWidget() {
                                                 onFocus={() => setFocusedField("city")}
                                                 onBlur={() => setFocusedField(null)}
                                                 onChange={(e) => { setLeadForm((p) => ({ ...p, city: e.target.value })); setFormErrors((p) => ({ ...p, city: "" })); }}
-                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.city ? "1.5px solid #ef4444" : focusedField === "city" ? "1.5px solid #7B61FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: leadForm.city ? "#1a1a2e" : "#9ca3af", background: "#fafafa", appearance: "none", cursor: "pointer" }}
+                                                style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: formErrors.city ? "1.5px solid #ef4444" : focusedField === "city" ? "1.5px solid #5F47FF" : "1.5px solid #e5e7eb", borderRadius: 10, boxSizing: "border-box", color: leadForm.city ? "#1a1a2e" : "#9ca3af", background: "#fafafa", appearance: "none", cursor: "pointer" }}
                                             >
                                                 <option value="" disabled>Select your area</option>
                                                 {BENGALURU_AREAS.map((area) => (
@@ -831,7 +831,7 @@ export default function AIChatWidget() {
                                                 padding: "11px",
                                                 background: leadSubmitting
                                                     ? "#c4b5fd"
-                                                    : "linear-gradient(135deg, #7B61FF, #4F46E5)",
+                                                    : "#5F47FF",
                                                 color: "#fff",
                                                 border: "none",
                                                 borderRadius: 12,
@@ -839,7 +839,7 @@ export default function AIChatWidget() {
                                                 fontSize: 14,
                                                 cursor: leadSubmitting ? "not-allowed" : "pointer",
                                                 width: "100%",
-                                                boxShadow: "0 4px 14px rgba(79,70,229,0.3)",
+                                                boxShadow: "0 4px 14px rgba(95,71,255,0.3)",
                                                 letterSpacing: "0.02em",
                                             }}
                                         >
@@ -914,7 +914,7 @@ export default function AIChatWidget() {
                                     borderRadius: "50%",
                                     border: "none",
                                     background: input.trim()
-                                        ? "linear-gradient(135deg, #7B61FF, #4F46E5)"
+                                        ? "#5F47FF"
                                         : "#e8e8f0",
                                     color: "#fff",
                                     cursor: input.trim() ? "pointer" : "default",
@@ -923,7 +923,7 @@ export default function AIChatWidget() {
                                     justifyContent: "center",
                                     flexShrink: 0,
                                     transition: "background 0.2s",
-                                    boxShadow: input.trim() ? "0 4px 14px rgba(79,70,229,0.3)" : "none",
+                                    boxShadow: input.trim() ? "0 4px 14px rgba(95,71,255,0.3)" : "none",
                                 }}
                                 aria-label="Send message"
                             >

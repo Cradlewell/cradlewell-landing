@@ -35,9 +35,8 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: number }) => (
-  <ScrollReveal direction="up" delay={delay} style={{ height: '100%' }}>
-    <div className="cw-testimonial-card">
+const TestimonialCard = ({ t }: { t: typeof testimonials[0] }) => (
+  <div className="cw-testimonial-card">
       {/* Big quote glyph — sits behind content */}
       <span className="cw-testimonial-glyph" aria-hidden="true">&ldquo;</span>
 
@@ -98,7 +97,6 @@ const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: numbe
         </div>
       </div>
     </div>
-  </ScrollReveal>
 );
 
 const TestimonialsSection = () => (
@@ -139,44 +137,42 @@ const TestimonialsSection = () => (
         alignItems: 'stretch',
       }}>
         {testimonials.map((t, i) => (
-          <TestimonialCard key={i} t={t} delay={i * 100} />
+          <TestimonialCard key={i} t={t} />
         ))}
       </div>
 
       {/* Google aggregate rating badge */}
-      <ScrollReveal direction="none" delay={300}>
-        <div style={{ textAlign: 'center', marginTop: 36 }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 10,
-            background: '#ffffff',
-            border: '1px solid rgba(15,23,42,0.08)',
-            borderRadius: 100,
-            padding: '10px 22px',
-            boxShadow: 'var(--cw-shadow-xs)',
+      <div style={{ textAlign: 'center', marginTop: 36 }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 10,
+          background: '#ffffff',
+          border: '1px solid rgba(15,23,42,0.08)',
+          borderRadius: 100,
+          padding: '10px 22px',
+          boxShadow: 'var(--cw-shadow-xs)',
+        }}>
+          <GoogleIcon />
+          <span style={{
+            fontSize: '0.85rem',
+            fontFamily: "'Lexend', system-ui, sans-serif",
+            fontWeight: 700,
+            color: '#0F172A',
           }}>
-            <GoogleIcon />
-            <span style={{
-              fontSize: '0.85rem',
-              fontFamily: "'Lexend', system-ui, sans-serif",
-              fontWeight: 700,
-              color: '#0F172A',
-            }}>
-              4.8
-            </span>
-            <span style={{ color: '#F59E0B', fontSize: '0.85rem', letterSpacing: 1 }}>★★★★★</span>
-            <span style={{
-              fontSize: '0.8rem',
-              color: '#64748B',
-              fontFamily: "'Source Sans 3', system-ui",
-              fontWeight: 500,
-            }}>
-              on Google · 28+ reviews
-            </span>
-          </div>
+            4.8
+          </span>
+          <span style={{ color: '#F59E0B', fontSize: '0.85rem', letterSpacing: 1 }}>★★★★★</span>
+          <span style={{
+            fontSize: '0.8rem',
+            color: '#64748B',
+            fontFamily: "'Source Sans 3', system-ui",
+            fontWeight: 500,
+          }}>
+            on Google · 28+ reviews
+          </span>
         </div>
-      </ScrollReveal>
+      </div>
     </Container>
   </section>
 );

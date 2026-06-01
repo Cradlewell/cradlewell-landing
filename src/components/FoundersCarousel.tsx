@@ -61,8 +61,7 @@ const FoundersCarousel = () => (
         gap: 20,
       }}>
         {teamMembers.map((member, i) => (
-          <ScrollReveal key={i} direction="up" delay={i * 80}>
-            <div style={{
+          <div key={i} style={{
               background: '#ffffff',
               borderRadius: 20,
               padding: '28px 20px 24px',
@@ -138,7 +137,6 @@ const FoundersCarousel = () => (
                 {member.desc}
               </p>
             </div>
-          </ScrollReveal>
         ))}
       </div>
     </Container>

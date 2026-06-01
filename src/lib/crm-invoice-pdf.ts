@@ -120,7 +120,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   // ─── Brand name ──────────────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.setTextColor("#4F46E5");
+  doc.setTextColor("#5F47FF");
   doc.text("Cradlewell", textX, 14);
 
   doc.setFont("helvetica", "italic");
@@ -138,7 +138,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   // ─── TAX INVOICE title ───────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.setTextColor("#4F46E5");
+  doc.setTextColor("#5F47FF");
   doc.text("TAX INVOICE", R, 16, { align: "right" });
 
   if (data.paymentStatus === "paid" || data.paymentStatus === "partial") {
@@ -215,7 +215,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   // Solid indigo header for item table
   const firstCgst = data.items[0]?.cgst ?? 0;
   const firstSgst = data.items[0]?.sgst ?? 0;
-  doc.setFillColor("#4F46E5");
+  doc.setFillColor("#5F47FF");
   doc.rect(L, y, R - L, 7, "F");
   doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor("#FFFFFF");
   const cols = [
@@ -277,7 +277,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   if (data.tds > 0) printRow("TDS/TCS", `-Rs.${data.tds.toFixed(0)}`);
   if (data.adjustment !== 0) printRow("Adjustment", `Rs.${data.adjustment.toFixed(0)}`);
   doc.setDrawColor("#E2E8F0"); doc.line(totalsX, y, R, y); y += 3;
-  printRow("TOTAL", `Rs.${grandTotal.toLocaleString("en-IN")}`, true, "#4F46E5", "#4F46E5");
+  printRow("TOTAL", `Rs.${grandTotal.toLocaleString("en-IN")}`, true, "#5F47FF", "#5F47FF");
   if (data.paymentStatus !== "unpaid") {
     printRow("Amount Paid", `Rs.${data.amountPaid.toLocaleString("en-IN")}`, false, "#22C55E", "#22C55E");
     if (balance > 0) printRow("Balance Due", `Rs.${balance.toLocaleString("en-IN")}`, true, "#EF4444", "#EF4444");
@@ -307,14 +307,14 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<void> {
   // ─── Footer ───────────────────────────────────────────────────────────────
   doc.setFillColor("#F5F3FF");
   doc.rect(0, H - 22, W, 22, "F");
-  doc.setFillColor("#4F46E5");
+  doc.setFillColor("#5F47FF");
   doc.rect(0, H - 22, 4, 22, "F");
   doc.setDrawColor("#E5E7EB");
   doc.setLineWidth(0.3);
   doc.line(L, H - 22, R, H - 22);
   doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(gray(120));
   doc.text("This is a computer-generated invoice. No signature required.", L + 2, H - 12);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor("#4F46E5");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor("#5F47FF");
   doc.text("Cradlewell — Your comfort is our care", R, H - 12, { align: "right" });
 
   doc.save(`${data.invoiceNumber}-Cradlewell.pdf`);

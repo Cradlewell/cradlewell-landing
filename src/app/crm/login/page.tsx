@@ -39,8 +39,8 @@ export default function CRMLoginPage() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "linear-gradient(135deg, #6388FF 0%, #5F47FF 100%)",
-      fontFamily: "'Outfit', sans-serif",
+      background: "#0F0B25",
+      fontFamily: "'Lexend', system-ui, sans-serif",
     }}>
       <div style={{
         background: "#fff",
@@ -48,12 +48,12 @@ export default function CRMLoginPage() {
         padding: "2.5rem 2rem",
         width: "100%",
         maxWidth: "380px",
-        boxShadow: "0 20px 60px rgba(99,136,255,0.25)",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.30)",
       }}>
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <div style={{
             width: 52, height: 52, borderRadius: "14px",
-            background: "linear-gradient(135deg,#6388FF,#5F47FF)",
+            background: "#5F47FF",
             display: "flex", alignItems: "center", justifyContent: "center",
             margin: "0 auto 1rem",
           }}>
@@ -154,11 +154,14 @@ export default function CRMLoginPage() {
             type="submit"
             disabled={loading}
             style={{
-              width: "100%", padding: "0.75rem",
-              background: loading ? "#94A3B8" : "linear-gradient(135deg,#6388FF,#5F47FF)",
-              color: "#fff", border: "none", borderRadius: "8px",
+              width: "100%", padding: "0.8rem",
+              background: loading ? "#94A3B8" : "#5F47FF",
+              color: "#fff", border: "none", borderRadius: "10px",
               fontSize: "0.95rem", fontWeight: 600, cursor: loading ? "not-allowed" : "pointer",
-              transition: "opacity 0.15s",
+              fontFamily: "'Lexend', system-ui, sans-serif",
+              letterSpacing: "-0.005em",
+              boxShadow: loading ? "none" : "0 4px 16px rgba(95,71,255,0.28)",
+              transition: "background-color 0.18s, box-shadow 0.18s",
             }}
           >
             {loading ? "Signing in…" : "Sign In"}

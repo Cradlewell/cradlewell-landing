@@ -1,165 +1,235 @@
 'use client'
 import React from "react";
-import { Container, Row, Col, Button, Card } from "react-bootstrap";
-import { Stethoscope, Heart, CheckCircle2 } from "lucide-react";
+import { Container } from "react-bootstrap";
+import { Stethoscope, Heart, Check, ArrowRight } from "lucide-react";
 import { useModal } from "./ModalContext";
 
-const nurseFeatures = [
-  "Clinical newborn care & monitoring",
-  "Feeding support (breastfeeding guidance + schedule setup)",
-  "Baby bathing, hygiene & sterilization protocols",
-  "Burping cycles, colic observation & comfort care",
-  "Mother recovery support (postpartum monitoring)",
-  "Basic vitals tracking & health observations",
-  "Sleep routine structuring for baby",
-  "Escalation support if any concern arises",
-  "Daily reporting & structured handover",
-  "Trained, verified & hospital-experienced nurses",
+type PlanColor = 'violet' | 'indigo';
+
+type Plan = {
+  id: 'nurse' | 'moba';
+  name: string;
+  tagline: string;
+  badge: string;
+  price: string;
+  unit: string;
+  perNote: string;
+  Icon: typeof Stethoscope;
+  features: string[];
+  cta: string;
+  color: PlanColor;
+};
+
+const plans: Plan[] = [
+  {
+    id: 'nurse',
+    name: 'Nurse Care',
+    tagline: 'Clinical, hospital-grade',
+    badge: 'Most Trusted',
+    price: '2,000',
+    unit: '/day',
+    perNote: 'Per nurse, per shift',
+    Icon: Stethoscope,
+    color: 'violet',
+    cta: 'Get Nurse Care',
+    features: [
+      'Clinical newborn care & monitoring',
+      'Feeding support (breastfeeding guidance + schedule setup)',
+      'Baby bathing, hygiene & sterilization protocols',
+      'Burping cycles, colic observation & comfort care',
+      'Mother recovery support (postpartum monitoring)',
+      'Basic vitals tracking & health observations',
+      'Sleep routine structuring for baby',
+      'Escalation support if any concern arises',
+      'Daily reporting & structured handover',
+      'Trained, verified & hospital-experienced nurses',
+    ],
+  },
+  {
+    id: 'moba',
+    name: 'MOBA Care',
+    tagline: 'Trained caregiver support',
+    badge: 'Most Chosen by Families',
+    price: '1,500',
+    unit: '/day',
+    perNote: 'Per caregiver, per shift',
+    Icon: Heart,
+    color: 'indigo',
+    cta: 'Get MOBA Care',
+    features: [
+      'Baby feeding assistance (as per parent guidance)',
+      'Diapering, cleaning & hygiene care',
+      'Gentle baby massage & safe bathing support',
+      'Burping & soothing the baby',
+      'Sleep routine & calming techniques',
+      'Baby laundry & organization',
+      'Mother comfort support (rest, positioning, hydration reminders)',
+      'Emotional reassurance during recovery phase',
+      'Age-appropriate baby engagement',
+      'Trained, verified & guided caregivers',
+    ],
+  },
 ];
 
-const mobaFeatures = [
-  "Baby feeding assistance (as per parent guidance)",
-  "Diapering, cleaning & hygiene care",
-  "Gentle baby massage & safe bathing support",
-  "Burping & soothing the baby",
-  "Sleep routine & calming techniques",
-  "Baby laundry & organization",
-  "Mother comfort support (rest, positioning, hydration reminders)",
-  "Emotional reassurance during recovery phase",
-  "Age-appropriate baby engagement",
-  "Trained, verified & guided caregivers",
-];
+const colorMap: Record<PlanColor, { primary: string; light: string; serviceArg: string }> = {
+  violet: { primary: '#5F47FF', light: 'rgba(95,71,255,0.08)', serviceArg: 'Nurse Care' },
+  indigo: { primary: '#6388FF', light: 'rgba(99,136,255,0.10)', serviceArg: 'MOBA Care' },
+};
 
 const PricingSection = () => {
   const { openModal } = useModal();
 
   return (
-    <div className="pricing-section bg-light py-5" id="ourplans">
-      <Container className="text-center text-dark">
-        <span className="badge rounded-pill bg-light primary-color px-3">Pricing Plan</span>
-        <h1 className="fw-bold mt-2 mb-5">
-          Choose the <span className="text-primary">Care Plan</span>
-        </h1>
+    <section className="pricing-section py-5" id="ourplans">
+      <Container>
+        <div className="text-center" style={{ marginBottom: 56 }}>
+          <span className="section-eyebrow">Pricing</span>
+          <h2 className="fw-bold mt-2" style={{ color: 'var(--cw-text-primary)', marginBottom: 12 }}>
+            Choose the <span style={{ color: 'var(--cw-brand-primary)' }}>care plan</span> that fits
+          </h2>
+          <p style={{ color: 'var(--cw-text-secondary)', maxWidth: 480, margin: '0 auto', fontSize: '1rem' }}>
+            Transparent pricing. No hidden charges. Longer packages bring the per-day rate down.
+          </p>
+        </div>
 
-        <Row className="g-4 justify-content-center">
-
-          {/* LEFT: Nurse Care — Recommended / Premium */}
-          <Col md={6} lg={5}>
-            <Card
-              className="h-100 text-dark p-4 price-card shadow-sm position-relative"
-              style={{ backgroundColor: "#ffffff", border: "1px solid rgba(95,71,255,0.15)", borderTop: "2.5px solid #5F47FF" }}
-            >
-              {/* Badge */}
-              <div className="position-absolute top-0 start-50 translate-middle">
-                <span
-                  className="badge px-3 py-2"
-                  style={{ backgroundColor: "#5F47FF", color: "#fff", fontSize: "0.75rem", borderRadius: 6 }}
-                >
-                  Most Trusted
-                </span>
-              </div>
-
-              <div className="d-flex justify-content-center mb-2 mt-3">
+        <div className="cw-pricing-grid">
+          {plans.map((plan) => {
+            const tone = colorMap[plan.color];
+            return (
+              <div key={plan.id} className="cw-pricing-card">
+                {/* Badge */}
                 <div
-                  className="d-flex align-items-center justify-content-center rounded-circle"
-                  style={{ width: "50px", height: "50px", background: "var(--cw-brand-light)" }}
+                  className="cw-pricing-badge"
+                  style={{ background: tone.primary }}
                 >
-                  <Stethoscope size={22} strokeWidth={1.75} color="#5F47FF" />
+                  {plan.badge}
                 </div>
-              </div>
 
-              <h3 className="text-dark text-center mb-2 fw-semibold">Nurse Care</h3>
-              <div className="text-center mb-3">
-                <span style={{
-                  display: "inline-block",
-                  background: "rgba(95,71,255,0.07)",
-                  border: "1px solid rgba(95,71,255,0.18)",
-                  borderRadius: 12,
-                  padding: "10px 24px",
-                }}>
-                  <span style={{ fontSize: "0.78rem", color: "#6B6B6A", letterSpacing: "0.05em", display: "block", fontWeight: 600 }}>STARTING FROM</span>
-                  <span style={{ fontSize: "1.6rem", fontWeight: 800, color: "#5F47FF", lineHeight: 1.2 }}>₹2,000</span>
-                  <span style={{ fontSize: "0.78rem", color: "#6B6B6A" }}> / day</span>
-                </span>
-              </div>
-
-              <ul className="list-unstyled mt-2 text-start mx-auto" style={{ maxWidth: 420 }}>
-                {nurseFeatures.map((item, i) => (
-                  <li key={i} className="d-flex align-items-start mb-3">
-                    <CheckCircle2 size={18} strokeWidth={1.75} color="#5F47FF" style={{ flexShrink: 0, marginTop: 3, marginRight: 10 }} />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button variant="primary" className="mt-auto w-100" onClick={() => openModal('Nurse Care')}>
-                Get Nurse Care
-              </Button>
-            </Card>
-          </Col>
-
-          {/* RIGHT: MOBA Care — Popular / Budget Friendly */}
-          <Col md={6} lg={5}>
-            <Card
-              className="h-100 text-dark p-4 price-card shadow-sm position-relative"
-              style={{ backgroundColor: "#ffffff", border: "1px solid rgba(99,136,255,0.15)", borderTop: "2.5px solid #6388FF" }}
-            >
-              {/* Badge */}
-              <div className="position-absolute top-0 start-50 translate-middle">
-                <span
-                  className="badge px-3 py-2"
-                  style={{ backgroundColor: "#6388FF", color: "#fff", fontSize: "0.75rem", borderRadius: 6 }}
-                >
-                  Most Chosen by Families
-                </span>
-              </div>
-
-              <div className="d-flex justify-content-center mb-2 mt-3">
-                <div
-                  className="d-flex align-items-center justify-content-center rounded-circle"
-                  style={{ width: "50px", height: "50px", background: "rgba(99,136,255,0.12)" }}
-                >
-                  <Heart size={22} strokeWidth={1.75} color="#6388FF" />
+                {/* Icon + name + tagline */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
+                  <div
+                    className="cw-pricing-icon"
+                    style={{ background: tone.light }}
+                  >
+                    <plan.Icon size={22} strokeWidth={1.75} color={tone.primary} />
+                  </div>
+                  <div>
+                    <h3 style={{
+                      fontFamily: "'Lexend', system-ui, sans-serif",
+                      fontWeight: 700,
+                      fontSize: '1.25rem',
+                      color: 'var(--cw-text-primary)',
+                      margin: 0,
+                      letterSpacing: '-0.015em',
+                    }}>
+                      {plan.name}
+                    </h3>
+                    <div style={{
+                      fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                      fontSize: '0.86rem',
+                      color: 'var(--cw-text-secondary)',
+                      marginTop: 2,
+                    }}>
+                      {plan.tagline}
+                    </div>
+                  </div>
                 </div>
+
+                {/* Price block — confident, no pill */}
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{
+                    fontFamily: "'Lexend', system-ui, sans-serif",
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.10em',
+                    textTransform: 'uppercase',
+                    color: 'var(--cw-text-muted)',
+                    marginBottom: 6,
+                  }}>
+                    Starting from
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{
+                      fontFamily: "'Lexend', system-ui, sans-serif",
+                      fontSize: 'clamp(2.4rem, 5vw, 3.25rem)',
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      color: 'var(--cw-text-primary)',
+                      letterSpacing: '-0.03em',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      ₹{plan.price}
+                    </span>
+                    <span style={{
+                      fontFamily: "'Lexend', system-ui, sans-serif",
+                      fontSize: '0.92rem',
+                      fontWeight: 600,
+                      color: 'var(--cw-text-secondary)',
+                    }}>
+                      {plan.unit}
+                    </span>
+                  </div>
+                  <div style={{
+                    fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                    fontSize: '0.78rem',
+                    color: 'var(--cw-text-muted)',
+                    marginTop: 6,
+                  }}>
+                    {plan.perNote}
+                  </div>
+                </div>
+
+                {/* Feature list */}
+                <ul className="cw-pricing-features">
+                  {plan.features.map((item, i) => (
+                    <li key={i}>
+                      <span
+                        className="cw-pricing-check"
+                        style={{ background: tone.light }}
+                      >
+                        <Check size={11} strokeWidth={3} color={tone.primary} />
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <button
+                  type="button"
+                  className="cw-pricing-cta"
+                  onClick={() => openModal(tone.serviceArg)}
+                  style={{ background: tone.primary }}
+                >
+                  {plan.cta}
+                  <ArrowRight size={15} strokeWidth={2.25} />
+                </button>
               </div>
+            );
+          })}
+        </div>
 
-              <h3 className="text-dark text-center mb-2 fw-semibold">MOBA Care</h3>
-              <div className="text-center mb-3">
-                <span style={{
-                  display: "inline-block",
-                  background: "rgba(99,136,255,0.07)",
-                  border: "1px solid rgba(99,136,255,0.18)",
-                  borderRadius: 12,
-                  padding: "10px 24px",
-                }}>
-                  <span style={{ fontSize: "0.78rem", color: "#6B6B6A", letterSpacing: "0.05em", display: "block", fontWeight: 600 }}>STARTING FROM</span>
-                  <span style={{ fontSize: "1.6rem", fontWeight: 800, color: "#6388FF", lineHeight: 1.2 }}>₹1,500</span>
-                  <span style={{ fontSize: "0.78rem", color: "#6B6B6A" }}> / day</span>
-                </span>
-              </div>
-
-              <ul className="list-unstyled mt-2 text-start mx-auto" style={{ maxWidth: 420 }}>
-                {mobaFeatures.map((item, i) => (
-                  <li key={i} className="d-flex align-items-start mb-3">
-                    <CheckCircle2 size={18} strokeWidth={1.75} color="#6388FF" style={{ flexShrink: 0, marginTop: 3, marginRight: 10 }} />
-                    <span style={{ color: "#6B6B6A" }}>{item}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button variant="primary" className="mt-auto w-100" onClick={() => openModal('MOBA Care')}>
-                Get MOBA Care
-              </Button>
-            </Card>
-          </Col>
-        </Row>
-
-        <Button variant="primary" className="mt-5" onClick={() => openModal()}>
-          Book Free Consultation Call
-        </Button>
-        <p className="mt-2 text-muted fw-bold">Limited availability — book your preferred time slot now.</p>
+        {/* Secondary CTA */}
+        <div className="text-center" style={{ marginTop: 48 }}>
+          <button
+            type="button"
+            onClick={() => openModal()}
+            className="cw-pricing-text-cta"
+          >
+            Not sure? Book a free consultation
+            <ArrowRight size={14} strokeWidth={2.25} />
+          </button>
+          <p style={{
+            marginTop: 8,
+            fontFamily: "'Source Sans 3', system-ui, sans-serif",
+            color: 'var(--cw-text-muted)',
+            fontSize: '0.84rem',
+          }}>
+            Limited availability — book your preferred slot.
+          </p>
+        </div>
       </Container>
-    </div>
+    </section>
   );
 };
 

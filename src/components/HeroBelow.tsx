@@ -106,47 +106,43 @@ const HeroBelow = () => {
             </ScrollReveal>
           </Col>
 
-          {/* Animated stats panel */}
+          {/* Stats panel — counters self-animate on intersection, no reveal wrapper needed */}
           <Col lg={6} className="px-4">
-            <ScrollReveal direction="right" delay={100}>
-              <div
-                style={{
-                  background: "#F9F8F6",
-                  borderRadius: 20,
-                  padding: "32px 16px",
-                  border: "1px solid rgba(17,17,16,0.07)",
-                }}
-              >
-                <div className="d-flex align-items-center justify-content-center">
-                  <StatCounter end={100} suffix="+" label="Families Served" />
-                  <div style={{ width: 1, height: 52, background: "rgba(15,23,42,0.10)", flexShrink: 0 }} />
-                  <StatCounter end={4.9} suffix="★" label="Customer Rating" decimals={1} color="#F97316" />
-                  <div style={{ width: 1, height: 52, background: "rgba(15,23,42,0.10)", flexShrink: 0 }} />
-                  <StatCounter end={40} suffix="+" label="Years Experience" />
-                </div>
+            <div
+              style={{
+                background: "#F9F8F6",
+                borderRadius: 20,
+                padding: "32px 16px",
+                border: "1px solid rgba(17,17,16,0.07)",
+              }}
+            >
+              <div className="d-flex align-items-center justify-content-center">
+                <StatCounter end={100} suffix="+" label="Families Served" />
+                <div style={{ width: 1, height: 52, background: "rgba(15,23,42,0.10)", flexShrink: 0 }} />
+                <StatCounter end={4.9} suffix="★" label="Customer Rating" decimals={1} color="#F97316" />
+                <div style={{ width: 1, height: 52, background: "rgba(15,23,42,0.10)", flexShrink: 0 }} />
+                <StatCounter end={40} suffix="+" label="Years Experience" />
               </div>
-            </ScrollReveal>
+            </div>
           </Col>
         </Row>
 
-        {/* Full-width image */}
-        <ScrollReveal direction="up" delay={150}>
-          <div
-            className="mt-5"
-            style={{
-              borderRadius: 20,
-              overflow: "hidden",
-              boxShadow: "var(--cw-shadow-md)",
-            }}
-          >
-            <img
-              className="img-fluid"
-              src="/images/img1.png"
-              alt="Professional Nurse Providing Newborn and Postnatal Home Care Services to Mother and Baby in Bangalore"
-              style={{ width: "100%", display: "block" }}
-            />
-          </div>
-        </ScrollReveal>
+        {/* Full-width image — static, no reveal */}
+        <div
+          className="mt-5"
+          style={{
+            borderRadius: 20,
+            overflow: "hidden",
+            boxShadow: "var(--cw-shadow-md)",
+          }}
+        >
+          <img
+            className="img-fluid"
+            src="/images/img1.png"
+            alt="Professional Nurse Providing Newborn and Postnatal Home Care Services to Mother and Baby in Bangalore"
+            style={{ width: "100%", display: "block" }}
+          />
+        </div>
       </Container>
     </div>
   );

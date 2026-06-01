@@ -56,8 +56,7 @@ const StepsSection = () => {
           position: 'relative',
         }}>
           {steps.map((step, i) => (
-            <ScrollReveal key={i} direction="up" delay={i * 110}>
-              <div style={{
+            <div key={i} style={{
                 background: 'rgba(95,71,255,0.04)',
                 borderRadius: 20,
                 padding: '36px 28px 32px',
@@ -135,7 +134,6 @@ const StepsSection = () => {
                   borderRadius: '0 0 20px 20px',
                 }} />
               </div>
-            </ScrollReveal>
           ))}
         </div>
 
