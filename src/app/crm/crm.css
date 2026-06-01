@@ -1,5 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
+/* ─── Brand heading font (Lexend) — applies to titles only ──────────────────── */
+.crm-app .crm-page-title,
+.crm-app .crm-card-title,
+.crm-app .crm-sidebar-title h2,
+.crm-app .crm-hero-amount {
+  font-family: 'Lexend', 'DM Sans', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.025em;
+}
+
 /* ─── Design tokens ──────────────────────────────────────────────────────────── */
 :root {
   --crm-primary:        #5F47FF;

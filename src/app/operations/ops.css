@@ -106,6 +106,15 @@
   padding: 0;
 }
 
+/* Brand heading font (Lexend) — applies to titles only; data stays in DM Sans */
+.ops-shell h1,
+.ops-shell h2,
+.ops-shell h3,
+.ops-shell h4 {
+  font-family: 'Lexend', 'DM Sans', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
+
 /* ── Customer card hover ─────────────────────────────────── */
 .ops-customer-card {
   transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, transform 0.1s ease-out;

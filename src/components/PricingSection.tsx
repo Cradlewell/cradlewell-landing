@@ -1,6 +1,7 @@
 'use client'
 import React from "react";
 import { Container, Row, Col, Button, Card } from "react-bootstrap";
+import { Stethoscope, Heart, CheckCircle2 } from "lucide-react";
 import { useModal } from "./ModalContext";
 
 const nurseFeatures = [
@@ -61,9 +62,9 @@ const PricingSection = () => {
               <div className="d-flex justify-content-center mb-2 mt-3">
                 <div
                   className="d-flex align-items-center justify-content-center rounded-circle"
-                  style={{ width: "50px", height: "50px", boxShadow: "inset 2px 2px 16px rgb(200, 200, 200)" }}
+                  style={{ width: "50px", height: "50px", background: "var(--cw-brand-light)" }}
                 >
-                  <i className="fas fa-user-nurse text-primary" style={{ fontSize: "20px" }}></i>
+                  <Stethoscope size={22} strokeWidth={1.75} color="#5F47FF" />
                 </div>
               </div>
 
@@ -85,7 +86,7 @@ const PricingSection = () => {
               <ul className="list-unstyled mt-2 text-start mx-auto" style={{ maxWidth: 420 }}>
                 {nurseFeatures.map((item, i) => (
                   <li key={i} className="d-flex align-items-start mb-3">
-                    <i className="far fa-check-circle text-primary me-2 mt-1"></i>
+                    <CheckCircle2 size={18} strokeWidth={1.75} color="#5F47FF" style={{ flexShrink: 0, marginTop: 3, marginRight: 10 }} />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -116,9 +117,9 @@ const PricingSection = () => {
               <div className="d-flex justify-content-center mb-2 mt-3">
                 <div
                   className="d-flex align-items-center justify-content-center rounded-circle"
-                  style={{ width: "50px", height: "50px", background: "rgba(99,136,255,0.10)", boxShadow: "0 2px 8px rgba(99,136,255,0.15)" }}
+                  style={{ width: "50px", height: "50px", background: "rgba(99,136,255,0.12)" }}
                 >
-                  <i className="fas fa-hands-holding-child" style={{ fontSize: "20px", color: "#6388FF" }}></i>
+                  <Heart size={22} strokeWidth={1.75} color="#6388FF" />
                 </div>
               </div>
 
@@ -140,7 +141,7 @@ const PricingSection = () => {
               <ul className="list-unstyled mt-2 text-start mx-auto" style={{ maxWidth: 420 }}>
                 {mobaFeatures.map((item, i) => (
                   <li key={i} className="d-flex align-items-start mb-3">
-                    <i className="far fa-check-circle me-2 mt-1" style={{ color: "#6388FF" }}></i>
+                    <CheckCircle2 size={18} strokeWidth={1.75} color="#6388FF" style={{ flexShrink: 0, marginTop: 3, marginRight: 10 }} />
                     <span style={{ color: "#6B6B6A" }}>{item}</span>
                   </li>
                 ))}

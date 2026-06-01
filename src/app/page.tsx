@@ -12,14 +12,12 @@ import Footer from "@/components/Footer";
 import FoundersCarousel from "@/components/FoundersCarousel";
 import HeroBelow from "@/components/HeroBelow";
 import HeroHeader1, { HeroHeaderShape } from "@/components/HeroHeaderShape";
-import ModalController from "@/components/ModalController";
 import PricingSection from "@/components/PricingSection";
 import PromoTrialSection from "@/components/PromoTrialSection";
 import StepsSection from "@/components/StepsSection";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import TrustedByStrip from "@/components/TrustedByStrip";
-import '@fortawesome/fontawesome-free/css/all.min.css';
 
 export default function Home() {
   return (

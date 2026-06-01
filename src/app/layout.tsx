@@ -327,8 +327,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
           rel="stylesheet"
         />
-        <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
-
         {/* H4 Performance: Preload hero image for LCP improvement */}
         <link rel="preload" as="image" href="/images/bannerimg.png" fetchPriority="high" />
 
@@ -337,12 +335,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
         {/* Google Site Verification */}
         <meta name="google-site-verification" content="8akbxzJkvsESfM46RB53TzV8NkmREJX7Q14wN4EJdhI" />
-
-        {/* Font Awesome CDN */}
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        />
 
         {/* Google Analytics (gtag.js) */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-VX71D6T1WD"></script>
