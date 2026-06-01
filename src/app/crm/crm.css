@@ -286,28 +286,15 @@
 .crm-hero-card {
   background: var(--crm-surface);
   border: 1px solid var(--crm-border);
-  border-top: 2.5px solid var(--crm-primary);
   border-radius: var(--crm-radius);
-  padding: 1.5rem;
-  box-shadow: var(--crm-shadow-md);
+  padding: 1.5rem 1.75rem;
+  box-shadow: var(--crm-shadow);
   position: relative;
   overflow: hidden;
 }
 
-.crm-hero-card::before {
-  content: '';
-  position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: var(--crm-primary-light);
-  pointer-events: none;
-}
-
 .crm-hero-amount {
-  font-size: 2.25rem;
+  font-size: 2.5rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;

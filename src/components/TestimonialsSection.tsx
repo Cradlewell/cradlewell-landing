@@ -37,59 +37,35 @@ const GoogleIcon = () => (
 
 const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: number }) => (
   <ScrollReveal direction="up" delay={delay} style={{ height: '100%' }}>
-    <div style={{
-      background: '#ffffff',
-      borderRadius: 20,
-      padding: '28px 24px',
-      boxShadow: 'var(--cw-shadow-sm)',
-      border: '1px solid rgba(15,23,42,0.06)',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      transition: 'box-shadow 220ms ease, transform 220ms ease',
-    }}
-    onMouseEnter={e => {
-      (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--cw-shadow-md)';
-      (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
-    }}
-    onMouseLeave={e => {
-      (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 24px rgba(15,23,42,0.07)';
-      (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-    }}
-    >
+    <div className="cw-testimonial-card">
+      {/* Big quote glyph — sits behind content */}
+      <span className="cw-testimonial-glyph" aria-hidden="true">&ldquo;</span>
+
       {/* Stars + Google badge */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, position: 'relative' }}>
         <div style={{ color: '#F59E0B', fontSize: '0.95rem', letterSpacing: 2 }}>★★★★★</div>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: 5,
-          background: '#F2F1EF',
+          background: 'var(--cw-surface-muted)',
           borderRadius: 6,
           padding: '4px 8px',
         }}>
           <GoogleIcon />
-          <span style={{ fontSize: '0.7rem', fontFamily: "'Lexend', system-ui", fontWeight: 600, color: '#64748B' }}>
+          <span style={{ fontSize: '0.7rem', fontFamily: "'Lexend', system-ui", fontWeight: 600, color: 'var(--cw-text-secondary)' }}>
             Google Review
           </span>
         </div>
       </div>
 
-      {/* Quote */}
-      <p style={{
-        fontSize: '0.97rem',
-        lineHeight: '1.75',
-        color: '#1E293B',
-        fontFamily: "'Source Sans 3', system-ui, sans-serif",
-        fontStyle: 'italic',
-        flex: 1,
-        marginBottom: 20,
-      }}>
-        &ldquo;{t.text}&rdquo;
+      {/* Quote — roman, weight 500, no italic */}
+      <p className="cw-testimonial-quote">
+        {t.text}
       </p>
 
       {/* Author */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
         <div style={{
           width: 46,
           height: 46,
@@ -110,12 +86,13 @@ const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: numbe
           <div style={{
             fontFamily: "'Lexend', system-ui, sans-serif",
             fontWeight: 700,
-            fontSize: '0.9rem',
-            color: '#0F172A',
+            fontSize: '0.92rem',
+            color: 'var(--cw-text-primary)',
+            letterSpacing: '-0.005em',
           }}>
             {t.name}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#94A3B8', fontFamily: "'Lexend', system-ui", fontWeight: 500 }}>
+          <div style={{ fontSize: '0.76rem', color: 'var(--cw-text-muted)', fontFamily: "'Lexend', system-ui", fontWeight: 500 }}>
             {t.location} · Verified Parent
           </div>
         </div>

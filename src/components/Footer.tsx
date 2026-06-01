@@ -1,88 +1,112 @@
 'use client';
 
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-import { FaFacebookF, FaInstagram, FaLinkedinIn, FaPhoneAlt, FaEnvelope } from 'react-icons/fa';
+import { Container } from 'react-bootstrap';
 import Image from 'next/image';
-import { FaX } from 'react-icons/fa6';
 import Link from 'next/link';
+import { Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
+import { FaFacebookF, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { useModal } from './ModalContext';
+
+type SocialIcon = React.ComponentType<{ size?: number; }>;
+
+const socials: { Icon: SocialIcon; href: string; label: string }[] = [
+  { Icon: FaFacebookF,   href: 'https://www.facebook.com/share/1HRDvZY1K3/?mibextid=wwXIfr',     label: 'Facebook'   },
+  { Icon: FaInstagram,   href: 'https://www.instagram.com/cradlewell_care?igsh=b3pkOHBxMTIyMGF4', label: 'Instagram'  },
+  { Icon: FaLinkedinIn,  href: 'https://www.linkedin.com/company/cradlewell/',                   label: 'LinkedIn'   },
+  { Icon: FaXTwitter,    href: 'https://x.com/cradle_well?s=11',                                 label: 'X (Twitter)'},
+];
 
 const Footer = () => {
   const { openModal } = useModal();
+  const year = new Date().getFullYear();
 
   return (
-    <footer className="text-white position-relative pt-5 pb-4" style={{ background: '#0F0B25', overflow: 'hidden' }}>
-      <Container style={{ position: 'relative', zIndex: 1 }}>
-        <Row className="mb-4">
-          {/* Logo & CTA */}
-          <Col md={5} className="mb-4 mb-md-0">
-            <div className="d-flex align-items-center mb-3">
-              <Image src="/images/logo2.png" alt="logo" width={180} height={40} className="me-2" />
-            </div>
-            <p style={{ color: '#C4C4C4' }}>
-              Providing premium, hospital-grade postnatal and newborn care in the comfort of your home. Your peace of mind is our priority.
+    <footer className="cw-footer">
+      <Container>
+        {/* Top: brand · contact · social */}
+        <div className="cw-footer-grid">
+
+          {/* Brand */}
+          <div className="cw-footer-brand">
+            <Image src="/images/logo2.png" alt="Cradlewell" width={170} height={38} priority={false} />
+            <p className="cw-footer-tagline">
+              Hospital-grade postnatal and newborn care, delivered at home in Bangalore. Your peace of mind is our priority.
             </p>
-            <button
-              className="btn btn-primary mt-2"
-              style={{ borderRadius: 999, padding: '10px 24px' }}
-              onClick={() => openModal()}
-            >
+            <button onClick={() => openModal()} className="cw-footer-cta">
               Book Free Consultation
+              <ArrowRight size={15} strokeWidth={2.25} />
             </button>
-          </Col>
+          </div>
 
-          {/* Contact info */}
-          <Col md={5} className="mb-4 mb-md-0">
-            <h4 className="mb-3">Contact Us</h4>
-            <p className="mb-2" style={{ color: '#C4C4C4' }}>
-              Site No. 26, Laskar Hosur, Adugodi, Koramangala,<br />
-              Bangalore South, Bangalore - 560030, Karnataka
-            </p>
-            <p className="mb-2"><FaPhoneAlt className="me-2" style={{ color: '#A5B4FC' }} /> +91 9363893639</p>
-            <p><FaEnvelope className="me-2" style={{ color: '#A5B4FC' }} /> care@cradlewell.com</p>
-          </Col>
+          {/* Contact */}
+          <div className="cw-footer-col">
+            <h4 className="cw-footer-heading">Contact</h4>
+            <ul className="cw-footer-list">
+              <li>
+                <MapPin size={15} strokeWidth={1.75} />
+                <span>
+                  Site No. 26, Laskar Hosur, Adugodi,<br />
+                  Koramangala, Bangalore – 560030
+                </span>
+              </li>
+              <li>
+                <Phone size={15} strokeWidth={1.75} />
+                <a href="tel:+919363893639">+91 9363893639</a>
+              </li>
+              <li>
+                <Mail size={15} strokeWidth={1.75} />
+                <a href="mailto:care@cradlewell.com">care@cradlewell.com</a>
+              </li>
+            </ul>
+          </div>
 
-          {/* Social media */}
-          <Col md={2}>
-            <h4 className="mb-3">Follow Us</h4>
-            <div className="d-flex gap-3 fs-5">
-              <a href="https://www.facebook.com/share/1HRDvZY1K3/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="text-light">
-                <FaFacebookF />
-              </a>
-              <a href="https://www.instagram.com/cradlewell_care?igsh=b3pkOHBxMTIyMGF4" target="_blank" rel="noopener noreferrer" className="text-light">
-                <FaInstagram />
-              </a>
-              <a href="https://www.linkedin.com/company/cradlewell/" target="_blank" rel="noopener noreferrer" className="text-light">
-                <FaLinkedinIn />
-              </a>
-              <a href="https://x.com/cradle_well?s=11" target="_blank" rel="noopener noreferrer" className="text-light">
-                <FaX />
-              </a>
+          {/* Navigate */}
+          <div className="cw-footer-col">
+            <h4 className="cw-footer-heading">Explore</h4>
+            <ul className="cw-footer-links">
+              <li><a href="/#whychoose">Why Cradlewell</a></li>
+              <li><a href="/#howitworks">How it works</a></li>
+              <li><a href="/#ourplans">Care plans</a></li>
+              <li><a href="/#testimonials">Reviews</a></li>
+              <li><Link href="/blog">Blog</Link></li>
+              <li><Link href="/nurses">Join as a nurse</Link></li>
+            </ul>
+          </div>
+
+          {/* Social */}
+          <div className="cw-footer-col">
+            <h4 className="cw-footer-heading">Follow</h4>
+            <div className="cw-footer-socials">
+              {socials.map(({ Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="cw-footer-social"
+                >
+                  <Icon size={15} />
+                </a>
+              ))}
             </div>
-          </Col>
-        </Row>
+          </div>
+        </div>
 
-        <Row className="pt-4 border-top border-secondary" style={{ fontSize: '0.875rem' }}>
-          <Col md={6} className="text-start text-light">
-            © Copyright 2025, All Rights Reserved by TENDERKIN WELLNESS PRIVATE LIMITED
-          </Col>
-          <Col md={6} className="text-md-end mt-3 mt-md-0">
-            <Link href="/privacy-policy" className="me-3 text-light text-decoration-none">
-              Privacy Policy
-            </Link>
-            <Link href="/terms-conditions" className="me-3 text-light text-decoration-none">
-              Terms &amp; Conditions
-            </Link>
-            <span
-              className="text-light"
-              style={{ cursor: 'pointer', textDecoration: 'underline' }}
-              onClick={() => openModal()}
-            >
-              Support
-            </span>
-          </Col>
-        </Row>
+        {/* Divider */}
+        <div className="cw-footer-divider" />
+
+        {/* Bottom: legal */}
+        <div className="cw-footer-legal">
+          <p>© {year} Tenderkin Wellness Private Limited · All rights reserved</p>
+          <nav className="cw-footer-legal-links">
+            <Link href="/privacy-policy">Privacy</Link>
+            <Link href="/terms-conditions">Terms</Link>
+            <button type="button" onClick={() => openModal()}>Support</button>
+          </nav>
+        </div>
       </Container>
     </footer>
   );
