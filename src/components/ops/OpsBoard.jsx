@@ -577,7 +577,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                         display: "grid", gridTemplateColumns: "1.5fr 0.9fr 1.1fr 1.2fr", alignItems: "center", gap: 8,
                         padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9",
                         backgroundColor: rowBg,
-                        opacity: isPast && !isToday ? 0.55 : 1,
+                        opacity: isPast && !isToday ? 0.78 : 1,
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <span style={{ width: 26, height: 22, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, borderRadius: 6, backgroundColor: isToday ? "#5F47FF" : isPast ? "#e2e8f0" : "#f1f5f9", color: isToday ? "#fff" : isPast ? "#9a9aa6" : "#7a7a86", flexShrink: 0 }}>
@@ -585,7 +585,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                           </span>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
                             {isToday && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", padding: "2px 6px", borderRadius: 4, backgroundColor: "#5F47FF", color: "#fff" }}>TODAY</span>}
-                            <span style={{ color: isToday ? "#5F47FF" : isPast ? "#9a9aa6" : "#0f1115", fontWeight: isToday ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: isPast && !isToday ? "line-through" : "none" }}>
+                            <span style={{ color: isToday ? "#5F47FF" : isPast ? "#9a9aa6" : "#0f1115", fontWeight: isToday ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {fmtLongDate(r.date)}
                             </span>
                           </div>
@@ -611,7 +611,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                                       </div>
                                     : <span style={{ fontSize: 11, fontWeight: 500, color: "#ef4444" }}>Unassigned</span>
                             }
-                            {!r.paused && !r.leave && <span style={{ marginLeft: "auto", fontSize: 10, color: "#7a7a86", opacity: 0.5, flexShrink: 0 }}>▾</span>}
+                            {!r.paused && !r.leave && <span style={{ marginLeft: "auto", fontSize: 10, color: isPast && !isToday ? "#5F47FF" : "#7a7a86", opacity: isPast && !isToday ? 1 : 0.5, flexShrink: 0 }}>{isPast && !isToday ? "✎" : "▾"}</span>}
                           </button>
 
                           {/* "+" button — add second staff (only when exactly 1 staff and day is active) */}
@@ -721,18 +721,24 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
         {pendingChange && (
           <div onClick={() => setPendingChange(null)} style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backgroundColor: "rgba(15,17,21,0.45)", backdropFilter: "blur(4px)" }}>
             <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 420, borderRadius: 14, padding: 20, backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 20px 40px rgba(15,17,21,0.18)" }}>
-              <h4 style={{ fontSize: 15, fontWeight: 600, color: "#0f1115", margin: "0 0 4px" }}>Reason</h4>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <h4 style={{ fontSize: 15, fontWeight: 600, color: "#0f1115", margin: 0 }}>Reason</h4>
+                {pendingChange.date < today && (
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", padding: "2px 7px", borderRadius: 4, backgroundColor: "rgba(245,158,11,0.12)", color: "#b45309" }}>RETROACTIVE EDIT</span>
+                )}
+              </div>
               <p style={{ fontSize: 11, color: "#7a7a86", margin: "0 0 12px" }}>
                 {fmtLongDate(pendingChange.date)} — {
                   pendingChange.action === "pause" ? "please record why this day is being paused."
                   : pendingChange.action === "leave" ? "please record why the caregiver is on leave."
                   : pendingChange.action === "add-secondary" ? "please record why a second caregiver is being added."
                   : pendingChange.action === "remove-secondary" ? "please record why the second caregiver is being removed."
+                  : pendingChange.date < today ? "please record the correction — who actually attended."
                   : "please record why this change is being made."
                 }
               </p>
               <textarea autoFocus value={reasonText} onChange={e => setReasonText(e.target.value)}
-                placeholder={pendingChange.action === "pause" ? "e.g. Client travelling, family event…" : pendingChange.action === "leave" ? "e.g. Sick leave, planned leave…" : "e.g. Original caregiver on leave, client request…"}
+                placeholder={pendingChange.action === "pause" ? "e.g. Client travelling, family event…" : pendingChange.action === "leave" ? "e.g. Sick leave, planned leave…" : pendingChange.date < today ? "e.g. Correction — different caregiver actually attended…" : "e.g. Original caregiver on leave, client request…"}
                 rows={3} style={{ ...inp, resize: "vertical" }} />
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
                 <button onClick={() => setPendingChange(null)} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "1px solid #e2e8f0", background: "transparent", color: "#7a7a86", cursor: "pointer" }}>Cancel</button>
