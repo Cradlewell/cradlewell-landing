@@ -12,33 +12,7 @@ const Footer = () => {
   const { openModal } = useModal();
 
   return (
-    <footer className="text-white position-relative pt-5 pb-4" style={{ background: '#08082B', overflow: 'hidden' }}>
-      {/* Top-left circle gradient */}
-      <div
-        className="position-absolute"
-        style={{
-          width: '200px',
-          height: '200px',
-          background: 'radial-gradient(circle, rgba(102,117,247,0.4) 0%, transparent 80%)',
-          top: '-50px',
-          left: '-50px',
-          zIndex: 0,
-        }}
-      ></div>
-
-      {/* Bottom-right circle gradient */}
-      <div
-        className="position-absolute"
-        style={{
-          width: '200px',
-          height: '200px',
-          background: 'radial-gradient(circle, rgba(102,117,247,0.4) 0%, transparent 80%)',
-          bottom: '-50px',
-          right: '-50px',
-          zIndex: 0,
-        }}
-      ></div>
-
+    <footer className="text-white position-relative pt-5 pb-4" style={{ background: '#0F0B25', overflow: 'hidden' }}>
       <Container style={{ position: 'relative', zIndex: 1 }}>
         <Row className="mb-4">
           {/* Logo & CTA */}
@@ -65,8 +39,8 @@ const Footer = () => {
               Site No. 26, Laskar Hosur, Adugodi, Koramangala,<br />
               Bangalore South, Bangalore - 560030, Karnataka
             </p>
-            <p className="mb-2"><FaPhoneAlt className="me-2 text-success" /> +91 9363893639</p>
-            <p><FaEnvelope className="me-2 text-success" /> care@cradlewell.com</p>
+            <p className="mb-2"><FaPhoneAlt className="me-2" style={{ color: '#A5B4FC' }} /> +91 9363893639</p>
+            <p><FaEnvelope className="me-2" style={{ color: '#A5B4FC' }} /> care@cradlewell.com</p>
           </Col>
 
           {/* Social media */}

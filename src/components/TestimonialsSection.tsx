@@ -41,7 +41,7 @@ const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: numbe
       background: '#ffffff',
       borderRadius: 20,
       padding: '28px 24px',
-      boxShadow: '0 4px 24px rgba(15,23,42,0.07)',
+      boxShadow: 'var(--cw-shadow-sm)',
       border: '1px solid rgba(15,23,42,0.06)',
       height: '100%',
       display: 'flex',
@@ -49,7 +49,7 @@ const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: numbe
       transition: 'box-shadow 220ms ease, transform 220ms ease',
     }}
     onMouseEnter={e => {
-      (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 40px rgba(15,23,42,0.12)';
+      (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--cw-shadow-md)';
       (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
     }}
     onMouseLeave={e => {
@@ -96,7 +96,7 @@ const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: numbe
           borderRadius: 12,
           overflow: 'hidden',
           flexShrink: 0,
-          boxShadow: '0 2px 10px rgba(15,23,42,0.10)',
+          boxShadow: 'var(--cw-shadow-xs)',
         }}>
           <Image
             src={t.image}
@@ -125,7 +125,7 @@ const TestimonialCard = ({ t, delay }: { t: typeof testimonials[0]; delay: numbe
 );
 
 const TestimonialsSection = () => (
-  <section className="py-5" id="testimonials" style={{ backgroundColor: '#F0EEFF' }}>
+  <section className="py-5" id="testimonials" style={{ backgroundColor: '#F9F8F6' }}>
     <Container>
       <ScrollReveal direction="none">
         <div className="text-center mb-5">
@@ -177,7 +177,7 @@ const TestimonialsSection = () => (
             border: '1px solid rgba(15,23,42,0.08)',
             borderRadius: 100,
             padding: '10px 22px',
-            boxShadow: '0 2px 12px rgba(15,23,42,0.06)',
+            boxShadow: 'var(--cw-shadow-xs)',
           }}>
             <GoogleIcon />
             <span style={{

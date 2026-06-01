@@ -13,7 +13,7 @@ const PromoTrialSection = () => {
     <section
       className="position-relative py-5 text-center text-white"
       style={{
-        background: 'linear-gradient(135deg, #4535E0 0%, #5F47FF 50%, #6388FF 100%)',
+        background: '#4A35E0',
         overflow: 'hidden',
       }}
     >
@@ -105,7 +105,7 @@ const PromoTrialSection = () => {
           <Button
             onClick={() => openModal()}
             style={{
-              background: 'linear-gradient(135deg, #F97316 0%, #fb923c 100%)',
+              background: '#F97316',
               border: 'none',
               color: '#fff',
               fontFamily: "'Lexend', system-ui, sans-serif",
@@ -113,7 +113,7 @@ const PromoTrialSection = () => {
               fontSize: '1rem',
               padding: '14px 36px',
               borderRadius: 12,
-              boxShadow: '0 4px 20px rgba(249,115,22,0.45)',
+              boxShadow: '0 4px 16px rgba(249,115,22,0.32)',
             }}
           >
             Book Free Consultation

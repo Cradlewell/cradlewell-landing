@@ -158,13 +158,12 @@ p {
 
 /* ─── Hero Section ────────────────────────────────────────────── */
 .ezy__header1 {
-  --bs-body-color: #111110;
-  --bs-body-bg:    #EEF2FB;
-  --ezy-theme-color: rgb(95, 71, 255);
-  --ezy-shadow: 0px 8px 48px rgba(99,136,255,0.16);
+  --bs-body-color: var(--cw-text-primary);
+  --bs-body-bg:    var(--cw-brand-light);
+  --ezy-theme-color: var(--cw-brand-primary);
 
-  /* Solid warm-lilac surface — no gradient */
-  background: #EEF2FB;
+  /* Solid brand-light surface — no gradient */
+  background: var(--cw-brand-light);
   overflow: hidden;
   padding: 56px 0 64px;
   position: relative;
@@ -358,7 +357,7 @@ p {
 /* ─── Pricing Section ────────────────────────────────────────── */
 .pricing-section {
   position: relative;
-  background-color: #F4F3F1;
+  background-color: var(--cw-surface-page);
   z-index: 1;
 }
 
@@ -628,25 +627,10 @@ body.modal-open .sticky-mobile-cta {
   z-index: 2;
 }
 
-.hero-badge-tl {
-  top: 16px;
-  left: -12px;
-  animation: badge-float 3.5s ease-in-out infinite;
-}
-
 .hero-badge-br {
   bottom: 32px;
   right: -12px;
   animation: badge-float 3.8s ease-in-out infinite 0.6s;
-}
-
-.hero-badge-rm {
-  top: 44%;
-  right: -12px;
-  animation: badge-float 4s ease-in-out infinite 1.2s;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
 }
 
 @keyframes badge-float {

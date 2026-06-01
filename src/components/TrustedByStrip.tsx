@@ -43,11 +43,11 @@ const TrustedByStrip = () => {
 
         {/* Award Banner */}
         <div className="award-banner" style={{
-          background: "linear-gradient(135deg, #4535E0 0%, #5F47FF 45%, #7268FF 100%)",
+          background: "#4A35E0",
           borderRadius: "28px",
           position: "relative",
           overflow: "hidden",
-          boxShadow: "0 20px 80px rgba(95,71,255,0.30)",
+          boxShadow: "0 20px 60px rgba(74,53,224,0.22)",
         }}>
           {/* Soft inner highlight */}
           <div style={{
@@ -103,13 +103,13 @@ const TrustedByStrip = () => {
               borderRadius: "20px",
               padding: "32px 20px 28px",
               textAlign: "center",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.14)",
+              boxShadow: "var(--cw-shadow-md)",
               position: "relative",
               overflow: "hidden",
             }}>
               <div style={{
                 position: "absolute", top: 0, left: 0, right: 0, height: "3px",
-                background: "linear-gradient(90deg, #5F47FF, #6388FF)",
+                background: "#5F47FF",
               }} />
               <div style={{ marginBottom: "14px", display: "flex", justifyContent: "center" }}>
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -126,7 +126,7 @@ const TrustedByStrip = () => {
               </div>
               <div style={{
                 display: "inline-block",
-                background: "linear-gradient(135deg, #5F47FF, #6388FF)",
+                background: "#5F47FF",
                 color: "#ffffff",
                 fontSize: "10px", fontWeight: "700", letterSpacing: "1.5px",
                 padding: "5px 18px", borderRadius: "20px",
@@ -140,13 +140,13 @@ const TrustedByStrip = () => {
               borderRadius: "20px",
               padding: "32px 20px 28px",
               textAlign: "center",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.14)",
+              boxShadow: "var(--cw-shadow-md)",
               position: "relative",
               overflow: "hidden",
             }}>
               <div style={{
                 position: "absolute", top: 0, left: 0, right: 0, height: "3px",
-                background: "linear-gradient(90deg, #5F47FF, #6388FF)",
+                background: "#5F47FF",
               }} />
               <div style={{ marginBottom: "14px", display: "flex", justifyContent: "center" }}>
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -161,7 +161,7 @@ const TrustedByStrip = () => {
               </div>
               <div style={{
                 display: "inline-block",
-                background: "linear-gradient(135deg, #5F47FF, #6388FF)",
+                background: "#5F47FF",
                 color: "#ffffff",
                 fontSize: "10px", fontWeight: "700", letterSpacing: "1.5px",
                 padding: "5px 18px", borderRadius: "20px",
@@ -222,7 +222,7 @@ const TrustedByStrip = () => {
 
           {/* Quote — mobile only */}
           <div className="photo-caption-mobile" style={{
-            background: "linear-gradient(135deg, #4535E0 0%, #5F47FF 100%)",
+            background: "#5F47FF",
             padding: "28px 24px",
           }}>
             <div style={{ width: "24px", height: "2px", background: "rgba(255,255,255,0.45)", borderRadius: "2px", marginBottom: "14px" }} />

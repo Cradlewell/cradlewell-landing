@@ -4,7 +4,7 @@ import { Accordion, Container } from 'react-bootstrap';
 
 const FaqSection = () => {
   return (
-    <section className="py-5" id='faq' style={{ backgroundColor: '#F8FAFC' }}>
+    <section className="py-5" id='faq' style={{ backgroundColor: '#F9F8F6' }}>
       <Container>
 
         {/* Section Title */}

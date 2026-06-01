@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Col, Container, Row } from "react-bootstrap";
+import { Star } from "lucide-react";
 import { useModal } from './ModalContext';
 
 const HeroHeaderShape = () => (
@@ -47,7 +48,7 @@ const HeroHeader1 = () => {
             {/* Trust bar — above-fold social proof */}
             <div className="d-flex justify-content-center justify-content-lg-start mb-4 hero-enter hero-enter-d1">
               <div className="hero-trust-bar">
-                <span style={{ color: "#F59E0B" }}>★</span>
+                <Star size={13} strokeWidth={0} fill="#F59E0B" style={{ flexShrink: 0 }} />
                 <span>4.8 Rated</span>
                 <span className="divider" />
                 <span>100+ Families</span>
@@ -128,37 +129,19 @@ const HeroHeader1 = () => {
                 loading="eager"
                 width="600"
                 height="500"
-                style={{ borderRadius: 20, boxShadow: "0 16px 64px rgba(15,23,42,0.14)", width: "100%", display: "block" }}
+                style={{ borderRadius: 20, boxShadow: "var(--cw-shadow-lg)", width: "100%", display: "block" }}
               />
 
-              {/* Floating badge — top left */}
-              <div className="hero-badge hero-badge-tl">
-                <span style={{ fontSize: "1rem" }}>🏆</span>
-                <div>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0F172A", lineHeight: 1.2 }}>Award Winning</div>
-                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>Entrepreneur India 2026</div>
-                </div>
-              </div>
-
-              {/* Floating badge — bottom right */}
+              {/* Floating badge — Google rating (single anchor) */}
               <div className="hero-badge hero-badge-br">
-                <span style={{ fontSize: "1rem" }}>✅</span>
-                <div>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0F172A", lineHeight: 1.2 }}>ISO 9001 Certified</div>
-                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>Background-verified nurses</div>
-                </div>
-              </div>
-
-              {/* Floating badge — right mid */}
-              <div className="hero-badge hero-badge-rm">
-                <div style={{ display: "flex", gap: 2 }}>
+                <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
                   {[1,2,3,4,5].map(i => (
-                    <span key={i} style={{ color: "#F59E0B", fontSize: "0.7rem" }}>★</span>
+                    <Star key={i} size={11} strokeWidth={0} fill="#F59E0B" />
                   ))}
                 </div>
                 <div>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0F172A", lineHeight: 1.2 }}>4.8 / 5.0</div>
-                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>Google Reviews</div>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#0F172A", lineHeight: 1.2, fontVariantNumeric: "tabular-nums" }}>4.8 / 5.0</div>
+                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>Google Reviews · 28+</div>
                 </div>
               </div>
             </div>

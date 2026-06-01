@@ -61,7 +61,7 @@ export default function StickyMobileCTA() {
       <button
         onClick={() => openModal()}
         style={{
-          background: 'linear-gradient(135deg, #5F47FF 0%, #6388FF 100%)',
+          background: '#5F47FF',
           border: 'none',
           color: '#fff',
           fontFamily: "'Lexend', system-ui, sans-serif",
@@ -69,7 +69,7 @@ export default function StickyMobileCTA() {
           fontSize: '0.9rem',
           padding: '12px 22px',
           borderRadius: 12,
-          boxShadow: '0 4px 18px rgba(95,71,255,0.38)',
+          boxShadow: '0 4px 16px rgba(95,71,255,0.28)',
           whiteSpace: 'nowrap',
           flexShrink: 0,
           cursor: 'pointer',

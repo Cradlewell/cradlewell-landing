@@ -136,7 +136,7 @@ const HeroBelow = () => {
             style={{
               borderRadius: 20,
               overflow: "hidden",
-              boxShadow: "0 8px 40px rgba(15,23,42,0.09)",
+              boxShadow: "var(--cw-shadow-md)",
             }}
           >
             <img

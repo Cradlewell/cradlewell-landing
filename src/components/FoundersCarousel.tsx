@@ -41,7 +41,7 @@ const teamMembers = [
 ];
 
 const FoundersCarousel = () => (
-  <section className="py-5" id="ourteam" style={{ backgroundColor: '#F8FAFC' }}>
+  <section className="py-5" id="ourteam" style={{ backgroundColor: '#F9F8F6' }}>
     <Container>
       <ScrollReveal direction="none">
         <div className="text-center mb-5">
@@ -68,11 +68,11 @@ const FoundersCarousel = () => (
               padding: '28px 20px 24px',
               textAlign: 'center',
               border: '1px solid rgba(15,23,42,0.06)',
-              boxShadow: '0 2px 12px rgba(15,23,42,0.05)',
+              boxShadow: 'var(--cw-shadow-xs)',
               transition: 'box-shadow 220ms ease, transform 220ms ease',
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLDivElement).style.boxShadow = '0 10px 36px rgba(15,23,42,0.10)';
+              (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--cw-shadow-md)';
               (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
             }}
             onMouseLeave={e => {

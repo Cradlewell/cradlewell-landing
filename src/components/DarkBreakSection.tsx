@@ -15,7 +15,7 @@ export default function DarkBreakSection() {
   return (
     <section
       style={{
-        background: 'linear-gradient(135deg, #0F172A 0%, #1E1B4B 55%, #0F172A 100%)',
+        background: '#0F0B25',
         padding: '88px 0',
         position: 'relative',
         overflow: 'hidden',
