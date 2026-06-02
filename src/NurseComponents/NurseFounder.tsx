@@ -96,7 +96,7 @@ const NurseFounder = () => {
       <Container>
         <div className="text-center mb-4">
           <h1 className="fw-bold">
-            Meet Our <span style={{ color: '#5B7CFA' }}>Founders & Team</span>
+            Meet Our <span style={{ color: '#5F47FF' }}>Founders & Team</span>
           </h1>
         </div>
 

@@ -40,7 +40,7 @@ const HowToJoin = () => {
           {/* Heading */}
           <div className="text-center mb-5">
             <h1 className="fw-bold">
-              <span style={{ color: '#5B7CFA' }}>How</span> to join <span className="text-dark">?</span>
+              <span style={{ color: '#5F47FF' }}>How</span> to join <span className="text-dark">?</span>
             </h1>
             <p className="text-muted mb-0">Simple steps to start your Cradlewell Journey</p>
           </div>
@@ -52,7 +52,7 @@ const HowToJoin = () => {
                 <div className="mb-3">
                   <Image src={step.icon} alt={step.title} width={40} height={40} />
                 </div>
-                <h6 className="fw-semibold mb-2" style={{ color: '#5B7CFA' }}>
+                <h6 className="fw-semibold mb-2" style={{ color: '#5F47FF' }}>
                   {step.title}
                 </h6>
                 <p className="small text-muted">{step.desc}</p>

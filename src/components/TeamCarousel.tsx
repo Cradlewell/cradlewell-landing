@@ -74,7 +74,7 @@ const TeamCarousel = () => {
       <Container>
         <div className="text-center mb-4">
           <h1 className="fw-bold">
-            Meet Our <span style={{ color: '#5B7CFA' }}>Team</span>
+            Meet Our <span style={{ color: '#5F47FF' }}>Team</span>
           </h1>
         </div>
 

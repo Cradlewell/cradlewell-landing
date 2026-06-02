@@ -26,7 +26,7 @@ const RealNurses = () => {
         {/* Title */}
         <div className="text-center mb-5">
           <h1>
-            <span style={{ color: '#5B7CFA' }}>Real Words</span> from Real Nurses
+            <span style={{ color: '#5F47FF' }}>Real Words</span> from Real Nurses
           </h1>
         </div>
 
@@ -95,7 +95,7 @@ const RealNurses = () => {
                             height: 0,
                             borderTop: '8px solid transparent',
                             borderBottom: '8px solid transparent',
-                            borderLeft: '12px solid #5B7CFA',
+                            borderLeft: '12px solid #5F47FF',
                             marginLeft: '4px',
                           }}
                         ></div>

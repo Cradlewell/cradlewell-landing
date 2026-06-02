@@ -37,7 +37,7 @@ const StepsSection = () => {
             <span className="section-eyebrow">How It Works</span>
             <h2 className="fw-bold mt-2">
               Nurse-Led Newborn &amp; Postnatal{' '}
-              <span style={{ color: '#5B7CFA' }}>
+              <span style={{ color: '#5F47FF' }}>
                 <br className="d-none d-md-block" />
                 Home Care in Bangalore
               </span>

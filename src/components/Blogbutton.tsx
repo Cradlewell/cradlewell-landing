@@ -1,15 +1,21 @@
 'use client'
 
 import React from "react";
-import { useModal } from './ModalContext'; // adjust path if needed
-
+import { ArrowRight } from "lucide-react";
+import { useModal } from './ModalContext';
 
 const Blogbutton = () => {
 	const { openModal } = useModal();
 	return (
-             <a onClick={() => openModal()} className="btn btn-primary w-100 mt-2">
-                Book Consultation
-              </a>
+		<button
+			type="button"
+			onClick={() => openModal()}
+			className="cw-pricing-cta"
+			style={{ background: 'var(--cw-cta)', boxShadow: '0 4px 16px rgba(249,115,22,0.28)' }}
+		>
+			Book consultation
+			<ArrowRight size={15} strokeWidth={2.25} />
+		</button>
 	);
 };
 

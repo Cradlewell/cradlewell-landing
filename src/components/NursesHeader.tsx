@@ -1,99 +1,107 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-	Button,
-	Collapse,
-	Container,
-	Form,
-	InputGroup,
-	Nav,
-	Navbar,
-} from "react-bootstrap";
+import Link from "next/link";
+import { Menu, X, ArrowRight } from "lucide-react";
 
-// Define your routes
 const routes = [
-	{ name: "Why Choose Us", href: "#whychooseus" },
-	{ name: "Responsibilities", href: "#responsibilities" },
-	{ name: "Testimonials", href: "#nursetestimonials" },
-	{ name: "How To Apply", href: "#howtoapply" },
+	{ name: "Why join",        href: "#whychooseus" },
+	{ name: "What you'll do",  href: "#responsibilities" },
+	{ name: "Stories",         href: "#nursetestimonials" },
+	{ name: "How to apply",    href: "#howtoapply" },
 ];
 
-const NavMenu = () => (
-	<Nav className="mx-auto mb-2 mb-lg-0 mt-4 mt-lg-0 px-2">
-		{routes.map((route) => (
-			<Nav.Item key={route.name}>
-				<Nav.Link href={route.href} className="nav-link-hover">
-					{route.name}
-				</Nav.Link>
-			</Nav.Item>
-		))}
-	</Nav>
-);
-
-const NavActions = () => (
-	<Nav className="flex-row mb-2 mb-lg-0">
-		<Nav.Item className="nav-item mx-2">
-			<a className="btn btn-primary" target="_blank" href="https://tally.so/r/3NGjb0">
-				Apply Now To Join
-			</a>
-		</Nav.Item>
-	</Nav>
-);
-
-const SearchForm = () => (
-	<Form className="mt-4">
-		<InputGroup>
-			<Form.Control type="search" placeholder="City, Address, Zip" />
-			<Button variant="" className="ezy__nav5-btn px-3" type="submit">
-				Search
-			</Button>
-		</InputGroup>
-	</Form>
-);
+const APPLY_URL = "https://tally.so/r/3NGjb0";
 
 const NurseHeader = () => {
-	const [isSearchOpen, setIsSearchOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
-	
+	const [open, setOpen] = useState(false);
 
-		useEffect(() => {
-			const handleScroll = () => {
-				setScrolled(window.scrollY > 0);
-			};
-	
-			window.addEventListener('scroll', handleScroll);
-			return () => window.removeEventListener('scroll', handleScroll);
-		}, []);
-		
+	useEffect(() => {
+		const onScroll = () => setScrolled(window.scrollY > 4);
+		onScroll();
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	}, []);
+
+	useEffect(() => {
+		if (open) document.body.style.overflow = 'hidden';
+		else document.body.style.overflow = '';
+		return () => { document.body.style.overflow = ''; };
+	}, [open]);
+
+	const closeMobile = () => setOpen(false);
+
 	return (
-		<div className={`ezy__nav5 light sticky-top ${scrolled ? 'shadow-sm' : ''}`}>
-			<Navbar expand="lg" className="flex-column py-3">
-				<Container>
-					<Navbar.Brand href="/">
-						<img
-							src="/images/logo.png"
-							alt="Cradlewell Logo - Nurse-led Newborn and Postnatal Home Care Services in Bangalore"
-							width="200px"
-							className="img-fluid"
-						/>
-					</Navbar.Brand>
-					<Navbar.Toggle aria-controls="navbar-content" />
-					<Navbar.Collapse id="navbar-content">
-						<NavMenu />
-						<NavActions />
-					</Navbar.Collapse>
-				</Container>
+		<header className={`cw-nav ${scrolled ? 'cw-nav-scrolled' : ''}`}>
+			<div className="cw-nav-inner">
+				<Link href="/" className="cw-nav-brand" aria-label="Cradlewell home">
+					<img
+						src="/images/logo.png"
+						alt="Cradlewell — nurse-led newborn and postnatal home care, Bangalore"
+						width={170}
+						height={36}
+					/>
+				</Link>
 
-				<Container>
-					<Collapse in={isSearchOpen} className="w-100">
-						<div>
-							<SearchForm />
-						</div>
-					</Collapse>
-				</Container>
-			</Navbar>
-		</div>
+				<nav className="cw-nav-links" aria-label="Primary">
+					{routes.map((r) => (
+						<a key={r.name} href={r.href} className="cw-nav-link">
+							{r.name}
+						</a>
+					))}
+				</nav>
+
+				<div className="cw-nav-actions">
+					<a
+						href={APPLY_URL}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="cw-nav-cta"
+					>
+						Apply now
+						<ArrowRight size={14} strokeWidth={2.25} />
+					</a>
+				</div>
+
+				<button
+					type="button"
+					className="cw-nav-toggle"
+					onClick={() => setOpen(v => !v)}
+					aria-label={open ? 'Close menu' : 'Open menu'}
+					aria-expanded={open}
+					aria-controls="cw-nurse-mobile-menu"
+				>
+					{open ? <X size={22} strokeWidth={1.75} /> : <Menu size={22} strokeWidth={1.75} />}
+				</button>
+			</div>
+
+			<div
+				id="cw-nurse-mobile-menu"
+				className={`cw-nav-sheet ${open ? 'is-open' : ''}`}
+				aria-hidden={!open}
+			>
+				<nav aria-label="Primary mobile">
+					{routes.map((r) => (
+						<a key={r.name} href={r.href} className="cw-nav-sheet-link" onClick={closeMobile}>
+							{r.name}
+						</a>
+					))}
+				</nav>
+				<div className="cw-nav-sheet-actions">
+					<a
+						href={APPLY_URL}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="cw-nav-sheet-cta"
+						onClick={closeMobile}
+					>
+						Apply now
+						<ArrowRight size={15} strokeWidth={2.25} />
+					</a>
+				</div>
+			</div>
+		</header>
 	);
 };
 

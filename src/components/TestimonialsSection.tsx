@@ -121,7 +121,7 @@ const TestimonialsSection = () => (
             What Parents Say
           </span>
           <h2 className="fw-bold mt-2">
-            <span style={{ color: '#5B7CFA' }}>Real words</span> from real parents
+            <span style={{ color: '#5F47FF' }}>Real words</span> from real parents
           </h2>
           <p style={{ color: '#64748B', maxWidth: 460, margin: '8px auto 0', fontSize: '1rem' }}>
             Families across Bangalore trust Cradlewell for their most precious moments.

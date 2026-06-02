@@ -47,7 +47,7 @@ const FoundersCarousel = () => (
         <div className="text-center mb-5">
           <span className="section-eyebrow">The Team</span>
           <h2 className="fw-bold mt-2">
-            Meet Our <span style={{ color: '#5B7CFA' }}>Founders &amp; Team</span>
+            Meet Our <span style={{ color: '#5F47FF' }}>Founders &amp; Team</span>
           </h2>
           <p style={{ color: '#64748B', maxWidth: 420, margin: '8px auto 0', fontSize: '1rem' }}>
             Healthcare professionals and operators united by one mission — better postnatal care for every family.

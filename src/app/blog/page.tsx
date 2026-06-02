@@ -43,60 +43,71 @@ export default async function BlogPage() {
   const posts = await getPosts();
 
   return (
-    <section className="py-4 bg-light">
+    <section style={{ padding: "64px 0 88px", background: "var(--cw-surface-page)" }}>
       <div className="container">
-        <div className="text-center mb-5">
-          <h1 className="fw-semibold">Our Blogs</h1>
-          <p className="text-muted">
-            Guidance, care & knowledge for every stage of motherhood
+        <div className="text-center" style={{ marginBottom: 56 }}>
+          <span className="section-eyebrow">From the team</span>
+          <h1 style={{
+            fontFamily: "'Lexend', system-ui, sans-serif",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            color: "var(--cw-text-primary)",
+            marginTop: 8,
+            marginBottom: 12,
+          }}>
+            Care, gently explained
+          </h1>
+          <p style={{
+            color: "var(--cw-text-secondary)",
+            maxWidth: 520,
+            margin: "0 auto",
+            fontSize: "1rem",
+            lineHeight: 1.65,
+          }}>
+            Guidance, care &amp; knowledge for every stage of motherhood — written by our nurses and clinical team.
           </p>
         </div>
 
-        <div className="row g-4">
+        <div className="cw-blog-grid">
           {posts.map((post) => {
-            const image =
-              post._embedded?.["wp:featuredmedia"]?.[0]?.source_url;
-
+            const image = post._embedded?.["wp:featuredmedia"]?.[0]?.source_url;
             return (
-              <div className="col-md-6 col-lg-4" key={post.id}>
-                <div className="card h-100 border-0 shadow-sm rounded-4">
-                  {image && (
-                    <img
-                      src={image}
-                      className="card-img-top rounded-top-4"
-                      alt={post.title.rendered}
-                      style={{ height: "220px", objectFit: "cover" }}
-                    />
-                  )}
-
-                  <div className="card-body p-4">
-                    <h5
-                      className="card-title fw-semibold"
-                      dangerouslySetInnerHTML={{
-                        __html: post.title.rendered,
-                      }}
-                    />
-
-                    <div
-                      className="card-text text-muted small mb-3"
-                      dangerouslySetInnerHTML={{
-                        __html: post.excerpt.rendered,
-                      }}
-                    />
-
-                    <Link
-                      href={`/blog/${post.slug}`}
-                      className="stretched-link text-decoration-none fw-medium"
-                      style={{ color: "#007A83" }}
-                    >
-                      Read more →
-                    </Link>
+              <Link
+                key={post.id}
+                href={`/blog/${post.slug}`}
+                className="cw-blog-card"
+              >
+                {image && (
+                  <div className="cw-blog-card-media">
+                    <img src={image} alt="" />
                   </div>
+                )}
+                <div className="cw-blog-card-body">
+                  <h3
+                    className="cw-blog-card-title"
+                    dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+                  />
+                  <div
+                    className="cw-blog-card-excerpt"
+                    dangerouslySetInnerHTML={{ __html: post.excerpt.rendered }}
+                  />
+                  <span className="cw-blog-card-cta">Read article →</span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
+
+        {posts.length === 0 && (
+          <p style={{
+            textAlign: "center",
+            color: "var(--cw-text-muted)",
+            fontSize: "0.95rem",
+            marginTop: 24,
+          }}>
+            New articles coming soon.
+          </p>
+        )}
       </div>
     </section>
   );

@@ -10,13 +10,13 @@ const WhyNurseSec = () => {
         {/* Heading */}
         <div className="text-center mb-5">
           <h1 className="fw-bold">
-            <span style={{ color: '#5B7CFA' }}> Why</span> Work With{' '}
-            <span style={{ color: '#5B7CFA' }}> Cradlewell</span>
+            <span style={{ color: '#5F47FF' }}> Why</span> Work With{' '}
+            <span style={{ color: '#5F47FF' }}> Cradlewell</span>
           </h1>
           <h4 className="" style={{ color: '#676767ff' }}>
             Because Your
-            <span style={{ color: '#5B7CFA' }}> Safety, Dignity & Growth</span> shouldn&rsquo;t be Optional,
-            it should be <span style={{ color: '#5B7CFA' }}> Guaranteed</span>
+            <span style={{ color: '#5F47FF' }}> Safety, Dignity & Growth</span> shouldn&rsquo;t be Optional,
+            it should be <span style={{ color: '#5F47FF' }}> Guaranteed</span>
           </h4>
         </div>
 

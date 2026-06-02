@@ -114,20 +114,39 @@ export default async function BlogPost({ params }: Props) {
   };
 
   return (
-    <div className="bg-light">
+    <div style={{ background: "var(--cw-surface-page)" }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
       />
 
-      {/* HERO SECTION */}
-      <section className="bg-white py-5 border-bottom">
-        <div className="container text-center">
+      {/* HERO */}
+      <section style={{
+        background: "#fff",
+        borderBottom: "1px solid rgba(17,17,16,0.06)",
+        padding: "64px 0 56px",
+      }}>
+        <div className="container" style={{ maxWidth: 820, textAlign: "center" }}>
+          <span className="section-eyebrow">Article</span>
           <h1
-            className="display-5 fw-bold"
+            style={{
+              fontFamily: "'Lexend', system-ui, sans-serif",
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              color: "var(--cw-text-primary)",
+              marginTop: 12,
+              marginBottom: 16,
+            }}
             dangerouslySetInnerHTML={{ __html: blog.title.rendered }}
           />
-          <p className="text-muted mt-3">
+          <p style={{
+            color: "var(--cw-text-muted)",
+            fontSize: "0.92rem",
+            fontFamily: "'Lexend', system-ui, sans-serif",
+            fontWeight: 500,
+            margin: 0,
+            letterSpacing: "0.01em",
+          }}>
             {new Date(blog.date).toLocaleDateString("en-IN", {
               year: "numeric",
               month: "long",
@@ -137,43 +156,57 @@ export default async function BlogPost({ params }: Props) {
         </div>
       </section>
 
-      {/* FEATURED IMAGE */}
-      {/* {featuredImage && (
-        <div className="container my-4">
-          <img
-            src={featuredImage}
-            alt={blog.title.rendered}
-            className="img-fluid rounded shadow-sm w-100"
-            style={{ maxHeight: "500px", objectFit: "cover" }}
-          />
-        </div>
-      )} */}
-
-      {/* CONTENT SECTION */}
-      <section className="container my-5">
-        <div className="row">
+      {/* CONTENT */}
+      <section className="container" style={{ padding: "56px 0 80px" }}>
+        <div className="row g-4">
 
           {/* MAIN CONTENT */}
           <div className="col-lg-8">
-            <div className="card border-0 shadow-sm p-4">
+            <article style={{
+              background: "#fff",
+              border: "1px solid rgba(17,17,16,0.06)",
+              borderRadius: 18,
+              padding: "40px 36px",
+              boxShadow: "var(--cw-shadow-xs)",
+            }}>
               <div
                 className="blog-content"
                 dangerouslySetInnerHTML={{ __html: blog.content.rendered }}
               />
-            </div>
+            </article>
           </div>
 
           {/* SIDEBAR */}
-          <div className="col-lg-4 mt-4 mt-lg-0">
+          <div className="col-lg-4">
             <div
-              className="card border-0 shadow-sm p-4 sticky-top"
-              style={{ top: "100px" }}
+              className="sticky-top"
+              style={{
+                background: "#fff",
+                border: "1px solid rgba(17,17,16,0.06)",
+                borderRadius: 18,
+                padding: "28px 26px",
+                boxShadow: "var(--cw-shadow-xs)",
+                top: "100px",
+              }}
             >
-              <h5 className="fw-bold mb-3">
-                Need Expert Newborn & Mother Care?
-              </h5>
-              <p className="text-muted small">
-                Get professional at-home care services for mother and baby.
+              <h4 style={{
+                fontFamily: "'Lexend', system-ui, sans-serif",
+                fontWeight: 700,
+                fontSize: "1.05rem",
+                letterSpacing: "-0.01em",
+                color: "var(--cw-text-primary)",
+                marginBottom: 8,
+              }}>
+                Need expert newborn &amp; mother care?
+              </h4>
+              <p style={{
+                color: "var(--cw-text-secondary)",
+                fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                fontSize: "0.92rem",
+                lineHeight: 1.55,
+                marginBottom: 18,
+              }}>
+                Certified nurses provide professional at-home care for mother and baby.
               </p>
 
               <Blogbutton />

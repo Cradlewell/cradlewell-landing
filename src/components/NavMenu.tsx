@@ -1,119 +1,119 @@
 'use client';
 
-import React, { useState } from "react";
-import {
-	Button,
-	Collapse,
-	Container,
-	Form,
-	InputGroup,
-	Nav,
-	Navbar,
-} from "react-bootstrap";
-import { FiPhoneCall } from "react-icons/fi";
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { Phone, Menu, X, ArrowRight } from "lucide-react";
 import { useModal } from "./ModalContext";
 
-type Route = {
-	name: string;
-	href: string;
-};
+type Route = { name: string; href: string };
 
 const routes: Route[] = [
-	{ name: "Why Choose", href: "/#whychoose" },
-	{ name: "How It Works", href: "/#howitworks" },
-	{ name: "See Plan", href: "/#ourplans" },
-	{ name: "Testimonials", href: "/#testimonials" },
-	{ name: "Our Team", href: "/#ourteam" },
-	{ name: "Blogs", href: "/blog" },
+  { name: "Why Cradlewell", href: "/#whychoose" },
+  { name: "How it works",   href: "/#howitworks" },
+  { name: "Plans",          href: "/#ourplans" },
+  { name: "Reviews",        href: "/#testimonials" },
+  { name: "Team",           href: "/#ourteam" },
+  { name: "Blog",           href: "/blog" },
 ];
 
-const NavMenu: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
-	<Nav className="mx-auto mb-2 mb-lg-0 mt-4 mt-lg-0 px-2">
-		{children}
-		{routes.map((route) => (
-			<Nav.Item key={route.name}>
-				<Nav.Link href={route.href} className="nav-link-hover">
-					{route.name}
-				</Nav.Link>
-			</Nav.Item>
-		))}
-	</Nav>
-);
+const NavMenu: React.FC = () => {
+  const { openModal } = useModal();
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
 
-type NavMenu2Props = {
-	toggleSearch: () => void;
-	openModal: () => void;
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (open) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  const closeMobile = () => setOpen(false);
+
+  return (
+    <header className={`cw-nav ${scrolled ? 'cw-nav-scrolled' : ''}`}>
+      <div className="cw-nav-inner">
+        {/* Brand */}
+        <Link href="/" className="cw-nav-brand" aria-label="Cradlewell home">
+          <img
+            src="/images/logo.png"
+            alt="Cradlewell — nurse-led newborn and postnatal home care, Bangalore"
+            width={170}
+            height={36}
+          />
+        </Link>
+
+        {/* Desktop links */}
+        <nav className="cw-nav-links" aria-label="Primary">
+          {routes.map((r) => (
+            <a key={r.name} href={r.href} className="cw-nav-link">
+              {r.name}
+            </a>
+          ))}
+        </nav>
+
+        {/* Desktop actions */}
+        <div className="cw-nav-actions">
+          <a href="tel:+919363893639" className="cw-nav-phone" aria-label="Call Cradlewell">
+            <Phone size={14} strokeWidth={2} />
+            <span>+91 93638 93639</span>
+          </a>
+          <button type="button" onClick={() => openModal()} className="cw-nav-cta">
+            Book consultation
+            <ArrowRight size={14} strokeWidth={2.25} />
+          </button>
+        </div>
+
+        {/* Mobile toggle */}
+        <button
+          type="button"
+          className="cw-nav-toggle"
+          onClick={() => setOpen(v => !v)}
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-expanded={open}
+          aria-controls="cw-mobile-menu"
+        >
+          {open ? <X size={22} strokeWidth={1.75} /> : <Menu size={22} strokeWidth={1.75} />}
+        </button>
+      </div>
+
+      {/* Mobile sheet */}
+      <div
+        id="cw-mobile-menu"
+        className={`cw-nav-sheet ${open ? 'is-open' : ''}`}
+        aria-hidden={!open}
+      >
+        <nav aria-label="Primary mobile">
+          {routes.map((r) => (
+            <a key={r.name} href={r.href} className="cw-nav-sheet-link" onClick={closeMobile}>
+              {r.name}
+            </a>
+          ))}
+        </nav>
+        <div className="cw-nav-sheet-actions">
+          <a href="tel:+919363893639" className="cw-nav-sheet-phone" onClick={closeMobile}>
+            <Phone size={15} strokeWidth={2} />
+            +91 93638 93639
+          </a>
+          <button
+            type="button"
+            onClick={() => { closeMobile(); openModal(); }}
+            className="cw-nav-sheet-cta"
+          >
+            Book consultation
+            <ArrowRight size={15} strokeWidth={2.25} />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
 };
 
-const NavMenu2: React.FC<NavMenu2Props> = ({ toggleSearch, openModal }) => (
-	<Nav className="flex-row mb-2 mb-lg-0">
-		<Nav.Item className="nav-item mx-2">
-			<a className="btn btn-primary" href="tel:9363893639">
-				<FiPhoneCall /> Call Us
-			</a>
-		</Nav.Item>
-		<Nav.Item className="nav-item mx-2">
-			<a className="btn btn-primary" style={{ cursor: 'pointer' }} onClick={() => openModal()}>
-				Contact Us
-			</a>
-		</Nav.Item>
-	</Nav>
-);
-
-const SearchForm: React.FC = () => (
-	<Form className="mt-4">
-		<InputGroup>
-			<Form.Control type="search" placeholder="City, Address, Zip" />
-			<Button variant="" className="ezy__nav5-btn px-3" type="submit">
-				Search
-			</Button>
-		</InputGroup>
-	</Form>
-);
-
-const Navigation5: React.FC = () => {
-	const [isOpenSearch, setIsOpenSearch] = useState(false);
-	const [scrolled, setScrolled] = useState(false);
-	const { openModal } = useModal();
-
-	const toggleSearch = () => setIsOpenSearch((prev) => !prev);
-
-	React.useEffect(() => {
-		const handleScroll = () => {
-			setScrolled(window.scrollY > 0);
-		};
-		window.addEventListener('scroll', handleScroll);
-		return () => window.removeEventListener('scroll', handleScroll);
-	}, []);
-
-	return (
-		<div className={`ezy__nav5 light sticky-top ${scrolled ? 'shadow-sm' : ''}`}>
-			<Navbar expand="lg" className="flex-column py-3">
-				<Container>
-					<Navbar.Brand href="/">
-						<img className="img-fluid" width={"200px"} src="/images/logo.png" alt="Cradlewell Logo - Nurse-led Newborn and Postnatal Home Care Services in Bangalore" />
-					</Navbar.Brand>
-					<Navbar.Toggle aria-controls="ezy__nav5-navbar-nav">
-						<span><span /></span>
-						<span><span /></span>
-						<span><span /></span>
-					</Navbar.Toggle>
-					<Navbar.Collapse id="ezy__nav5-navbar-nav">
-						<NavMenu />
-						<NavMenu2 toggleSearch={toggleSearch} openModal={openModal} />
-					</Navbar.Collapse>
-				</Container>
-
-				<Container>
-					<Collapse in={isOpenSearch} className="w-100">
-						<div>
-							<SearchForm />
-						</div>
-					</Collapse>
-				</Container>
-			</Navbar>
-		</div>
-	);
-};
-
-export default Navigation5;
+export default NavMenu;

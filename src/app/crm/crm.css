@@ -228,14 +228,14 @@
 }
 
 .crm-card-title {
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--crm-text);
   margin: 0;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
 }
 
-.crm-card-body { padding: 1.25rem; }
+.crm-card-body { padding: 1.5rem; }
 
 /* ─── Stat Cards ─────────────────────────────────────────────────────────────── */
 .crm-stat-card {
@@ -243,29 +243,29 @@
   border: 1px solid var(--crm-border);
   border-radius: var(--crm-radius);
   box-shadow: var(--crm-shadow);
-  padding: 1.25rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  transition: box-shadow 0.15s ease-out, transform 0.1s ease-out;
+  gap: 0.5rem;
+  transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out;
 }
 
 .crm-stat-card:hover {
+  border-color: var(--crm-border-md);
   box-shadow: var(--crm-shadow-md);
-  transform: translateY(-1px);
 }
 
 .crm-stat-label {
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--crm-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .crm-stat-value {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 800;
   color: var(--crm-text);
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -334,8 +334,7 @@
 
 .crm-btn-primary:hover {
   background: var(--crm-primary-dark);
-  box-shadow: 0 4px 12px rgba(95, 71, 255, 0.3);
-  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(95, 71, 255, 0.35);
   color: white;
   text-decoration: none;
 }
@@ -771,11 +770,11 @@
 .crm-divider { height: 1px; background: var(--crm-border); margin: 1rem 0; }
 
 .crm-section-title {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--crm-text-3);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--crm-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   margin: 0 0 0.75rem;
 }
 
