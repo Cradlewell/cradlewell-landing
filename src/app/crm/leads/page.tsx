@@ -118,8 +118,8 @@ export default function LeadsPage() {
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={exportCSV}>
             <Download size={15} /> Export
           </button>
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowWAImport(true)} style={{ color: "#16A34A" }}>
-            <MessageSquare size={15} /> Import WhatsApp
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowWAImport(true)}>
+            <MessageSquare size={15} style={{ color: "#25D366" }} /> Import WhatsApp
           </button>
           <button className="crm-btn crm-btn-primary" onClick={() => setShowNewLead(true)}>
             <Plus size={16} /> New Lead
@@ -189,13 +189,13 @@ export default function LeadsPage() {
                   <td className="sticky-col" style={{ minWidth: 160 }}>
                     <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{l.name}</span>
                   </td>
-                  <td style={{ whiteSpace: "nowrap" }}>
+                  <td style={{ whiteSpace: "nowrap" }} className="crm-tabular">
                     <a href={`tel:${l.phone}`} style={{ color: "var(--crm-primary)", textDecoration: "none", fontSize: "0.875rem" }} onClick={e => e.stopPropagation()}>
                       {l.phone}
                     </a>
                   </td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtDate(l.leadDate)}</td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtTime(l.leadDate)}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{fmtDate(l.leadDate)}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{fmtTime(l.leadDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtDay(l.leadDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.source || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.875rem" }}>{l.serviceRequired || "—"}</td>
@@ -208,16 +208,16 @@ export default function LeadsPage() {
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.preferredShift || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.shiftHoursCount ? `${l.shiftHoursCount} hrs` : "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.shiftTime || "—"}</td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtCareDate(l.careStartDate)}</td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.serviceDays ? `${l.serviceDays} days` : "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{fmtCareDate(l.careStartDate)}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{l.serviceDays ? `${l.serviceDays} days` : "—"}</td>
                   <td><StageBadge stage={l.stage} /></td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <button
                       onClick={e => handleDelete(e, l.id, l.name)}
-                      style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 6px", borderRadius: 6, color: "var(--crm-text-muted)", display: "flex", alignItems: "center" }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "#DC2626")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "var(--crm-text-muted)")}
+                      className="crm-icon-btn danger"
+                      style={{ width: 28, height: 28 }}
                       title="Delete lead"
+                      aria-label={`Delete ${l.name}`}
                     >
                       <Trash2 size={14} />
                     </button>

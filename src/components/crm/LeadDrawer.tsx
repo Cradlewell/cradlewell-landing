@@ -29,11 +29,11 @@ interface FieldProps {
 function Field({ label, value, field, type = "text", editing, draft, setDraft }: FieldProps) {
   return (
     <div>
-      <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
+      <div className="crm-field-label">{label}</div>
       {editing ? (
         <input className="crm-input" type={type} value={(draft[field] as string) ?? ""} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} style={{ fontSize: "0.85rem" }} />
       ) : (
-        <div style={{ fontSize: "0.875rem", color: value ? "var(--crm-text)" : "var(--crm-text-muted)", fontWeight: value ? 500 : 400 }}>{value || "—"}</div>
+        <div className={`crm-field-value ${value ? "" : "empty"}`}>{value || "—"}</div>
       )}
     </div>
   );
@@ -168,15 +168,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                 )}
               </div>
             </div>
-            <button onClick={onClose} aria-label="Close" style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "transparent", color: "#A8A8A6",
-              border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", flexShrink: 0,
-              transition: "background-color 0.12s ease-out, color 0.12s ease-out",
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,0,0,0.05)"; (e.currentTarget as HTMLButtonElement).style.color = "#111110"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#A8A8A6"; }}
-            >
+            <button onClick={onClose} aria-label="Close" className="crm-icon-btn">
               <X size={16} />
             </button>
           </div>
@@ -239,7 +231,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
               {/* Lead Info */}
               <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Lead Info</div>
+                <div className="crm-section-title" style={{ marginBottom: "0.875rem" }}>Lead Info</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                   <Field label="Name" value={lead.name} field="name"  editing={editing} draft={draft} setDraft={setDraft} />
                   <Field label="Phone" value={lead.phone} field="phone"  editing={editing} draft={draft} setDraft={setDraft} />
@@ -253,7 +245,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
               {/* Baby Details */}
               <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Baby Details</div>
+                <div className="crm-section-title" style={{ marginBottom: "0.875rem" }}>Baby Details</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                   <Field label="Baby Status" value={lead.babyStatus} field="babyStatus"  editing={editing} draft={draft} setDraft={setDraft} />
                   <Field label="Hospital" value={lead.hospitalName} field="hospitalName"  editing={editing} draft={draft} setDraft={setDraft} />
@@ -267,7 +259,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
               {/* Service & Shift */}
               <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Service & Shift</div>
+                <div className="crm-section-title" style={{ marginBottom: "0.875rem" }}>Service & Shift</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                   <Field label="Service" value={lead.serviceRequired} field="serviceRequired"  editing={editing} draft={draft} setDraft={setDraft} />
                   <Field label="Shift Type" value={lead.preferredShift} field="preferredShift"  editing={editing} draft={draft} setDraft={setDraft} />
@@ -283,7 +275,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
               {/* Address */}
               <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Location</div>
+                <div className="crm-section-title" style={{ marginBottom: "0.875rem" }}>Location</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                   <Field label="Area" value={lead.area} field="area"  editing={editing} draft={draft} setDraft={setDraft} />
                   <Field label="City" value={lead.city} field="city"  editing={editing} draft={draft} setDraft={setDraft} />
@@ -297,7 +289,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
               {/* Call Notes */}
               <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: "0.875rem" }}>Call Notes</div>
+                <div className="crm-section-title" style={{ marginBottom: "0.875rem" }}>Call Notes</div>
                 <textarea
                   key={lead.id}
                   className="crm-textarea"
@@ -312,7 +304,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
               {/* Danger Zone */}
               <div>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#EF4444", marginBottom: "0.875rem" }}>Danger Zone</div>
+                <div className="crm-section-title" style={{ color: "#EF4444", marginBottom: "0.875rem" }}>Danger Zone</div>
                 <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={handleDelete}>
                   <Trash2 size={14} /> Delete Lead
                 </button>

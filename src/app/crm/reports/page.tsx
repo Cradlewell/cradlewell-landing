@@ -7,7 +7,7 @@ import {
   Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 
-const COLORS = ["#6388FF", "#5F47FF", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7"];
+const COLORS = ["#5F47FF", "#6388FF", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7"];
 
 export default function ReportsPage() {
   const leads = useLeads();
@@ -69,14 +69,14 @@ export default function ReportsPage() {
       {/* KPI Cards */}
       <div className="crm-grid-4 mb-4">
         {[
-          { label: "Conversion Rate", value: `${convRate}%`, color: "#6388FF" },
-          { label: "Follow-up Completion", value: `${fuRate}%`, color: "#22C55E" },
-          { label: "Total Revenue", value: `₹${revenue.toLocaleString("en-IN")}`, color: "#5F47FF" },
-          { label: "Hot Pipeline", value: hot, color: "#EF4444" },
+          { label: "Conversion rate", value: `${convRate}%` },
+          { label: "Follow-up completion", value: `${fuRate}%` },
+          { label: "Total revenue", value: `₹${revenue.toLocaleString("en-IN")}` },
+          { label: "Hot pipeline", value: hot },
         ].map(s => (
           <div key={s.label} className="crm-stat-card">
             <div className="crm-stat-label">{s.label}</div>
-            <div className="crm-stat-value" style={{ color: s.color }}>{s.value}</div>
+            <div className="crm-stat-value">{s.value}</div>
           </div>
         ))}
       </div>
@@ -111,7 +111,7 @@ export default function ReportsPage() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="Total" fill="#6388FF" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Total" fill="#5F47FF" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Won" fill="#22C55E" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

@@ -82,7 +82,7 @@ export default function FollowupsPage() {
                       {!f.completed && over && <span className="crm-badge" style={{ background: "#FEF2F2", color: "#DC2626" }}>Overdue</span>}
                       {!f.completed && isToday(f.dueAt) && <span className="crm-badge" style={{ background: "#FFFBEB", color: "#B45309" }}>Today</span>}
                     </div>
-                    <div style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)", display: "flex", alignItems: "center", gap: 4, marginBottom: f.note ? 4 : 0 }}>
+                    <div className="crm-tabular" style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)", display: "flex", alignItems: "center", gap: 4, marginBottom: f.note ? 4 : 0 }}>
                       <Clock size={12} />
                       {format(new Date(f.dueAt), "dd MMM yyyy, hh:mm a")}
                     </div>
