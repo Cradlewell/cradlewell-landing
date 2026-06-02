@@ -5,7 +5,7 @@
   /* Brand */
   --cw-brand-primary:   #5F47FF;
   --cw-brand-dark:      #4A35E0;
-  --cw-brand-mid:       #6388FF;
+  --cw-brand-mid:       #5F47FF;
   --cw-brand-light:     #EEF2FF;
 
   /* CTA — warm orange for conversion */
@@ -219,7 +219,7 @@ p {
   gap: 6px;
   background: rgba(255,255,255,0.84);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(99,136,255,0.18);
+  border: 1px solid rgba(95,71,255,0.18);
   border-radius: 100px;
   padding: 7px 16px;
   font-size: 0.82rem;
@@ -960,7 +960,7 @@ body.modal-open .sticky-mobile-cta {
 
 .form-control:focus {
   border-color: var(--cw-brand-mid);
-  box-shadow: 0 0 0 3px rgba(99,136,255,0.15);
+  box-shadow: 0 0 0 3px rgba(95,71,255,0.15);
   outline: none;
 }
 

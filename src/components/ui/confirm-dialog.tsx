@@ -38,7 +38,7 @@ export async function confirm(options: ConfirmOptions): Promise<boolean> {
 const VARIANT_CFG = {
   danger:  { Icon: Trash2,        iconColor: "#DC2626", iconBg: "#FEF2F2", btnBg: "#DC2626" },
   warning: { Icon: AlertTriangle, iconColor: "#D97706", iconBg: "#FFFBEB", btnBg: "#D97706" },
-  primary: { Icon: HelpCircle,    iconColor: "#6388FF", iconBg: "#EEF1FF", btnBg: "#6388FF" },
+  primary: { Icon: HelpCircle,    iconColor: "#5F47FF", iconBg: "#EEF2FF", btnBg: "#5F47FF" },
 };
 
 // ── ConfirmDialogRoot — render once in CRM layout ──────────────────────────────

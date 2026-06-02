@@ -91,7 +91,7 @@ export default function OpsLoginPage() {
                 outline: "none", boxSizing: "border-box",
                 transition: "border-color 0.15s",
               }}
-              onFocus={(e) => (e.target.style.borderColor = "#6388FF")}
+              onFocus={(e) => (e.target.style.borderColor = "#5F47FF")}
               onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
             />
           </div>
@@ -114,7 +114,7 @@ export default function OpsLoginPage() {
                   outline: "none", boxSizing: "border-box",
                   transition: "border-color 0.15s",
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "#6388FF")}
+                onFocus={(e) => (e.target.style.borderColor = "#5F47FF")}
                 onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
               />
               <button

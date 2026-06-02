@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { X, ArrowRight, PhoneCall } from "lucide-react";
 
 type ChatMessage = {
     role: "user" | "assistant";
@@ -138,7 +139,7 @@ function SpeedDial({ onOpenAria, isMobile }: { onOpenAria: () => void; isMobile:
                     background: expanded ? "#6B7280" : "#5F47FF",
                     color: "#fff",
                     cursor: "pointer",
-                    boxShadow: "0 8px 32px rgba(99,136,255,0.45)",
+                    boxShadow: "0 8px 32px rgba(95,71,255,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -440,8 +441,8 @@ export default function AIChatWidget() {
                     to   { opacity: 1; transform: translateY(0) scale(1); }
                 }
                 @keyframes ariaPulse {
-                    0%, 100% { box-shadow: 0 0 0 0 rgba(99,136,255,0.4); }
-                    50%       { box-shadow: 0 0 0 8px rgba(99,136,255,0); }
+                    0%, 100% { box-shadow: 0 0 0 0 rgba(95,71,255,0.4); }
+                    50%       { box-shadow: 0 0 0 8px rgba(95,71,255,0); }
                 }
                 @keyframes speedDialIn {
                     from { opacity: 0; transform: translateY(10px) scale(0.85); }
@@ -452,8 +453,8 @@ export default function AIChatWidget() {
                 }
                 .aria-send-btn:hover { opacity: 0.85; }
                 .aria-close-btn:hover { opacity: 0.7; }
-                .aria-msg-input:focus { outline: none; border-color: #6388FF !important; }
-                .aria-lead-input:focus { outline: none; border-color: #6388FF !important; box-shadow: 0 0 0 3px rgba(99,136,255,0.12); }
+                .aria-msg-input:focus { outline: none; border-color: #5F47FF !important; }
+                .aria-lead-input:focus { outline: none; border-color: #5F47FF !important; box-shadow: 0 0 0 3px rgba(95,71,255,0.12); }
 
                 /* Mobile responsive */
                 @media (max-width: 480px) {
@@ -509,7 +510,7 @@ export default function AIChatWidget() {
                             overflow: "hidden",
                             display: "flex",
                             flexDirection: "column",
-                            border: isMobile ? "none" : "1px solid rgba(99,136,255,0.12)",
+                            border: isMobile ? "none" : "1px solid rgba(95,71,255,0.12)",
                         }}
                     >
                         {/* Header */}
@@ -580,8 +581,6 @@ export default function AIChatWidget() {
                                     width: 32,
                                     height: 32,
                                     borderRadius: "50%",
-                                    fontSize: 18,
-                                    lineHeight: 1,
                                     cursor: "pointer",
                                     display: "flex",
                                     alignItems: "center",
@@ -590,7 +589,7 @@ export default function AIChatWidget() {
                                 }}
                                 aria-label="Close chat"
                             >
-                                ×
+                                <X size={16} strokeWidth={2.2} />
                             </button>
                         </div>
 
@@ -729,7 +728,7 @@ export default function AIChatWidget() {
                                         borderRadius: 18,
                                         padding: "16px",
                                         boxShadow: "0 4px 24px rgba(95,71,255,0.1)",
-                                        border: "1px solid rgba(99,136,255,0.18)",
+                                        border: "1px solid rgba(95,71,255,0.18)",
                                         marginTop: 4,
                                     }}
                                 >
@@ -739,14 +738,14 @@ export default function AIChatWidget() {
                                                 width: 36, height: 36, borderRadius: "50%",
                                                 background: "#5F47FF",
                                                 display: "flex", alignItems: "center", justifyContent: "center",
-                                                fontSize: 16,
+                                                color: "#fff",
                                             }}
                                         >
-                                            🌸
+                                            <PhoneCall size={16} strokeWidth={2.2} />
                                         </div>
                                         <div>
                                             <div style={{ fontWeight: 700, fontSize: 13, color: "#1a1a2e" }}>
-                                                Let's get you connected
+                                                Let&apos;s get you connected
                                             </div>
                                             <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>
                                                 A care advisor will call you personally
@@ -841,9 +840,13 @@ export default function AIChatWidget() {
                                                 width: "100%",
                                                 boxShadow: "0 4px 14px rgba(95,71,255,0.3)",
                                                 letterSpacing: "0.02em",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: 6,
                                             }}
                                         >
-                                            {leadSubmitting ? "Connecting you..." : "Request free callback →"}
+                                            {leadSubmitting ? "Connecting you…" : <>Request free callback <ArrowRight size={15} strokeWidth={2.2} /></>}
                                         </button>
                                     </div>
                                 </div>

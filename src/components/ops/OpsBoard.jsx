@@ -572,7 +572,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                     const isStart = r.date === customer.startDate;
                     const isToday = r.date === today;
                     const isPast = r.date < today;
-                    const rowBg = isToday ? "rgba(99,136,255,0.07)" : isPast ? "#fafafa" : "#fff";
+                    const rowBg = isToday ? "rgba(95,71,255,0.07)" : isPast ? "#fafafa" : "#fff";
                     return (
                       <div key={r.date} ref={isToday ? todayRowRef : undefined} style={{
                         display: "grid", gridTemplateColumns: "1.5fr 0.9fr 1.1fr 1.2fr", alignItems: "center", gap: 8,
@@ -1279,7 +1279,7 @@ function TravelExpensesView({ roster, customers, entries, onAdd, onDelete }) {
               <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr 1.2fr 0.6fr 0.9fr 0.4fr 32px", alignItems: "center", gap: 8, padding: "12px 16px", fontSize: 13, borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{staff && <Avatar s={staff} size={28} />}<div><div style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{staff?.name ?? "—"}</div><div style={{ fontSize: 11, color: "#7a7a86" }}>{staff?.role}</div></div></div>
                 <div style={{ fontSize: 12, color: "#0f1115" }}>{formatDateDMY(e.date)}</div>
-                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, backgroundColor: "rgba(99,136,255,0.10)", color: "#5F47FF", fontWeight: 600, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customerLabel}</span>
+                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, backgroundColor: "rgba(95,71,255,0.10)", color: "#5F47FF", fontWeight: 600, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customerLabel}</span>
                 <div><div style={{ fontSize: 12, color: "#0f1115" }}>{e.from} → {e.to}</div><div style={{ fontSize: 11, color: "#7a7a86" }}>{e.mode}</div></div>
                 <div style={{ color: "#0f1115" }}>{e.distance}</div>
                 <div style={{ fontWeight: 600, color: "#0f1115" }}>₹{e.amount.toLocaleString("en-IN")}</div>
