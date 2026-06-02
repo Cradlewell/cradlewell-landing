@@ -159,7 +159,7 @@ export default function StaffAvailabilityPage() {
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--crm-text-muted)" }}>
           <div style={{
             width: 32, height: 32, borderRadius: "50%",
-            border: "3px solid var(--crm-border)", borderTopColor: "#6388FF",
+            border: "3px solid var(--crm-border)", borderTopColor: "var(--crm-primary)",
             animation: "crm-spin 0.7s linear infinite",
             margin: "0 auto 12px",
           }} />
@@ -315,7 +315,7 @@ function StaffRow({ staff, assignment }: { staff: StaffMember; assignment: Assig
     }}>
       <div style={{
         width: 34, height: 34, borderRadius: "50%",
-        background: staff.color ?? "#6388FF",
+        background: staff.color ?? "var(--crm-primary)",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: "0.72rem", fontWeight: 700, color: "#fff", flexShrink: 0,
       }}>
@@ -369,10 +369,10 @@ function RangeView({
             {dates.map(d => (
               <th key={d} style={{
                 textAlign: "center", padding: "8px 10px",
-                background: d === today ? "rgba(99,136,255,0.08)" : "var(--crm-surface)",
-                borderBottom: d === today ? "2px solid #6388FF" : "2px solid var(--crm-border)",
+                background: d === today ? "rgba(95,71,255,0.07)" : "var(--crm-surface)",
+                borderBottom: d === today ? "2px solid var(--crm-primary)" : "2px solid var(--crm-border)",
                 fontWeight: d === today ? 700 : 600,
-                color: d === today ? "#6388FF" : "var(--crm-text-muted)",
+                color: d === today ? "var(--crm-primary)" : "var(--crm-text-muted)",
                 whiteSpace: "nowrap", minWidth: 100,
               }}>
                 {formatDateShort(d)}
@@ -394,7 +394,7 @@ function RangeView({
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{
                       width: 28, height: 28, borderRadius: "50%",
-                      background: s.color ?? "#6388FF",
+                      background: s.color ?? "var(--crm-primary)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: "0.65rem", fontWeight: 700, color: "#fff", flexShrink: 0,
                     }}>
@@ -414,7 +414,7 @@ function RangeView({
                     <td key={d} style={{
                       textAlign: "center", padding: "8px 6px",
                       borderBottom: "1px solid var(--crm-border)",
-                      background: d === today ? "rgba(99,136,255,0.04)" : rowBg,
+                      background: d === today ? "rgba(95,71,255,0.04)" : rowBg,
                     }}>
                       {a ? (
                         <span title={a.customerName} style={{

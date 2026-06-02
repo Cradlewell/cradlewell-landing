@@ -116,8 +116,8 @@ export default function WhatsAppImportModal({ open, onClose, onImported }: Props
 
             <div className="modal-header">
               <div className="d-flex align-items-center gap-2">
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <MessageSquare size={16} color="#16A34A" />
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#25D366", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <MessageSquare size={16} color="#FFFFFF" />
                 </div>
                 <div>
                   <h5 className="modal-title" style={{ marginBottom: 0 }}>Import from WhatsApp</h5>
@@ -164,7 +164,7 @@ export default function WhatsAppImportModal({ open, onClose, onImported }: Props
                         <tr key={s.wa_phone}>
                           <td>
                             <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{s.name || "—"}</div>
-                            <div style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)" }}>+91 {fmtPhone(s.wa_phone)}</div>
+                            <div className="crm-tabular" style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)" }}>+91 {fmtPhone(s.wa_phone)}</div>
                           </td>
                           <td>
                             <span style={{
@@ -180,7 +180,7 @@ export default function WhatsAppImportModal({ open, onClose, onImported }: Props
                           <td style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)" }}>
                             {[s.baby_status, s.service, s.shift].filter(Boolean).join(" · ") || "—"}
                           </td>
-                          <td style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)" }}>
+                          <td className="crm-tabular" style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)" }}>
                             {fmtDate(s.updated_at)}
                           </td>
                           <td style={{ textAlign: "right" }}>

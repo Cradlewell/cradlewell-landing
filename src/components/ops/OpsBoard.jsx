@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { Pencil, ChevronDown, AlertTriangle, Download } from "lucide-react";
 import { haversineKm, fmtKm as fmtKmLib } from "@/lib/geo-utils";
 
 const OpsMap = dynamic(() => import("./OpsMap"), { ssr: false, loading: () => <div style={{ height: 320, borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f8fafc", color: "#94a3b8", fontSize: 13 }}>Loading map…</div> });
@@ -7,7 +8,7 @@ const OpsMap = dynamic(() => import("./OpsMap"), { ssr: false, loading: () => <d
 // ─── Types (as JSDoc) ──────────────────────────────────────────────────────────
 
 const PALETTE = [
-  "#5F47FF", "#5F47FF", "#22c55e", "#f59e0b", "#a855f7",
+  "#5F47FF", "#4A35E0", "#22c55e", "#f59e0b", "#a855f7",
   "#ec4899", "#06b6d4", "#f43f5e", "#84cc16", "#eab308",
 ];
 
@@ -514,7 +515,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
             </span>
             {hasRota && (
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={downloadRota} style={{ fontSize: 11, fontWeight: 500, padding: "4px 8px", borderRadius: 6, backgroundColor: "#5F47FF", color: "#fff", border: "none", cursor: "pointer" }}>↓ Download CSV</button>
+                <button onClick={downloadRota} style={{ fontSize: 11, fontWeight: 500, padding: "4px 8px", borderRadius: 6, backgroundColor: "#5F47FF", color: "#fff", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}><Download size={11} strokeWidth={2.2} /> Download CSV</button>
                 <button onClick={() => onClearRota(customer.id)} style={{ fontSize: 11, fontWeight: 500, padding: "4px 8px", borderRadius: 6, backgroundColor: "transparent", color: "#ef4444", border: "1px solid #ef444466", cursor: "pointer" }}>Reset Rota</button>
               </div>
             )}
@@ -611,7 +612,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                                       </div>
                                     : <span style={{ fontSize: 11, fontWeight: 500, color: "#ef4444" }}>Unassigned</span>
                             }
-                            {!r.paused && !r.leave && <span style={{ marginLeft: "auto", fontSize: 10, color: isPast && !isToday ? "#5F47FF" : "#7a7a86", opacity: isPast && !isToday ? 1 : 0.5, flexShrink: 0 }}>{isPast && !isToday ? "✎" : "▾"}</span>}
+                            {!r.paused && !r.leave && <span style={{ marginLeft: "auto", display: "inline-flex", color: isPast && !isToday ? "#5F47FF" : "#7a7a86", opacity: isPast && !isToday ? 1 : 0.5, flexShrink: 0 }}>{isPast && !isToday ? <Pencil size={11} strokeWidth={2} /> : <ChevronDown size={12} strokeWidth={2} />}</span>}
                           </button>
 
                           {/* "+" button — add second staff (only when exactly 1 staff and day is active) */}
@@ -697,7 +698,7 @@ function DetailDialog({ customer, onClose, onAddStaff, onRemoveStaff, onSetRotaD
                                   : `${who}Also at ${o.customerName.replace(/\s+Family\s*$/i,"").trim()}`;
                                 return (
                                   <span key={`${si}-${i}`} title={label} style={{ fontSize: 11, padding: "3px 7px", borderRadius: 6, color: "#ea580c", backgroundColor: "#fff7ed", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
-                                    ⚠ {label}
+                                    <AlertTriangle size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} /> {label}
                                   </span>
                                 );
                               });
@@ -903,7 +904,7 @@ function StaffView({ roster, customers, onAdd, onRemove, onUpdate }) {
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "#0f1115" }}>{s.name}</div>
                     <div style={{ fontSize: 11, color: "#9a9aa6" }}>{s.area ? s.area : (assigned.length === 0 ? "Available" : `${assigned.length} client${assigned.length > 1 ? "s" : ""}`)}</div>
-                    {s.notes && <div style={{ fontSize: 11, color: "#7a7a86", marginTop: 2, fontStyle: "italic" }}>{s.notes}</div>}
+                    {s.notes && <div style={{ fontSize: 11, color: "#7a7a86", marginTop: 2 }}>{s.notes}</div>}
                   </div>
                 </div>
                 <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px", borderRadius: 6, backgroundColor: "#f1f5f9", color: "#5F47FF", fontWeight: 600, display: "inline-block" }}>{s.role}</span>
@@ -1514,7 +1515,7 @@ function RequirementsView({ requirements, loading }) {
         </div>
 
         {r.notes && (
-          <div style={{ marginTop: 10, fontSize: 12, color: "#64748b", borderTop: "1px solid #f1f5f9", paddingTop: 8, fontStyle: "italic" }}>
+          <div style={{ marginTop: 10, fontSize: 12, color: "#64748b", borderTop: "1px solid #f1f5f9", paddingTop: 8 }}>
             {r.notes}
           </div>
         )}
@@ -1564,8 +1565,8 @@ function RequirementsView({ requirements, loading }) {
   }
 
   const btnStyle = (active) => ({
-    padding: "5px 13px", borderRadius: 8, border: "1px solid #e2e8f0",
-    background: active ? "#6388FF" : "#fff", color: active ? "#fff" : "#64748b",
+    padding: "5px 13px", borderRadius: 8, border: `1px solid ${active ? "#5F47FF" : "#e2e8f0"}`,
+    background: active ? "#5F47FF" : "#fff", color: active ? "#fff" : "#64748b",
     fontWeight: 600, fontSize: 12, cursor: "pointer",
   });
 
@@ -1613,7 +1614,7 @@ function RequirementsView({ requirements, loading }) {
 
       {/* Cards */}
       <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <Section label="Nurse Required" color="#6388FF" items={nurse} total={nurseTotal} />
+        <Section label="Nurse Required" color="#5F47FF" items={nurse} total={nurseTotal} />
         <Section label="Moba Required"  color="#a855f7" items={moba}  total={mobaTotal} />
       </div>
 

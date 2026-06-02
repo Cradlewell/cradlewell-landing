@@ -115,7 +115,7 @@ export default function DashboardPage() {
               <s.icon size={18} color={s.color} />
             </div>
             <div className="crm-stat-label">{s.label}</div>
-            <div className="crm-stat-value" style={{ color: s.color }}>{s.value}</div>
+            <div className="crm-stat-value">{s.value}</div>
           </div>
         ))}
       </div>
