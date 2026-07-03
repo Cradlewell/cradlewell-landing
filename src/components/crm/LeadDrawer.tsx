@@ -13,6 +13,38 @@ import { format } from "date-fns";
 const FOLLOWUP_TYPES: FollowupType[] = ["First call", "Call back", "Quotation reminder", "Payment reminder", "Trial decision", "Closure follow-up"];
 const LOST_REASONS: LostReason[] = ["Competitor selected", "Budget issue", "No response", "Trust issue", "Service not available", "Other"];
 
+// ── Notes ───────────────────────────────────────────────────────────────────
+// Notes are persisted as a JSON array inside the lead's `callNotes` field, so no
+// separate table is needed. A legacy plain-text note (from before this format)
+// is surfaced as the first, un-deletable entry so nothing is lost.
+interface LeadNote { id: string; text: string; at: string; }
+
+function parseNotes(raw?: string): LeadNote[] {
+  if (!raw || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((n) => n && typeof n.text === "string")
+        .map((n, i) => ({ id: typeof n.id === "string" ? n.id : `n${i}`, text: n.text, at: typeof n.at === "string" ? n.at : "" }));
+    }
+  } catch { /* not JSON — treat the whole string as one legacy note */ }
+  return [{ id: "legacy", text: raw, at: "" }];
+}
+
+function noteTimeAgo(iso: string): string {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const diff = Date.now() - then;
+  if (diff < 60_000) return "now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  const days = Math.floor(diff / 86_400_000);
+  if (days < 30) return `${days}d ago`;
+  try { return format(new Date(iso), "dd MMM"); } catch { return ""; }
+}
+
 interface Props { leadId: string | null; onClose: () => void; }
 type Tab = "profile" | "followups" | "quotations" | "closure" | "activity";
 
@@ -49,6 +81,10 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [fuType, setFuType] = useState<FollowupType>("Call back");
   const [fuDue, setFuDue] = useState("");
   const [fuNote, setFuNote] = useState("");
+
+  const [noteDraft, setNoteDraft] = useState("");
+  const [notesSort, setNotesSort] = useState<"recent-last" | "recent-first">("recent-last");
+  const [hoverNote, setHoverNote] = useState<string | null>(null);
 
   const [qPkg, setQPkg] = useState("Standard 30 days");
   const [qHours, setQHours] = useState("12h");
@@ -93,6 +129,24 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
     });
     if (ok) { api.deleteLead(lead.id); onClose(); toast.success(`"${lead.name}" deleted`); }
   };
+  const notes = parseNotes(lead.callNotes);
+  const sortedNotes = [...notes].sort((a, b) => {
+    const ta = a.at ? new Date(a.at).getTime() : 0;
+    const tb = b.at ? new Date(b.at).getTime() : 0;
+    return notesSort === "recent-last" ? ta - tb : tb - ta;
+  });
+  const addNote = () => {
+    const text = noteDraft.trim();
+    if (!text) return;
+    const next = [...notes, { id: crypto.randomUUID(), text, at: new Date().toISOString() }];
+    api.updateLead(lead.id, { callNotes: JSON.stringify(next) });
+    setNoteDraft("");
+  };
+  const deleteNote = (id: string) => {
+    const next = notes.filter(n => n.id !== id);
+    api.updateLead(lead.id, { callNotes: next.length ? JSON.stringify(next) : "" });
+  };
+
   const addFollowup = () => {
     if (!fuDue) return;
     // fuDue is a naive datetime-local string (no timezone). Convert it to an
@@ -291,16 +345,72 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
               <div style={{ height: 1, background: "var(--crm-border)", marginBottom: "1.5rem" }} />
 
-              {/* Call Notes */}
+              {/* Notes */}
               <div style={{ marginBottom: "1.5rem" }}>
-                <div className="crm-section-title" style={{ marginBottom: "0.875rem" }}>Call Notes</div>
-                <textarea
-                  key={lead.id}
-                  className="crm-textarea"
-                  defaultValue={lead.callNotes ?? ""}
-                  placeholder="Add notes from your call…"
-                  onBlur={e => api.updateLead(lead.id, { callNotes: e.target.value })}
-                  style={{ minHeight: 80, fontSize: "0.875rem" }}
+                <div className="d-flex align-items-center justify-content-between" style={{ marginBottom: "0.875rem" }}>
+                  <div className="crm-section-title" style={{ margin: 0 }}>Notes</div>
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={notesSort}
+                      onChange={e => setNotesSort(e.target.value as "recent-last" | "recent-first")}
+                      style={{
+                        appearance: "none", background: "#F9F8F6", color: "#111110",
+                        border: "1px solid rgba(0,0,0,0.09)", borderRadius: 8,
+                        padding: "0.3rem 1.75rem 0.3rem 0.6rem", fontSize: "0.72rem",
+                        fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >
+                      <option value="recent-last">Recent Last</option>
+                      <option value="recent-first">Recent First</option>
+                    </select>
+                    <ChevronDown size={12} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#A8A8A6", pointerEvents: "none" }} />
+                  </div>
+                </div>
+
+                {notes.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", marginBottom: "0.85rem" }}>
+                    {sortedNotes.map(n => (
+                      <div
+                        key={n.id}
+                        onMouseEnter={() => setHoverNote(n.id)}
+                        onMouseLeave={() => setHoverNote(h => (h === n.id ? null : h))}
+                        style={{ display: "flex", gap: "0.625rem", alignItems: "flex-start" }}
+                      >
+                        <Avatar name={lead.name} size={34} shape="circle" style={{ flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.85rem", color: "#111110", fontWeight: 600, lineHeight: 1.4, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{n.text}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, fontSize: "0.72rem", color: "var(--crm-text-muted)", flexWrap: "wrap" }}>
+                            <span>Lead</span>
+                            <span style={{ color: "#A8A8A6" }}>·</span>
+                            <span style={{ color: "#5F47FF", fontWeight: 600 }}>{lead.name}</span>
+                            {n.at && (
+                              <>
+                                <span style={{ color: "#A8A8A6" }}>·</span>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={11} />{noteTimeAgo(n.at)}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteNote(n.id)}
+                          aria-label="Delete note"
+                          className="crm-icon-btn"
+                          style={{ opacity: hoverNote === n.id ? 0.7 : 0, transition: "opacity 0.15s", flexShrink: 0, color: "#DC2626" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <input
+                  className="crm-input"
+                  value={noteDraft}
+                  onChange={e => setNoteDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addNote(); } }}
+                  placeholder="Add a note"
+                  style={{ fontSize: "0.85rem" }}
                 />
               </div>
 
