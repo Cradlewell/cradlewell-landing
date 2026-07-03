@@ -32,17 +32,9 @@ function parseNotes(raw?: string): LeadNote[] {
   return [{ id: "legacy", text: raw, at: "" }];
 }
 
-function noteTimeAgo(iso: string): string {
+function fmtNoteDt(iso: string): string {
   if (!iso) return "";
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return "";
-  const diff = Date.now() - then;
-  if (diff < 60_000) return "now";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  const days = Math.floor(diff / 86_400_000);
-  if (days < 30) return `${days}d ago`;
-  try { return format(new Date(iso), "dd MMM"); } catch { return ""; }
+  try { return format(new Date(iso), "dd MMM yyyy, hh:mm a"); } catch { return ""; }
 }
 
 interface Props { leadId: string | null; onClose: () => void; }
@@ -379,17 +371,11 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                         <Avatar name={lead.name} size={34} shape="circle" style={{ flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: "0.85rem", color: "#111110", fontWeight: 600, lineHeight: 1.4, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{n.text}</div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, fontSize: "0.72rem", color: "var(--crm-text-muted)", flexWrap: "wrap" }}>
-                            <span>Lead</span>
-                            <span style={{ color: "#A8A8A6" }}>·</span>
-                            <span style={{ color: "#5F47FF", fontWeight: 600 }}>{lead.name}</span>
-                            {n.at && (
-                              <>
-                                <span style={{ color: "#A8A8A6" }}>·</span>
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={11} />{noteTimeAgo(n.at)}</span>
-                              </>
-                            )}
-                          </div>
+                          {n.at && (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 3, fontSize: "0.72rem", color: "var(--crm-text-muted)" }}>
+                              <Clock size={11} />{fmtNoteDt(n.at)}
+                            </div>
+                          )}
                         </div>
                         <button
                           onClick={() => deleteNote(n.id)}
