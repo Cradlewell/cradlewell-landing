@@ -95,7 +95,11 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   };
   const addFollowup = () => {
     if (!fuDue) return;
-    api.addFollowup({ leadId: lead.id, type: fuType, dueAt: fuDue, note: fuNote });
+    // fuDue is a naive datetime-local string (no timezone). Convert it to an
+    // absolute ISO instant so it stays stable across the TIMESTAMPTZ round-trip —
+    // otherwise Postgres reads the offset-less string as UTC and the time shifts
+    // by the user's timezone offset once it's re-fetched.
+    api.addFollowup({ leadId: lead.id, type: fuType, dueAt: new Date(fuDue).toISOString(), note: fuNote });
     setFuDue(""); setFuNote("");
     toast.success("Follow-up scheduled");
   };
