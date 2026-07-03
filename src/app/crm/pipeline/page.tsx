@@ -6,7 +6,16 @@ import type { Lead, LeadStage } from "@/lib/crm-types";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
-import { Plus, StickyNote } from "lucide-react";
+import { Plus, StickyNote, Calendar } from "lucide-react";
+import { format } from "date-fns";
+
+function fmtLeadDate(l: Lead): string {
+  const raw = l.createdAt || l.leadDate;
+  if (!raw) return "";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return typeof raw === "string" ? raw : "";
+  return format(d, "dd MMM yyyy");
+}
 
 export default function PipelinePage() {
   const leads = useLeads();
@@ -132,6 +141,11 @@ export default function PipelinePage() {
                     </div>
                     {l.shiftTime && (
                       <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)", marginTop: 4 }}>{l.shiftTime}</div>
+                    )}
+                    {fmtLeadDate(l) && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.7rem", color: "var(--crm-text-muted)", marginTop: 6 }}>
+                        <Calendar size={11} />{fmtLeadDate(l)}
+                      </div>
                     )}
                   </div>
                 ))}
