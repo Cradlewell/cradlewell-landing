@@ -10,7 +10,7 @@ import { confirm } from "@/components/ui/confirm-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { format } from "date-fns";
 
-const FOLLOWUP_TYPES: FollowupType[] = ["Callback + WhatsApp"];
+const FOLLOWUP_TYPES: FollowupType[] = ["Callback + WhatsApp", "Quotation reminder", "Payment reminder", "Trial decision", "Closure follow-up"];
 const LOST_REASONS: LostReason[] = ["Competitor selected", "Budget issue", "No response", "Trust issue", "Service not available", "Other"];
 
 // ── Notes ───────────────────────────────────────────────────────────────────
