@@ -108,7 +108,10 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const leadActivity = db.activity.filter(a => a.leadId === lead.id).reverse();
 
   const saveEdits = () => {
-    api.updateLead(lead.id, draft);
+    // callNotes is owned by the Notes thread, not the profile form. Exclude it
+    // so a stale draft snapshot can't overwrite notes added after the drawer opened.
+    const { callNotes: _ignore, ...patch } = draft;
+    api.updateLead(lead.id, patch);
     setEditing(false);
     toast.success("Lead updated");
   };
