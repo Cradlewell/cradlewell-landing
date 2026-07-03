@@ -483,9 +483,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                   </div>
                   <div className="crm-form-group">
                     <label className="crm-label">Shift Hours</label>
-                    <select className="crm-select" value={qHours} onChange={e => setQHours(e.target.value)}>
-                      <option>12h</option><option>24h</option><option>8h</option>
-                    </select>
+                    <input className="crm-input" value={qHours} onChange={e => setQHours(e.target.value)} placeholder="12h" />
                   </div>
                   <div className="crm-form-group">
                     <label className="crm-label required">Quoted Price (₹)</label>
