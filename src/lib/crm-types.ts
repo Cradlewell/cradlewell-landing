@@ -15,7 +15,7 @@ export type LeadSource = "Website" | "Aria Chat" | "WhatsApp" | "Instagram" | "F
   | "Referral" | "Walk-in" | "Hospital Partner" | "Other";
 export type BabyStatus = "Born" | "Expecting";
 export type Shift = "Day" | "Night" | "24hrs" | "Day (12h)" | "Night (12h)" | "Full Day (24h)" | "Custom";
-export type FollowupType = "First call" | "Call back" | "Quotation reminder"
+export type FollowupType = "First call" | "Call back" | "Callback + WhatsApp" | "Quotation reminder"
   | "Payment reminder" | "Trial decision" | "Closure follow-up";
 export type LostReason = "Competitor selected" | "Budget issue" | "No response"
   | "Trust issue" | "Service not available" | "Other";

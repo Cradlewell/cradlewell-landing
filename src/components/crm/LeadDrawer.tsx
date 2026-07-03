@@ -10,7 +10,7 @@ import { confirm } from "@/components/ui/confirm-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { format } from "date-fns";
 
-const FOLLOWUP_TYPES: FollowupType[] = ["First call", "Call back", "Quotation reminder", "Payment reminder", "Trial decision", "Closure follow-up"];
+const FOLLOWUP_TYPES: FollowupType[] = ["Callback + WhatsApp"];
 const LOST_REASONS: LostReason[] = ["Competitor selected", "Budget issue", "No response", "Trust issue", "Service not available", "Other"];
 
 // ── Notes ───────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Partial<Lead>>({});
 
-  const [fuType, setFuType] = useState<FollowupType>("Call back");
+  const [fuType, setFuType] = useState<FollowupType>("Callback + WhatsApp");
   const [fuDue, setFuDue] = useState("");
   const [fuNote, setFuNote] = useState("");
 
