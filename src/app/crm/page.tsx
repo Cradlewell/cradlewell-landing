@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useLeads, useFollowups, useClosures, isOverdue, isToday, isStale, isUrgentNew } from "@/lib/crm-store";
 import StageBadge from "@/components/crm/StageBadge";
 import TempBadge from "@/components/crm/TempBadge";
@@ -12,8 +12,22 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-const MONTHS = ["January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"];
+type PresetKey = "thisMonth" | "lastMonth" | "thisYear" | "all" | "custom";
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: "thisMonth", label: "This month" },
+  { key: "lastMonth", label: "Last month" },
+  { key: "thisYear", label: "This year" },
+  { key: "all", label: "All time" },
+];
+const PRESET_LABEL: Record<PresetKey, string> = {
+  thisMonth: "This month's revenue",
+  lastMonth: "Last month's revenue",
+  thisYear: "This year's revenue",
+  all: "All-time revenue",
+  custom: "Revenue",
+};
+const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+const monthEnd = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 
 export default function DashboardPage() {
   const leads = useLeads();
@@ -22,72 +36,68 @@ export default function DashboardPage() {
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
 
-  const nowRef = new Date();
-  const [selMonth, setSelMonth] = useState(nowRef.getMonth());
-  const [selYear, setSelYear] = useState(nowRef.getFullYear());
-  const isCurrentPeriod = selMonth === nowRef.getMonth() && selYear === nowRef.getFullYear();
+  // ── Date-range filter ───────────────────────────────────────────────────────
+  // A flexible calendar range drives all time-based numbers. Presets set the two
+  // dates; editing either date directly switches to "custom". Days are read in
+  // local time (from = start of day, to = end of day) so closures/leads land in
+  // the range the user actually picked.
+  const [fromStr, setFromStr] = useState(() => format(monthStart(new Date()), "yyyy-MM-dd"));
+  const [toStr, setToStr] = useState(() => format(monthEnd(new Date()), "yyyy-MM-dd"));
+  const [preset, setPreset] = useState<PresetKey>("thisMonth");
 
-  // Years to offer in the filter: every year we have a closure for, plus the
-  // current year, newest first — so the dropdown always covers real data.
-  const years = useMemo(() => {
-    const set = new Set<number>([new Date().getFullYear()]);
-    closures.forEach(c => set.add(new Date(c.closureDate).getFullYear()));
-    return Array.from(set).sort((a, b) => b - a);
-  }, [closures]);
+  const fromDate = useMemo(() => new Date(`${fromStr}T00:00:00`), [fromStr]);
+  const toDate = useMemo(() => new Date(`${toStr}T23:59:59.999`), [toStr]);
+  const rangeValid = !!fromStr && !!toStr && fromDate.getTime() <= toDate.getTime();
 
-  const today = useMemo(
-    () => followups.filter(f => !f.completed && isToday(f.dueAt)),
-    [followups]
-  );
-  const overdue = useMemo(
-    () => followups.filter(f => !f.completed && isOverdue(f.dueAt) && !isToday(f.dueAt)),
-    [followups]
-  );
-  const hot = useMemo(
-    () => leads.filter(l => l.temperature === "Hot" && l.stage !== "Closed Won" && l.stage !== "Closed Lost"),
-    [leads]
-  );
+  const applyPreset = (key: PresetKey) => {
+    const n = new Date();
+    setPreset(key);
+    if (key === "thisMonth") { setFromStr(format(monthStart(n), "yyyy-MM-dd")); setToStr(format(monthEnd(n), "yyyy-MM-dd")); }
+    else if (key === "lastMonth") { const p = new Date(n.getFullYear(), n.getMonth() - 1, 1); setFromStr(format(monthStart(p), "yyyy-MM-dd")); setToStr(format(monthEnd(p), "yyyy-MM-dd")); }
+    else if (key === "thisYear") { setFromStr(format(new Date(n.getFullYear(), 0, 1), "yyyy-MM-dd")); setToStr(format(new Date(n.getFullYear(), 11, 31), "yyyy-MM-dd")); }
+    else if (key === "all") { setFromStr("2000-01-01"); setToStr(format(n, "yyyy-MM-dd")); }
+  };
+  const editFrom = (v: string) => { setFromStr(v); setPreset("custom"); };
+  const editTo = (v: string) => { setToStr(v); setPreset("custom"); };
+
+  // Range-scoped (historical) numbers
+  const within = useCallback((iso: string) => {
+    const t = new Date(iso).getTime();
+    return t >= fromDate.getTime() && t <= toDate.getTime();
+  }, [fromDate, toDate]);
+  const rangeLeads = useMemo(() => leads.filter(l => within(l.createdAt)), [leads, within]);
+  const rangeWon = useMemo(() => closures.filter(c => c.type === "Won" && within(c.closureDate)), [closures, within]);
+  const rangeLost = useMemo(() => closures.filter(c => c.type === "Lost" && within(c.closureDate)), [closures, within]);
+  const revenue = useMemo(() => rangeWon.reduce((s, c) => s + (c.finalAmount ?? 0), 0), [rangeWon]);
+  const winRate = useMemo(() => {
+    const closed = rangeWon.length + rangeLost.length;
+    return closed > 0 ? Math.round((rangeWon.length / closed) * 100) : 0;
+  }, [rangeWon.length, rangeLost.length]);
+
+  // Current-state (live) numbers — a status snapshot, not tied to the range
+  const today = useMemo(() => followups.filter(f => !f.completed && isToday(f.dueAt)), [followups]);
+  const overdue = useMemo(() => followups.filter(f => !f.completed && isOverdue(f.dueAt) && !isToday(f.dueAt)), [followups]);
+  const hot = useMemo(() => leads.filter(l => l.temperature === "Hot" && l.stage !== "Closed Won" && l.stage !== "Closed Lost"), [leads]);
   const inNegotiation = useMemo(() => leads.filter(l => l.stage === "Negotiation"), [leads]);
   const inFollowup = useMemo(() => leads.filter(l => l.stage === "Follow-up"), [leads]);
-  const wonLeads = useMemo(() => leads.filter(l => l.stage === "Closed Won"), [leads]);
-  const lostLeads = useMemo(() => leads.filter(l => l.stage === "Closed Lost"), [leads]);
-  const newToday = useMemo(() => leads.filter(l => isToday(l.createdAt)), [leads]);
+  const pipelineLeads = useMemo(() => leads.filter(l => l.stage !== "Closed Won" && l.stage !== "Closed Lost" && l.stage !== "Invalid Lead"), [leads]);
 
-  const periodWon = useMemo(
-    () => closures.filter(c => {
-      if (c.type !== "Won") return false;
-      const d = new Date(c.closureDate);
-      return d.getMonth() === selMonth && d.getFullYear() === selYear;
-    }),
-    [closures, selMonth, selYear]
-  );
-  const monthRevenue = useMemo(
-    () => periodWon.reduce((sum, c) => sum + (c.finalAmount ?? 0), 0),
-    [periodWon]
-  );
+  const heroLabel = PRESET_LABEL[preset] ?? "Revenue";
 
-  const conversionRate = useMemo(
-    () => leads.length > 0 ? Math.round((wonLeads.length / leads.length) * 100) : 0,
-    [leads.length, wonLeads.length]
-  );
-
-  const pipelineLeads = useMemo(
-    () => leads.filter(l => l.stage !== "Closed Won" && l.stage !== "Closed Lost" && l.stage !== "Invalid Lead"),
-    [leads]
-  );
-
-  const stats = useMemo(() => [
+  const periodStats = [
+    { label: "New leads", value: rangeLeads.length, icon: UserPlus, bg: "rgba(95,71,255,0.07)", color: "#5F47FF" },
+    { label: "Closed won", value: rangeWon.length, icon: Trophy, bg: "rgba(48,164,108,0.08)", color: "#30A46C" },
+    { label: "Closed lost", value: rangeLost.length, icon: XCircle, bg: "rgba(0,0,0,0.04)", color: "#6B6B6A" },
+  ];
+  const statusStats = [
     { label: "Total leads", value: leads.length, icon: Users, bg: "rgba(95,71,255,0.07)", color: "#5F47FF" },
-    { label: "New today", value: newToday.length, icon: UserPlus, bg: "rgba(48,164,108,0.08)", color: "#30A46C" },
+    { label: "In pipeline", value: pipelineLeads.length, icon: TrendingUp, bg: "rgba(124,58,237,0.07)", color: "#7C3AED" },
     { label: "Follow-ups today", value: today.length, icon: CalendarClock, bg: "rgba(229,146,10,0.08)", color: "#B45309" },
     { label: "Overdue", value: overdue.length, icon: AlertTriangle, bg: "rgba(229,72,77,0.07)", color: "#DC2626" },
     { label: "Hot leads", value: hot.length, icon: Flame, bg: "rgba(229,72,77,0.07)", color: "#E5484D" },
     { label: "Negotiation", value: inNegotiation.length, icon: TrendingUp, bg: "rgba(124,58,237,0.07)", color: "#7C3AED" },
     { label: "Follow-up stage", value: inFollowup.length, icon: RotateCcw, bg: "rgba(229,146,10,0.08)", color: "#92400E" },
-    { label: "Closed won", value: wonLeads.length, icon: Trophy, bg: "rgba(48,164,108,0.08)", color: "#30A46C" },
-    { label: "Closed lost", value: lostLeads.length, icon: XCircle, bg: "rgba(0,0,0,0.04)", color: "#6B6B6A" },
-  ], [leads.length, newToday.length, today.length, overdue.length, hot.length,
-      inNegotiation.length, inFollowup.length, wonLeads.length, lostLeads.length]);
+  ];
 
   return (
     <>
@@ -104,46 +114,77 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* Period filter — presets + flexible calendar range */}
+      <div className="crm-card mb-4" style={{ padding: "0.85rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div className="d-flex align-items-center gap-2" style={{ color: "var(--crm-text-muted)", fontSize: "0.8rem", fontWeight: 600 }}>
+          <CalendarClock size={15} /> Period
+        </div>
+        <div className="d-flex gap-2 flex-wrap">
+          {PRESETS.map(p => (
+            <button key={p.key} onClick={() => applyPreset(p.key)}
+              className={`crm-btn crm-btn-sm ${preset === p.key ? "crm-btn-primary" : "crm-btn-ghost"}`}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div className="d-flex align-items-center gap-2" style={{ marginLeft: "auto" }}>
+          <input type="date" className="crm-input" value={fromStr} onChange={e => editFrom(e.target.value)}
+            style={{ width: "auto", minHeight: 34, fontSize: "0.8rem" }} aria-label="From date" />
+          <span style={{ color: "var(--crm-text-muted)" }}>→</span>
+          <input type="date" className="crm-input" value={toStr} onChange={e => editTo(e.target.value)}
+            style={{ width: "auto", minHeight: 34, fontSize: "0.8rem" }} aria-label="To date" />
+        </div>
+        {!rangeValid && (
+          <div style={{ flexBasis: "100%", fontSize: "0.75rem", color: "#DC2626" }}>
+            &ldquo;From&rdquo; date must be on or before &ldquo;To&rdquo; date.
+          </div>
+        )}
+      </div>
+
       {/* Revenue Hero */}
       <div className="crm-hero-card mb-4">
-        <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap" style={{ marginBottom: "0.5rem" }}>
-          <div className="crm-section-title" style={{ margin: 0 }}>
-            {isCurrentPeriod ? "This month's revenue" : `${format(new Date(selYear, selMonth, 1), "MMMM yyyy")} revenue`}
-          </div>
-          <div className="d-flex gap-2">
-            <select className="crm-select" value={selMonth} onChange={e => setSelMonth(Number(e.target.value))}
-              style={{ width: "auto", minHeight: 34, padding: "0.35rem 1.75rem 0.35rem 0.6rem", fontSize: "0.8rem" }}>
-              {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-            </select>
-            <select className="crm-select" value={selYear} onChange={e => setSelYear(Number(e.target.value))}
-              style={{ width: "auto", minHeight: 34, padding: "0.35rem 1.75rem 0.35rem 0.6rem", fontSize: "0.8rem" }}>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
+        <div className="crm-section-title" style={{ marginBottom: "0.25rem" }}>{heroLabel}</div>
+        <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)", marginBottom: "0.5rem" }}>
+          {format(fromDate, "dd MMM yyyy")} – {format(toDate, "dd MMM yyyy")}
         </div>
         <div className="crm-hero-amount" style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <IndianRupee size={26} style={{ flexShrink: 0, marginTop: 2 }} />
-          {monthRevenue.toLocaleString("en-IN")}
+          {revenue.toLocaleString("en-IN")}
         </div>
         <div className="d-flex gap-4 mt-3 flex-wrap">
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Conversions</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{periodWon.length}</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{rangeWon.length}</div>
           </div>
           <div>
-            <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>In pipeline</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{pipelineLeads.length}</div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Lost</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{rangeLost.length}</div>
           </div>
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Win rate</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-primary)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{conversionRate}%</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-primary)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{winRate}%</div>
           </div>
         </div>
       </div>
 
-      {/* Stats grid */}
+      {/* In selected period */}
+      <div className="crm-section-title mb-2">In selected period</div>
       <div className="crm-grid-4 mb-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-        {stats.map(s => (
+        {periodStats.map(s => (
+          <div key={s.label} className="crm-stat-card">
+            <div className="crm-stat-icon" style={{ background: s.bg }}>
+              <s.icon size={18} color={s.color} />
+            </div>
+            <div className="crm-stat-label">{s.label}</div>
+            <div className="crm-stat-value">{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Current status — live snapshot, not affected by the period filter */}
+      <div className="crm-section-title mb-2">Current status</div>
+      <div className="crm-grid-4 mb-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        {statusStats.map(s => (
           <div key={s.label} className="crm-stat-card">
             <div className="crm-stat-icon" style={{ background: s.bg }}>
               <s.icon size={18} color={s.color} />
