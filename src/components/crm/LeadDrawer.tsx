@@ -74,6 +74,12 @@ const PAYMENT_STYLE: Record<string, { bg: string; color: string }> = {
   Pending: { bg: "#FEF2F2", color: "#DC2626" },
 };
 
+// A closure's date is edited as a plain calendar day. Anchor it to local noon so
+// the stored UTC instant maps back to the same day in any reasonable timezone —
+// both the dashboard month/year filter and the card display read it locally.
+const dayToIso = (day: string) => new Date(`${day}T12:00:00`).toISOString();
+const isoToDay = (iso: string) => format(new Date(iso), "yyyy-MM-dd");
+
 function ClosureCard({ closure }: { closure: Closure }) {
   const [editing, setEditing] = useState(false);
   const [pkg, setPkg] = useState("");
@@ -83,6 +89,7 @@ function ClosureCard({ closure }: { closure: Closure }) {
   const [lostReason, setLostReason] = useState<LostReason>("Competitor selected");
   const [competitor, setCompetitor] = useState("");
   const [notes, setNotes] = useState("");
+  const [dateStr, setDateStr] = useState("");
 
   const startEdit = () => {
     setPkg(closure.finalPackage ?? "");
@@ -92,19 +99,22 @@ function ClosureCard({ closure }: { closure: Closure }) {
     setLostReason((closure.lostReason as LostReason) ?? "Competitor selected");
     setCompetitor(closure.competitorName ?? "");
     setNotes(closure.notes ?? "");
+    setDateStr(isoToDay(closure.closureDate));
     setEditing(true);
   };
 
   const save = () => {
+    const closureDate = dateStr ? dayToIso(dateStr) : closure.closureDate;
     if (closure.type === "Won") {
       api.updateClosure(closure.id, {
         finalPackage: pkg,
         finalAmount: Number(amount) || undefined,
         advanceReceived: Number(advance) || undefined,
         paymentStatus: payStatus,
+        closureDate,
       });
     } else {
-      api.updateClosure(closure.id, { lostReason, competitorName: competitor, notes });
+      api.updateClosure(closure.id, { lostReason, competitorName: competitor, notes, closureDate });
     }
     setEditing(false);
     toast.success("Closure updated");
@@ -162,6 +172,10 @@ function ClosureCard({ closure }: { closure: Closure }) {
                 <option>Pending</option><option>Partial</option><option>Paid</option>
               </select>
             </div>
+            <div className="crm-form-group">
+              <label className="crm-label">Closure Date</label>
+              <input className="crm-input" type="date" value={dateStr} onChange={e => setDateStr(e.target.value)} />
+            </div>
             <div style={{ gridColumn: "1/-1" }}>
               <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={save}><Save size={13} /> Save Changes</button>
             </div>
@@ -177,6 +191,10 @@ function ClosureCard({ closure }: { closure: Closure }) {
             <div className="crm-form-group">
               <label className="crm-label">Competitor Name</label>
               <input className="crm-input" value={competitor} onChange={e => setCompetitor(e.target.value)} />
+            </div>
+            <div className="crm-form-group">
+              <label className="crm-label">Closure Date</label>
+              <input className="crm-input" type="date" value={dateStr} onChange={e => setDateStr(e.target.value)} />
             </div>
             <div className="crm-form-group" style={{ gridColumn: "1/-1" }}>
               <label className="crm-label">Notes</label>
@@ -243,6 +261,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [cLostReason, setCLostReason] = useState<LostReason>("Competitor selected");
   const [cCompetitor, setCCompetitor] = useState("");
   const [cNotes, setCNotes] = useState("");
+  const [cDate, setCDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [showAddClosure, setShowAddClosure] = useState(false);
 
   useEffect(() => {
@@ -314,16 +333,18 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
     toast.success("Quotation saved", { description: `₹${(p - d).toLocaleString("en-IN")} — ${qPkg}` });
   };
   const submitClosure = () => {
+    const closureDate = cDate ? new Date(`${cDate}T12:00:00`).toISOString() : new Date().toISOString();
     if (closureType === "Won") {
-      api.closeLead({ leadId: lead.id, type: "Won", finalPackage: cPkg, finalAmount: Number(cAmount) || undefined, advanceReceived: Number(cAdvance) || undefined, paymentStatus: cPayStatus, closureDate: new Date().toISOString() });
+      api.closeLead({ leadId: lead.id, type: "Won", finalPackage: cPkg, finalAmount: Number(cAmount) || undefined, advanceReceived: Number(cAdvance) || undefined, paymentStatus: cPayStatus, closureDate });
       toast.success("Closed Won!", { description: cAmount ? `₹${Number(cAmount).toLocaleString("en-IN")} · ${cPayStatus}` : undefined });
     } else {
-      api.closeLead({ leadId: lead.id, type: "Lost", lostReason: cLostReason, competitorName: cCompetitor, notes: cNotes, closureDate: new Date().toISOString() });
+      api.closeLead({ leadId: lead.id, type: "Lost", lostReason: cLostReason, competitorName: cCompetitor, notes: cNotes, closureDate });
       toast.warning("Marked as Lost", { description: cLostReason });
     }
     // Reset the add-closure form so the next entry starts blank, and collapse it.
     setCPkg(""); setCAmount(""); setCAdvance(""); setCPayStatus("Pending");
     setCLostReason("Competitor selected"); setCCompetitor(""); setCNotes("");
+    setCDate(format(new Date(), "yyyy-MM-dd"));
     setShowAddClosure(false);
   };
   const fmtDt = (iso: string) => { try { return format(new Date(iso), "dd MMM, hh:mm a"); } catch { return iso; } };
@@ -729,6 +750,10 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                             <option>Pending</option><option>Partial</option><option>Paid</option>
                           </select>
                         </div>
+                        <div className="crm-form-group">
+                          <label className="crm-label">Closure Date</label>
+                          <input className="crm-input" type="date" value={cDate} onChange={e => setCDate(e.target.value)} />
+                        </div>
                       </div>
                       <div className="d-flex gap-2">
                         <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={submitClosure}>Confirm Won</button>
@@ -749,6 +774,10 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                         <div className="crm-form-group">
                           <label className="crm-label">Competitor Name</label>
                           <input className="crm-input" value={cCompetitor} onChange={e => setCCompetitor(e.target.value)} placeholder="NurtureNest" />
+                        </div>
+                        <div className="crm-form-group">
+                          <label className="crm-label">Closure Date</label>
+                          <input className="crm-input" type="date" value={cDate} onChange={e => setCDate(e.target.value)} />
                         </div>
                       </div>
                       <div className="crm-form-group mb-2">

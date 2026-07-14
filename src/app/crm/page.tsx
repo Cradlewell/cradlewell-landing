@@ -12,12 +12,28 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
+const MONTHS = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+
 export default function DashboardPage() {
   const leads = useLeads();
   const followups = useFollowups();
   const closures = useClosures();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
+
+  const nowRef = new Date();
+  const [selMonth, setSelMonth] = useState(nowRef.getMonth());
+  const [selYear, setSelYear] = useState(nowRef.getFullYear());
+  const isCurrentPeriod = selMonth === nowRef.getMonth() && selYear === nowRef.getFullYear();
+
+  // Years to offer in the filter: every year we have a closure for, plus the
+  // current year, newest first — so the dropdown always covers real data.
+  const years = useMemo(() => {
+    const set = new Set<number>([new Date().getFullYear()]);
+    closures.forEach(c => set.add(new Date(c.closureDate).getFullYear()));
+    return Array.from(set).sort((a, b) => b - a);
+  }, [closures]);
 
   const today = useMemo(
     () => followups.filter(f => !f.completed && isToday(f.dueAt)),
@@ -37,18 +53,18 @@ export default function DashboardPage() {
   const lostLeads = useMemo(() => leads.filter(l => l.stage === "Closed Lost"), [leads]);
   const newToday = useMemo(() => leads.filter(l => isToday(l.createdAt)), [leads]);
 
-  const monthRevenue = useMemo(() => {
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-    return closures
-      .filter(c => {
-        if (c.type !== "Won") return false;
-        const d = new Date(c.closureDate);
-        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-      })
-      .reduce((sum, c) => sum + (c.finalAmount ?? 0), 0);
-  }, [closures]);
+  const periodWon = useMemo(
+    () => closures.filter(c => {
+      if (c.type !== "Won") return false;
+      const d = new Date(c.closureDate);
+      return d.getMonth() === selMonth && d.getFullYear() === selYear;
+    }),
+    [closures, selMonth, selYear]
+  );
+  const monthRevenue = useMemo(
+    () => periodWon.reduce((sum, c) => sum + (c.finalAmount ?? 0), 0),
+    [periodWon]
+  );
 
   const conversionRate = useMemo(
     () => leads.length > 0 ? Math.round((wonLeads.length / leads.length) * 100) : 0,
@@ -90,8 +106,20 @@ export default function DashboardPage() {
 
       {/* Revenue Hero */}
       <div className="crm-hero-card mb-4">
-        <div className="crm-section-title" style={{ marginBottom: "0.5rem" }}>
-          This month&apos;s revenue
+        <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap" style={{ marginBottom: "0.5rem" }}>
+          <div className="crm-section-title" style={{ margin: 0 }}>
+            {isCurrentPeriod ? "This month's revenue" : `${format(new Date(selYear, selMonth, 1), "MMMM yyyy")} revenue`}
+          </div>
+          <div className="d-flex gap-2">
+            <select className="crm-select" value={selMonth} onChange={e => setSelMonth(Number(e.target.value))}
+              style={{ width: "auto", minHeight: 34, padding: "0.35rem 1.75rem 0.35rem 0.6rem", fontSize: "0.8rem" }}>
+              {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+            </select>
+            <select className="crm-select" value={selYear} onChange={e => setSelYear(Number(e.target.value))}
+              style={{ width: "auto", minHeight: 34, padding: "0.35rem 1.75rem 0.35rem 0.6rem", fontSize: "0.8rem" }}>
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
         <div className="crm-hero-amount" style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <IndianRupee size={26} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -100,7 +128,7 @@ export default function DashboardPage() {
         <div className="d-flex gap-4 mt-3 flex-wrap">
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Conversions</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{wonLeads.length}</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{periodWon.length}</div>
           </div>
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>In pipeline</div>
