@@ -488,6 +488,10 @@
 .crm-kanban-col-body {
   padding: 0.5rem;
   min-height: 80px;
+  /* Cap the column height so a long column scrolls internally instead of
+     stretching the whole page — lets you scroll down within a busy stage. */
+  max-height: calc(100dvh - 260px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
