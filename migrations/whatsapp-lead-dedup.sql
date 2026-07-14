@@ -86,6 +86,15 @@ DELETE FROM leads l USING lead_dedup d WHERE l.id = d.id AND d.id <> d.survivor_
 -- 4. Enforce one-lead-per-number at the DB level ------------------------------
 CREATE UNIQUE INDEX IF NOT EXISTS leads_phone_unique ON leads (phone);
 
+-- 4b. Back-fill whatsapp_stage on EXISTING leads from their session -----------
+--     (leads created before the column existed have a NULL stage; going forward
+--      the bot keeps it fresh on every message).
+UPDATE leads l
+SET whatsapp_stage = s.step
+FROM whatsapp_sessions s
+WHERE l.phone = RIGHT(regexp_replace(s.wa_phone, '\D', '', 'g'), 10)
+  AND (l.whatsapp_stage IS NULL OR l.whatsapp_stage = '');
+
 -- 5. Back-fill drop-off leads from active WhatsApp sessions --------------------
 --    Anyone who has a bot session but no lead row (captured before the fix).
 INSERT INTO leads (
