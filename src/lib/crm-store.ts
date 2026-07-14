@@ -276,9 +276,28 @@ export const api = {
   },
 
   updateClosure(id: string, patch: Partial<Closure>) {
+    const prev = _db.closures.find((c) => c.id === id);
+    if (!prev) return;
+    const snap = { ...prev };
     _db.closures = _db.closures.map((c) => c.id === id ? { ...c, ...patch } : c);
-    notify("closures");
+    const lead = _db.leads.find((l) => l.id === snap.leadId);
+    if (lead) lead.lastActivityAt = now();
+    notify("leads", "closures");
     apiPut(`/api/crm/closures/${id}`, patch).catch(() => {
+      // Restore the pre-edit closure so a failed save doesn't leave a wrong value on screen
+      _db.closures = _db.closures.map((c) => c.id === id ? snap : c);
+      notify("leads", "closures");
+    });
+  },
+
+  deleteClosure(id: string) {
+    const idx = _db.closures.findIndex((c) => c.id === id);
+    if (idx === -1) return;
+    const snap = _db.closures[idx];
+    _db.closures = _db.closures.filter((c) => c.id !== id);
+    notify("closures");
+    apiDelete(`/api/crm/closures/${id}`).catch(() => {
+      _db.closures.splice(idx, 0, snap);
       notify("closures");
     });
   },

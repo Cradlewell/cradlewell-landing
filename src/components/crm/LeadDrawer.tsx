@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Phone, MessageCircle, Edit2, Save, Trash2, Plus, Check, Clock, ChevronDown } from "lucide-react";
 import { api, useDB, isOverdue, isToday } from "@/lib/crm-store";
-import type { Lead, LeadStage, FollowupType, LostReason } from "@/lib/crm-types";
+import type { Lead, LeadStage, FollowupType, LostReason, Closure } from "@/lib/crm-types";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import StageBadge from "./StageBadge";
 import { toast } from "@/components/ui/toast";
@@ -63,6 +63,157 @@ function Field({ label, value, field, type = "text", editing, draft, setDraft }:
   );
 }
 
+// ── Closure card ──────────────────────────────────────────────────────────────
+// One card per closure. A lead can be closed multiple times (repeat bookings,
+// renewals, split payments), so each closure renders independently with its own
+// edit state. Saving writes through api.updateClosure, which updates the shared
+// store — so the dashboard revenue and Closures page reflect the change live.
+const PAYMENT_STYLE: Record<string, { bg: string; color: string }> = {
+  Paid: { bg: "#F0FDF4", color: "#16A34A" },
+  Partial: { bg: "#FFFBEB", color: "#B45309" },
+  Pending: { bg: "#FEF2F2", color: "#DC2626" },
+};
+
+function ClosureCard({ closure }: { closure: Closure }) {
+  const [editing, setEditing] = useState(false);
+  const [pkg, setPkg] = useState("");
+  const [amount, setAmount] = useState("");
+  const [advance, setAdvance] = useState("");
+  const [payStatus, setPayStatus] = useState<"Pending" | "Partial" | "Paid">("Pending");
+  const [lostReason, setLostReason] = useState<LostReason>("Competitor selected");
+  const [competitor, setCompetitor] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const startEdit = () => {
+    setPkg(closure.finalPackage ?? "");
+    setAmount(String(closure.finalAmount ?? ""));
+    setAdvance(String(closure.advanceReceived ?? ""));
+    setPayStatus((closure.paymentStatus as "Pending" | "Partial" | "Paid") ?? "Pending");
+    setLostReason((closure.lostReason as LostReason) ?? "Competitor selected");
+    setCompetitor(closure.competitorName ?? "");
+    setNotes(closure.notes ?? "");
+    setEditing(true);
+  };
+
+  const save = () => {
+    if (closure.type === "Won") {
+      api.updateClosure(closure.id, {
+        finalPackage: pkg,
+        finalAmount: Number(amount) || undefined,
+        advanceReceived: Number(advance) || undefined,
+        paymentStatus: payStatus,
+      });
+    } else {
+      api.updateClosure(closure.id, { lostReason, competitorName: competitor, notes });
+    }
+    setEditing(false);
+    toast.success("Closure updated");
+  };
+
+  const remove = async () => {
+    const ok = await confirm({
+      title: "Delete this closure?",
+      body: "This closure record will be permanently removed and revenue totals will update.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (ok) { api.deleteClosure(closure.id); toast.success("Closure removed"); }
+  };
+
+  return (
+    <div className="crm-card p-4">
+      <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+        <div className="d-flex align-items-center gap-2">
+          <span className="crm-badge" style={closure.type === "Won" ? { background: "#F0FDF4", color: "#16A34A", fontSize: "0.85rem" } : { background: "#FEF2F2", color: "#DC2626", fontSize: "0.85rem" }}>
+            {closure.type === "Won" ? "🏆 Closed Won" : "✗ Closed Lost"}
+          </span>
+          <span style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)" }}>{format(new Date(closure.closureDate), "dd MMM yyyy")}</span>
+        </div>
+        <div className="d-flex align-items-center gap-1">
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => (editing ? setEditing(false) : startEdit())}>
+            {editing ? <><X size={13} /> Cancel</> : <><Edit2 size={13} /> Edit</>}
+          </button>
+          {!editing && (
+            <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={remove} style={{ color: "#DC2626" }} title="Delete closure">
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        closure.type === "Won" ? (
+          <div className="crm-grid-2">
+            <div className="crm-form-group">
+              <label className="crm-label">Package</label>
+              <input className="crm-input" value={pkg} onChange={e => setPkg(e.target.value)} />
+            </div>
+            <div className="crm-form-group">
+              <label className="crm-label">Final Amount (₹)</label>
+              <input className="crm-input" type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+            </div>
+            <div className="crm-form-group">
+              <label className="crm-label">Advance Received (₹)</label>
+              <input className="crm-input" type="number" value={advance} onChange={e => setAdvance(e.target.value)} />
+            </div>
+            <div className="crm-form-group">
+              <label className="crm-label">Payment Status</label>
+              <select className="crm-select" value={payStatus} onChange={e => setPayStatus(e.target.value as "Pending" | "Partial" | "Paid")}>
+                <option>Pending</option><option>Partial</option><option>Paid</option>
+              </select>
+            </div>
+            <div style={{ gridColumn: "1/-1" }}>
+              <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={save}><Save size={13} /> Save Changes</button>
+            </div>
+          </div>
+        ) : (
+          <div className="crm-grid-2">
+            <div className="crm-form-group">
+              <label className="crm-label">Lost Reason</label>
+              <select className="crm-select" value={lostReason} onChange={e => setLostReason(e.target.value as LostReason)}>
+                {LOST_REASONS.map(r => <option key={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="crm-form-group">
+              <label className="crm-label">Competitor Name</label>
+              <input className="crm-input" value={competitor} onChange={e => setCompetitor(e.target.value)} />
+            </div>
+            <div className="crm-form-group" style={{ gridColumn: "1/-1" }}>
+              <label className="crm-label">Notes</label>
+              <textarea className="crm-textarea" value={notes} onChange={e => setNotes(e.target.value)} style={{ minHeight: 64 }} />
+            </div>
+            <div style={{ gridColumn: "1/-1" }}>
+              <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={save}><Save size={13} /> Save Changes</button>
+            </div>
+          </div>
+        )
+      ) : (
+        <>
+          {closure.type === "Won" && (
+            <div className="crm-grid-2">
+              <div><div className="crm-section-title mb-1">Package</div><div style={{ fontSize: "0.875rem" }}>{closure.finalPackage || "—"}</div></div>
+              <div><div className="crm-section-title mb-1">Final Amount</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--crm-primary)" }}>{closure.finalAmount ? `₹${closure.finalAmount.toLocaleString("en-IN")}` : "—"}</div></div>
+              <div><div className="crm-section-title mb-1">Advance</div><div style={{ fontSize: "0.875rem" }}>{closure.advanceReceived ? `₹${closure.advanceReceived.toLocaleString("en-IN")}` : "—"}</div></div>
+              <div><div className="crm-section-title mb-1">Payment</div>
+                <span className="crm-badge" style={PAYMENT_STYLE[closure.paymentStatus ?? "Pending"] ?? {}}>
+                  {closure.paymentStatus}
+                </span>
+              </div>
+            </div>
+          )}
+          {closure.type === "Lost" && (
+            <div className="crm-grid-2">
+              <div><div className="crm-section-title mb-1">Reason</div><div style={{ fontSize: "0.875rem" }}>{closure.lostReason || "—"}</div></div>
+              <div><div className="crm-section-title mb-1">Competitor</div><div style={{ fontSize: "0.875rem" }}>{closure.competitorName || "—"}</div></div>
+              {closure.notes && <div style={{ gridColumn: "1/-1" }}><div className="crm-section-title mb-1">Notes</div><div style={{ fontSize: "0.875rem" }}>{closure.notes}</div></div>}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function LeadDrawer({ leadId, onClose }: Props) {
   const db = useDB();
   const lead = leadId ? db.leads.find(l => l.id === leadId) ?? null : null;
@@ -92,19 +243,22 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [cLostReason, setCLostReason] = useState<LostReason>("Competitor selected");
   const [cCompetitor, setCCompetitor] = useState("");
   const [cNotes, setCNotes] = useState("");
-  const [closureEditing, setClosureEditing] = useState(false);
+  const [showAddClosure, setShowAddClosure] = useState(false);
 
   useEffect(() => {
     if (lead) setDraft({ ...lead });
     setTab("profile");
     setEditing(false);
+    setShowAddClosure(false);
   }, [leadId]);
 
   if (!lead) return null;
 
   const leadFollowups = db.followups.filter(f => f.leadId === lead.id).sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
   const leadQuotations = db.quotations.filter(q => q.leadId === lead.id);
-  const leadClosure = db.closures.find(c => c.leadId === lead.id);
+  const leadClosures = db.closures
+    .filter(c => c.leadId === lead.id)
+    .sort((a, b) => new Date(b.closureDate).getTime() - new Date(a.closureDate).getTime());
   const leadActivity = db.activity.filter(a => a.leadId === lead.id).reverse();
 
   const saveEdits = () => {
@@ -167,6 +321,10 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
       api.closeLead({ leadId: lead.id, type: "Lost", lostReason: cLostReason, competitorName: cCompetitor, notes: cNotes, closureDate: new Date().toISOString() });
       toast.warning("Marked as Lost", { description: cLostReason });
     }
+    // Reset the add-closure form so the next entry starts blank, and collapse it.
+    setCPkg(""); setCAmount(""); setCAdvance(""); setCPayStatus("Pending");
+    setCLostReason("Competitor selected"); setCCompetitor(""); setCNotes("");
+    setShowAddClosure(false);
   };
   const fmtDt = (iso: string) => { try { return format(new Date(iso), "dd MMM, hh:mm a"); } catch { return iso; } };
 
@@ -531,106 +689,21 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
           {/* ── Closure ── */}
           {tab === "closure" && (
             <div className="crm-drawer-tab-content">
-              {leadClosure ? (
-                <div className="crm-card p-4">
-                  <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
-                    <span className="crm-badge" style={leadClosure.type === "Won" ? { background: "#F0FDF4", color: "#16A34A", fontSize: "0.85rem" } : { background: "#FEF2F2", color: "#DC2626", fontSize: "0.85rem" }}>
-                      {leadClosure.type === "Won" ? "🏆 Closed Won" : "✗ Closed Lost"}
-                    </span>
-                    <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => {
-                      setClosureEditing(v => !v);
-                      if (!closureEditing) {
-                        setCPkg(leadClosure.finalPackage ?? "");
-                        setCAmount(String(leadClosure.finalAmount ?? ""));
-                        setCAdvance(String(leadClosure.advanceReceived ?? ""));
-                        setCPayStatus((leadClosure.paymentStatus as "Pending"|"Partial"|"Paid") ?? "Pending");
-                        setCLostReason((leadClosure.lostReason as LostReason) ?? "Competitor selected");
-                        setCCompetitor(leadClosure.competitorName ?? "");
-                        setCNotes(leadClosure.notes ?? "");
-                      }
-                    }}>
-                      {closureEditing ? <><X size={13} /> Cancel</> : <><Edit2 size={13} /> Edit</>}
-                    </button>
-                  </div>
-
-                  {closureEditing ? (
-                    leadClosure.type === "Won" ? (
-                      <div className="crm-grid-2">
-                        <div className="crm-form-group">
-                          <label className="crm-label">Package</label>
-                          <input className="crm-input" value={cPkg} onChange={e => setCPkg(e.target.value)} />
-                        </div>
-                        <div className="crm-form-group">
-                          <label className="crm-label">Final Amount (₹)</label>
-                          <input className="crm-input" type="number" value={cAmount} onChange={e => setCAmount(e.target.value)} />
-                        </div>
-                        <div className="crm-form-group">
-                          <label className="crm-label">Advance Received (₹)</label>
-                          <input className="crm-input" type="number" value={cAdvance} onChange={e => setCAdvance(e.target.value)} />
-                        </div>
-                        <div className="crm-form-group">
-                          <label className="crm-label">Payment Status</label>
-                          <select className="crm-select" value={cPayStatus} onChange={e => setCPayStatus(e.target.value as "Pending"|"Partial"|"Paid")}>
-                            <option>Pending</option><option>Partial</option><option>Paid</option>
-                          </select>
-                        </div>
-                        <div style={{ gridColumn: "1/-1" }}>
-                          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => {
-                            api.updateClosure(leadClosure.id, { finalPackage: cPkg, finalAmount: Number(cAmount) || undefined, advanceReceived: Number(cAdvance) || undefined, paymentStatus: cPayStatus });
-                            setClosureEditing(false);
-                          }}><Save size={13} /> Save Changes</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="crm-grid-2">
-                        <div className="crm-form-group">
-                          <label className="crm-label">Lost Reason</label>
-                          <select className="crm-select" value={cLostReason} onChange={e => setCLostReason(e.target.value as LostReason)}>
-                            {LOST_REASONS.map(r => <option key={r}>{r}</option>)}
-                          </select>
-                        </div>
-                        <div className="crm-form-group">
-                          <label className="crm-label">Competitor Name</label>
-                          <input className="crm-input" value={cCompetitor} onChange={e => setCCompetitor(e.target.value)} />
-                        </div>
-                        <div className="crm-form-group" style={{ gridColumn: "1/-1" }}>
-                          <label className="crm-label">Notes</label>
-                          <textarea className="crm-textarea" value={cNotes} onChange={e => setCNotes(e.target.value)} style={{ minHeight: 64 }} />
-                        </div>
-                        <div style={{ gridColumn: "1/-1" }}>
-                          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => {
-                            api.updateClosure(leadClosure.id, { lostReason: cLostReason, competitorName: cCompetitor, notes: cNotes });
-                            setClosureEditing(false);
-                          }}><Save size={13} /> Save Changes</button>
-                        </div>
-                      </div>
-                    )
-                  ) : (
-                    <>
-                      {leadClosure.type === "Won" && (
-                        <div className="crm-grid-2">
-                          <div><div className="crm-section-title mb-1">Package</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.finalPackage || "—"}</div></div>
-                          <div><div className="crm-section-title mb-1">Final Amount</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--crm-primary)" }}>{leadClosure.finalAmount ? `₹${leadClosure.finalAmount.toLocaleString("en-IN")}` : "—"}</div></div>
-                          <div><div className="crm-section-title mb-1">Advance</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.advanceReceived ? `₹${leadClosure.advanceReceived.toLocaleString("en-IN")}` : "—"}</div></div>
-                          <div><div className="crm-section-title mb-1">Payment</div>
-                            <span className="crm-badge" style={{ background: leadClosure.paymentStatus === "Paid" ? "#F0FDF4" : leadClosure.paymentStatus === "Partial" ? "#FFFBEB" : "#FEF2F2", color: leadClosure.paymentStatus === "Paid" ? "#16A34A" : leadClosure.paymentStatus === "Partial" ? "#B45309" : "#DC2626" }}>
-                              {leadClosure.paymentStatus}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      {leadClosure.type === "Lost" && (
-                        <div className="crm-grid-2">
-                          <div><div className="crm-section-title mb-1">Reason</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.lostReason || "—"}</div></div>
-                          <div><div className="crm-section-title mb-1">Competitor</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.competitorName || "—"}</div></div>
-                          {leadClosure.notes && <div style={{ gridColumn: "1/-1" }}><div className="crm-section-title mb-1">Notes</div><div style={{ fontSize: "0.875rem" }}>{leadClosure.notes}</div></div>}
-                        </div>
-                      )}
-                    </>
-                  )}
+              {/* Existing closures — one card each, independently editable */}
+              {leadClosures.length > 0 && (
+                <div className="d-flex flex-column gap-3 mb-3">
+                  {leadClosures.map(c => <ClosureCard key={c.id} closure={c} />)}
                 </div>
-              ) : (
+              )}
+
+              {/* Add-closure form: always shown when there are no closures yet,
+                  otherwise revealed by the "Add closure" button so a lead can
+                  hold multiple bookings/renewals. */}
+              {(showAddClosure || leadClosures.length === 0) ? (
                 <div>
+                  {leadClosures.length > 0 && (
+                    <div className="crm-section-title mb-2">Add another closure</div>
+                  )}
                   <div className="d-flex gap-2 mb-3">
                     <button onClick={() => setClosureType("Won")} className={`crm-btn ${closureType === "Won" ? "crm-btn-primary" : "crm-btn-ghost"} crm-btn-sm`}>Won</button>
                     <button onClick={() => setClosureType("Lost")} className={`crm-btn crm-btn-sm ${closureType === "Lost" ? "" : "crm-btn-ghost"}`} style={closureType === "Lost" ? { background: "#FEF2F2", color: "#DC2626" } : {}}>Lost</button>
@@ -657,7 +730,12 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                           </select>
                         </div>
                       </div>
-                      <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={submitClosure}>Confirm Won</button>
+                      <div className="d-flex gap-2">
+                        <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={submitClosure}>Confirm Won</button>
+                        {leadClosures.length > 0 && (
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowAddClosure(false)}>Cancel</button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="crm-card p-3">
@@ -677,10 +755,19 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                         <label className="crm-label">Notes</label>
                         <textarea className="crm-textarea" value={cNotes} onChange={e => setCNotes(e.target.value)} placeholder="Why did we lose?" style={{ minHeight: 64 }} />
                       </div>
-                      <button className="crm-btn crm-btn-sm" style={{ background: "#FEF2F2", color: "#DC2626" }} onClick={submitClosure}>Confirm Lost</button>
+                      <div className="d-flex gap-2">
+                        <button className="crm-btn crm-btn-sm" style={{ background: "#FEF2F2", color: "#DC2626" }} onClick={submitClosure}>Confirm Lost</button>
+                        {leadClosures.length > 0 && (
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowAddClosure(false)}>Cancel</button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
+              ) : (
+                <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowAddClosure(true)}>
+                  <Plus size={14} /> Add closure
+                </button>
               )}
             </div>
           )}

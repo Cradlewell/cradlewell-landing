@@ -38,9 +38,15 @@ export default function DashboardPage() {
   const newToday = useMemo(() => leads.filter(l => isToday(l.createdAt)), [leads]);
 
   const monthRevenue = useMemo(() => {
-    const thisMonth = new Date().getMonth();
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
     return closures
-      .filter(c => c.type === "Won" && new Date(c.closureDate).getMonth() === thisMonth)
+      .filter(c => {
+        if (c.type !== "Won") return false;
+        const d = new Date(c.closureDate);
+        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+      })
       .reduce((sum, c) => sum + (c.finalAmount ?? 0), 0);
   }, [closures]);
 
