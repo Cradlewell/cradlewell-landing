@@ -860,16 +860,6 @@
 .crm-app ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 999px; }
 .crm-app ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.22); }
 
-/* Horizontally-scrolling data views (leads table, pipeline board) get a taller,
-   higher-contrast horizontal bar so it's easy to grab and drag with a mouse. */
-.crm-table-wrap, .crm-kanban-wrap { scrollbar-width: auto; }
-.crm-table-wrap::-webkit-scrollbar,
-.crm-kanban-wrap::-webkit-scrollbar { height: 12px; }
-.crm-table-wrap::-webkit-scrollbar-thumb,
-.crm-kanban-wrap::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.28); border-radius: 999px; }
-.crm-table-wrap::-webkit-scrollbar-thumb:hover,
-.crm-kanban-wrap::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.42); }
-
 /* ─── Modal ──────────────────────────────────────────────────────────────────── */
 .crm-modal .modal-content {
   border-radius: var(--crm-radius);

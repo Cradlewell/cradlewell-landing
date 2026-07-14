@@ -6,7 +6,7 @@ import type { Lead, LeadStage } from "@/lib/crm-types";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
-import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
+import { useHScroll, HScrollButtons } from "@/components/crm/HScrollControls";
 import { waStageLabel, waStageTone } from "@/lib/whatsapp-stage";
 import { Plus, StickyNote, Calendar, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
@@ -26,7 +26,8 @@ export default function PipelinePage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const dragIdRef = useRef<string | null>(null);
   const [overStage, setOverStage] = useState<LeadStage | null>(null);
-  const kanbanRef = useHorizontalWheelScroll<HTMLDivElement>();
+  const kanbanScroll = useHScroll<HTMLDivElement>(leads.length);
+  const kanbanRef = kanbanScroll.ref;
   const scrollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => () => stopScroll(), []);
@@ -174,6 +175,9 @@ export default function PipelinePage() {
           );
         })}
       </div>
+
+      {/* Horizontal scroll controls */}
+      <HScrollButtons ctrl={kanbanScroll} />
     </>
   );
 }

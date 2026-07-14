@@ -8,7 +8,7 @@ import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
 import WhatsAppImportModal from "@/components/crm/WhatsAppImportModal";
-import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
+import { useHScroll, HScrollButtons } from "@/components/crm/HScrollControls";
 import { waStageLabel, waStageTone } from "@/lib/whatsapp-stage";
 import { Plus, Search, Download, Trash2, MessageSquare } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
@@ -56,7 +56,6 @@ export default function LeadsPage() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [showWAImport, setShowWAImport] = useState(false);
   const [page, setPage] = useState(1);
-  const tableWrapRef = useHorizontalWheelScroll<HTMLDivElement>();
 
   const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -85,6 +84,7 @@ export default function LeadsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const tableScroll = useHScroll<HTMLDivElement>(paginated.length);
 
   // Reset to page 1 when filters change
   useMemo(() => { setPage(1); }, [search, filterStage, filterSource]);
@@ -171,7 +171,7 @@ export default function LeadsPage() {
       </div>
 
       {/* Table */}
-      <div className="crm-table-wrap" ref={tableWrapRef}>
+      <div className="crm-table-wrap" ref={tableScroll.ref}>
         {filtered.length === 0 ? (
           <EmptyState
             title={leads.length === 0 ? "No leads yet" : "No leads match your filters"}
@@ -251,6 +251,9 @@ export default function LeadsPage() {
           </table>
         )}
       </div>
+
+      {/* Horizontal scroll controls */}
+      <HScrollButtons ctrl={tableScroll} />
 
       {/* Pagination */}
       {totalPages > 1 && (
