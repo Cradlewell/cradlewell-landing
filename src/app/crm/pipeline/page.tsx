@@ -6,7 +6,9 @@ import type { Lead, LeadStage } from "@/lib/crm-types";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
-import { Plus, StickyNote, Calendar } from "lucide-react";
+import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
+import { waStageLabel, waStageTone } from "@/lib/whatsapp-stage";
+import { Plus, StickyNote, Calendar, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 
 function fmtLeadDate(l: Lead): string {
@@ -24,7 +26,7 @@ export default function PipelinePage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const dragIdRef = useRef<string | null>(null);
   const [overStage, setOverStage] = useState<LeadStage | null>(null);
-  const kanbanRef = useRef<HTMLDivElement>(null);
+  const kanbanRef = useHorizontalWheelScroll<HTMLDivElement>();
   const scrollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => () => stopScroll(), []);
@@ -139,6 +141,24 @@ export default function PipelinePage() {
                       {l.preferredShift && <span className="crm-tag">{l.preferredShift}</span>}
                       {l.shiftHoursCount != null && <span className="crm-tag">{l.shiftHoursCount} hrs</span>}
                     </div>
+                    {l.whatsappStage && (
+                      <div style={{ marginTop: 6 }}>
+                        <span
+                          title="WhatsApp bot stage"
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            fontSize: "0.68rem", fontWeight: 600, borderRadius: 4, padding: "1px 6px",
+                            ...(waStageTone(l.whatsappStage) === "done"
+                              ? { background: "#F0FDF4", color: "#16A34A" }
+                              : waStageTone(l.whatsappStage) === "stopped"
+                              ? { background: "#FEF2F2", color: "#DC2626" }
+                              : { background: "#EEF9F2", color: "#128C7E" }),
+                          }}
+                        >
+                          <MessageCircle size={11} />{waStageLabel(l.whatsappStage)}
+                        </span>
+                      </div>
+                    )}
                     {l.shiftTime && (
                       <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)", marginTop: 4 }}>{l.shiftTime}</div>
                     )}

@@ -52,6 +52,7 @@ export interface Lead {
   shiftTime?: string;
   careStartDate?: string;
   serviceDays?: number;
+  whatsappStage?: string;
 }
 
 export interface Followup {

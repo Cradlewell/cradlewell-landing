@@ -31,9 +31,12 @@ CREATE TABLE IF NOT EXISTS leads (
   shift_hours_count INTEGER,
   shift_time TEXT,
   care_start_date TEXT,
-  service_days INTEGER
+  service_days INTEGER,
+  whatsapp_stage TEXT
 );
 ALTER TABLE leads DISABLE ROW LEVEL SECURITY;
+-- One lead per phone number (phones are normalized to last 10 digits in app code)
+CREATE UNIQUE INDEX IF NOT EXISTS leads_phone_unique ON leads (phone);
 
 CREATE TABLE IF NOT EXISTS followups (
   id TEXT PRIMARY KEY,
@@ -84,3 +87,59 @@ CREATE TABLE IF NOT EXISTS activity_logs (
   at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE activity_logs DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON leads TO anon, authenticated;
+GRANT ALL ON followups TO anon, authenticated;
+GRANT ALL ON quotations TO anon, authenticated;
+GRANT ALL ON closures TO anon, authenticated;
+GRANT ALL ON activity_logs TO anon, authenticated;
+
+-- ── WhatsApp bot ─────────────────────────────────────────────────────────────
+-- WhatsApp sessions table
+CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+  id UUID PRIMARY KEY,
+  wa_phone TEXT UNIQUE NOT NULL,
+  step TEXT NOT NULL DEFAULT 'greeting',
+  name TEXT,
+  service TEXT,
+  baby_status TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- WhatsApp messages table
+CREATE TABLE IF NOT EXISTS whatsapp_messages (
+  id UUID PRIMARY KEY,
+  wa_phone TEXT NOT NULL,
+  direction TEXT NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- WhatsApp events table (for Meta webhook events like account_update)
+CREATE TABLE IF NOT EXISTS whatsapp_events (
+  id UUID PRIMARY KEY,
+  event_type TEXT,
+  payload JSONB,
+  created_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_phone ON whatsapp_messages(wa_phone);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_sessions_phone ON whatsapp_sessions(wa_phone);
+
+-- Session columns (added incrementally as the bot flow grew)
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS location TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS due_date TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS shift TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS time_slot TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS hospital TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS baby_weight TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS japa_hours TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS birth_stage TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS baby_age TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS service_days TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS care_start_date TEXT;
+ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS agent_active BOOLEAN DEFAULT FALSE;
+
+-- Message deduplication column
+ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS wa_message_id TEXT UNIQUE;

@@ -400,61 +400,80 @@ async function syncLeadFromSession(session: Partial<Session> & { wa_phone: strin
     const phone = waPhone.replace(/\D/g, "").slice(-10);
     if (!phone) return;
     const now = new Date().toISOString();
+
+    // Build the update patch (fields we always want to keep fresh from the bot).
+    // whatsapp_stage tracks funnel position so drop-offs are visible in the CRM.
+    const patch: Record<string, unknown> = { last_activity_at: now, whatsapp_stage: session.step };
+    if (session.name)        patch.name = session.name;
+    if (session.baby_status) patch.baby_status = session.baby_status;
+    if (session.location)    patch.address = session.location;
+    if (session.hospital)    patch.hospital_name = session.hospital;
+    if (session.birth_stage) patch.baby_birth_stage_status = session.birth_stage;
+    if (session.baby_age)    patch.baby_age = session.baby_age;
+    if (session.baby_weight) patch.current_weight = session.baby_weight;
+    if (session.service)     patch.service_required = session.service;
+    if (session.shift)       patch.preferred_shift = session.shift;
+    const hrs = deriveShiftHours(session as Session);
+    if (hrs !== null)        patch.shift_hours_count = hrs;
+    if (session.time_slot)   patch.shift_time = session.time_slot;
+    const careDate = session.baby_status === "Born"
+        ? (session.care_start_date || null)
+        : parseDueDate(session.due_date);
+    if (careDate)            patch.care_start_date = careDate;
+    if (session.service_days) patch.service_days = parseInt(session.service_days) || null;
+
     try {
-        const { data: existing } = await supabase
+        // Find the existing lead for this number. Ordered + limit(1) (not
+        // maybeSingle) so a pre-existing duplicate doesn't error us into
+        // inserting yet another row.
+        const { data: matches } = await supabase
             .from("leads")
             .select("id")
             .eq("phone", phone)
-            .maybeSingle();
+            .order("created_at", { ascending: true })
+            .limit(1);
+        const existing = matches?.[0];
 
         if (existing) {
-            const patch: Record<string, unknown> = { last_activity_at: now };
-            if (session.name)        patch.name = session.name;
-            if (session.baby_status) patch.baby_status = session.baby_status;
-            if (session.location)    patch.address = session.location;
-            if (session.hospital)    patch.hospital_name = session.hospital;
-            if (session.birth_stage) patch.baby_birth_stage_status = session.birth_stage;
-            if (session.baby_age)    patch.baby_age = session.baby_age;
-            if (session.baby_weight) patch.current_weight = session.baby_weight;
-            if (session.service)     patch.service_required = session.service;
-            if (session.shift)       patch.preferred_shift = session.shift;
-            const hrs = deriveShiftHours(session as Session);
-            if (hrs !== null)        patch.shift_hours_count = hrs;
-            if (session.time_slot)   patch.shift_time = session.time_slot;
-            const careDate = session.baby_status === "Born"
-                ? (session.care_start_date || null)
-                : parseDueDate(session.due_date);
-            if (careDate)            patch.care_start_date = careDate;
-            if (session.service_days) patch.service_days = parseInt(session.service_days) || null;
             await supabase.from("leads").update(patch).eq("id", existing.id);
-        } else {
-            await supabase.from("leads").insert({
-                id: crypto.randomUUID(),
-                name: session.name || "WhatsApp User",
-                phone,
-                whatsapp: phone,
-                source: "WhatsApp",
-                lead_date: now,
-                service_required: session.service || "",
-                baby_status: session.baby_status || null,
-                address: session.location || null,
-                hospital_name: session.hospital || null,
-                baby_birth_stage_status: session.birth_stage || null,
-                baby_age: session.baby_age || null,
-                current_weight: session.baby_weight || null,
-                care_start_date: session.baby_status === "Born"
-                    ? (session.care_start_date || null)
-                    : parseDueDate(session.due_date),
-                preferred_shift: session.shift || null,
-                shift_hours_count: deriveShiftHours(session as Session),
-                shift_time: session.time_slot || null,
-                service_days: session.service_days ? parseInt(session.service_days) || null : null,
-                owner: "Unassigned",
-                stage: "New Lead",
-                temperature: "Cold",
-                last_activity_at: now,
-                created_at: now,
-            });
+            return;
+        }
+
+        // New number → create the lead on this very first message so drop-offs
+        // are captured. baby_status must never be null (NOT NULL column).
+        const { error } = await supabase.from("leads").insert({
+            id: crypto.randomUUID(),
+            name: session.name || "WhatsApp User",
+            phone,
+            whatsapp: phone,
+            source: "WhatsApp",
+            lead_date: now,
+            service_required: session.service || "",
+            baby_status: session.baby_status || "",
+            address: session.location || null,
+            hospital_name: session.hospital || null,
+            baby_birth_stage_status: session.birth_stage || null,
+            baby_age: session.baby_age || null,
+            current_weight: session.baby_weight || null,
+            care_start_date: careDate,
+            preferred_shift: session.shift || null,
+            shift_hours_count: deriveShiftHours(session as Session),
+            shift_time: session.time_slot || null,
+            service_days: session.service_days ? parseInt(session.service_days) || null : null,
+            owner: "Unassigned",
+            stage: "New Lead",
+            temperature: "Cold",
+            whatsapp_stage: session.step,
+            last_activity_at: now,
+            created_at: now,
+        });
+
+        // Race safety: if another concurrent webhook inserted first, the unique
+        // phone index rejects this one (23505) — fall back to updating that row.
+        if (error?.code === "23505") {
+            await supabase.from("leads").update(patch).eq("phone", phone);
+        } else if (error) {
+            console.error("syncLeadFromSession insert failed:", error);
         }
     } catch (err) {
         console.error("syncLeadFromSession failed:", err);

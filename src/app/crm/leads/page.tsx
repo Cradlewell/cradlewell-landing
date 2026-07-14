@@ -8,9 +8,28 @@ import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
 import WhatsAppImportModal from "@/components/crm/WhatsAppImportModal";
+import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
+import { waStageLabel, waStageTone } from "@/lib/whatsapp-stage";
 import { Plus, Search, Download, Trash2, MessageSquare } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { LeadSource, LeadStage } from "@/lib/crm-types";
+
+const WA_STAGE_STYLE: Record<"done" | "stopped" | "neutral", { bg: string; color: string }> = {
+  done:    { bg: "#F0FDF4", color: "#16A34A" },
+  stopped: { bg: "#FEF2F2", color: "#DC2626" },
+  neutral: { bg: "#EEF9F2", color: "#128C7E" },
+};
+
+function WhatsAppStageCell({ stage }: { stage?: string }) {
+  const label = waStageLabel(stage);
+  if (!label) return <span style={{ color: "var(--crm-text-3)" }}>—</span>;
+  const s = WA_STAGE_STYLE[waStageTone(stage)];
+  return (
+    <span className="crm-badge" style={{ background: s.bg, color: s.color, fontSize: "0.72rem", whiteSpace: "nowrap" }}>
+      {label}
+    </span>
+  );
+}
 
 const SOURCES: LeadSource[] = ["Website", "WhatsApp", "Aria Chat", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
 
@@ -37,6 +56,7 @@ export default function LeadsPage() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [showWAImport, setShowWAImport] = useState(false);
   const [page, setPage] = useState(1);
+  const tableWrapRef = useHorizontalWheelScroll<HTMLDivElement>();
 
   const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -70,7 +90,7 @@ export default function LeadsPage() {
   useMemo(() => { setPage(1); }, [search, filterStage, filterSource]);
 
   const exportCSV = () => {
-    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage"].join(",");
+    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "WhatsApp Stage", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage"].join(",");
     const rows = filtered.map(l => [
       `"${l.name}"`,
       l.phone,
@@ -78,6 +98,7 @@ export default function LeadsPage() {
       fmtTime(l.leadDate),
       fmtDay(l.leadDate),
       l.source ?? "",
+      waStageLabel(l.whatsappStage),
       l.serviceRequired ?? "",
       l.babyStatus ?? "",
       l.hospitalName ?? "",
@@ -150,7 +171,7 @@ export default function LeadsPage() {
       </div>
 
       {/* Table */}
-      <div className="crm-table-wrap">
+      <div className="crm-table-wrap" ref={tableWrapRef}>
         {filtered.length === 0 ? (
           <EmptyState
             title={leads.length === 0 ? "No leads yet" : "No leads match your filters"}
@@ -167,6 +188,7 @@ export default function LeadsPage() {
                 <th>Time</th>
                 <th>Day</th>
                 <th>Source</th>
+                <th>WhatsApp Stage</th>
                 <th>Service</th>
                 <th>Baby Status</th>
                 <th>Hospital</th>
@@ -198,6 +220,7 @@ export default function LeadsPage() {
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{fmtTime(l.leadDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{fmtDay(l.leadDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.source || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap" }}><WhatsAppStageCell stage={l.whatsappStage} /></td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.875rem" }}>{l.serviceRequired || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.babyStatus || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.hospitalName || "—"}</td>

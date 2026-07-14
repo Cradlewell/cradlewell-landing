@@ -63,13 +63,14 @@ export async function POST(req: NextRequest) {
 
   const phone = String(wa_phone).replace(/\D/g, "").slice(-10);
 
-  const { data: existing } = await supabase
+  const { data: matches } = await supabase
     .from("leads")
     .select("id")
     .eq("phone", phone)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .limit(1);
 
-  if (existing)
+  if (matches?.[0])
     return NextResponse.json({ error: "Lead already exists for this number" }, { status: 409 });
 
   let shiftHoursCount: number | null = null;
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
     owner: "Unassigned",
     stage: "New Lead",
     temperature: "Cold",
+    whatsapp_stage: session.step,
     last_activity_at: now,
     created_at: now,
   });

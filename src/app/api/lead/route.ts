@@ -125,35 +125,72 @@ export async function POST(req: NextRequest) {
         ]);
 
         // ── Write to Supabase CRM (secondary — never fail the form) ───────────
+        // Normalize the phone to the last 10 digits so it matches WhatsApp-sourced
+        // leads, and upsert on it so one number = one record (no duplicates).
+        const dbPhone = lead.phone.replace(/\D/g, "").slice(-10);
         try {
-            const { error } = await supabase.from("leads").insert({
-                id: crypto.randomUUID(),
-                name: lead.name,
-                phone: lead.phone,
-                whatsapp: lead.phone,
-                source: lead.source || "Website",
-                lead_date: now.toISOString(),
-                service_required: lead.service,
-                baby_status: lead.babyStatus || "Unknown",
-                hospital_name: lead.hospitalName || null,
-                baby_birth_stage_status: lead.birthStageStatus || null,
-                baby_age: lead.babyAge || null,
-                current_weight: lead.currentWeight || null,
-                address: lead.address || null,
-                preferred_shift: lead.shiftType || null,
-                shift_hours_count: lead.shiftHours ? parseInt(lead.shiftHours) || null : null,
-                shift_time: lead.shiftTime || null,
-                care_start_date: lead.careStartDate || null,
-                service_days: lead.serviceDays ? parseInt(lead.serviceDays) || null : null,
-                owner: "Unassigned",
-                stage: "New Lead",
-                temperature: "Cold",
-                last_activity_at: now.toISOString(),
-                created_at: now.toISOString(),
-            });
-            if (error) console.error("Supabase lead insert error:", error.message);
+            const { data: matches } = await supabase
+                .from("leads")
+                .select("id")
+                .eq("phone", dbPhone)
+                .order("created_at", { ascending: true })
+                .limit(1);
+            const existing = matches?.[0];
+
+            if (existing) {
+                // Fill in details from the form without clobbering an existing
+                // record's identity (keep original source/stage/owner).
+                const patch: Record<string, unknown> = { last_activity_at: now.toISOString() };
+                if (lead.name)             patch.name = lead.name;
+                if (lead.service)          patch.service_required = lead.service;
+                if (lead.babyStatus)       patch.baby_status = lead.babyStatus;
+                if (lead.hospitalName)     patch.hospital_name = lead.hospitalName;
+                if (lead.birthStageStatus) patch.baby_birth_stage_status = lead.birthStageStatus;
+                if (lead.babyAge)          patch.baby_age = lead.babyAge;
+                if (lead.currentWeight)    patch.current_weight = lead.currentWeight;
+                if (lead.address)          patch.address = lead.address;
+                if (lead.shiftType)        patch.preferred_shift = lead.shiftType;
+                if (lead.shiftHours)       patch.shift_hours_count = parseInt(lead.shiftHours) || null;
+                if (lead.shiftTime)        patch.shift_time = lead.shiftTime;
+                if (lead.careStartDate)    patch.care_start_date = lead.careStartDate;
+                if (lead.serviceDays)      patch.service_days = parseInt(lead.serviceDays) || null;
+                const { error } = await supabase.from("leads").update(patch).eq("id", existing.id);
+                if (error) console.error("Supabase lead update error:", error.message);
+            } else {
+                const { error } = await supabase.from("leads").insert({
+                    id: crypto.randomUUID(),
+                    name: lead.name,
+                    phone: dbPhone,
+                    whatsapp: dbPhone,
+                    source: lead.source || "Website",
+                    lead_date: now.toISOString(),
+                    service_required: lead.service,
+                    baby_status: lead.babyStatus || "Unknown",
+                    hospital_name: lead.hospitalName || null,
+                    baby_birth_stage_status: lead.birthStageStatus || null,
+                    baby_age: lead.babyAge || null,
+                    current_weight: lead.currentWeight || null,
+                    address: lead.address || null,
+                    preferred_shift: lead.shiftType || null,
+                    shift_hours_count: lead.shiftHours ? parseInt(lead.shiftHours) || null : null,
+                    shift_time: lead.shiftTime || null,
+                    care_start_date: lead.careStartDate || null,
+                    service_days: lead.serviceDays ? parseInt(lead.serviceDays) || null : null,
+                    owner: "Unassigned",
+                    stage: "New Lead",
+                    temperature: "Cold",
+                    last_activity_at: now.toISOString(),
+                    created_at: now.toISOString(),
+                });
+                // Race safety: concurrent insert already created it → update instead.
+                if (error?.code === "23505") {
+                    await supabase.from("leads").update({ last_activity_at: now.toISOString() }).eq("phone", dbPhone);
+                } else if (error) {
+                    console.error("Supabase lead insert error:", error.message);
+                }
+            }
         } catch (err) {
-            console.error("Supabase lead insert failed:", err);
+            console.error("Supabase lead upsert failed:", err);
         }
 
         return NextResponse.json({ success: true });
