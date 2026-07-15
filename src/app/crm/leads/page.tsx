@@ -12,7 +12,7 @@ import { useHScroll, HScrollButtons } from "@/components/crm/HScrollControls";
 import { waStageLabel, waStageTone } from "@/lib/whatsapp-stage";
 import { Plus, Search, Download, Trash2, MessageSquare } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
-import type { LeadSource, LeadStage } from "@/lib/crm-types";
+import type { Lead, LeadSource, LeadStage } from "@/lib/crm-types";
 
 const WA_STAGE_STYLE: Record<"done" | "stopped" | "neutral", { bg: string; color: string }> = {
   done:    { bg: "#F0FDF4", color: "#16A34A" },
@@ -56,6 +56,9 @@ export default function LeadsPage() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [showWAImport, setShowWAImport] = useState(false);
   const [page, setPage] = useState(1);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
 
   const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -89,9 +92,28 @@ export default function LeadsPage() {
   // Reset to page 1 when filters change
   useMemo(() => { setPage(1); }, [search, filterStage, filterSource]);
 
-  const exportCSV = () => {
+  // Leads within the chosen export date range (by lead date). A blank bound
+  // means "no limit" on that side. Also respects the active search/stage filters.
+  const exportRows = useMemo(() => {
+    const fromMs = exportFrom ? new Date(`${exportFrom}T00:00:00`).getTime() : -Infinity;
+    const toMs = exportTo ? new Date(`${exportTo}T23:59:59.999`).getTime() : Infinity;
+    return filtered.filter(l => {
+      const t = new Date(l.leadDate).getTime();
+      return t >= fromMs && t <= toMs;
+    });
+  }, [filtered, exportFrom, exportTo]);
+
+  const rangeValid = !exportFrom || !exportTo || exportFrom <= exportTo;
+
+  const runExport = () => {
+    exportCSV(exportRows);
+    setShowExportDialog(false);
+    toast.success(`Exported ${exportRows.length} lead${exportRows.length === 1 ? "" : "s"}`);
+  };
+
+  const exportCSV = (rows: Lead[]) => {
     const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "WhatsApp Stage", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage"].join(",");
-    const rows = filtered.map(l => [
+    const body = rows.map(l => [
       `"${l.name}"`,
       l.phone,
       fmtDate(l.leadDate),
@@ -113,7 +135,7 @@ export default function LeadsPage() {
       l.serviceDays ?? "",
       l.stage,
     ].join(","));
-    const csv = [headers, ...rows].join("\n");
+    const csv = [headers, ...body].join("\n");
     const a = document.createElement("a");
     a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
     a.download = `cradlewell-leads-${Date.now()}.csv`;
@@ -130,13 +152,45 @@ export default function LeadsPage() {
       />
       <LeadDrawer leadId={selectedLead} onClose={() => setSelectedLead(null)} />
 
+      {/* Export date-range dialog */}
+      {showExportDialog && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1060, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div onClick={() => setShowExportDialog(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
+          <div className="crm-card" style={{ position: "relative", width: "min(440px, 100%)", padding: "1.25rem 1.5rem" }}>
+            <div className="crm-section-title" style={{ fontSize: "1rem", marginBottom: "0.25rem" }}>Export leads</div>
+            <p style={{ fontSize: "0.8rem", color: "var(--crm-text-muted)", marginBottom: "1rem" }}>
+              Pick a date range (by lead date). Leave a field blank for no limit. Current search / stage / source filters still apply.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
+              <div className="crm-form-group">
+                <label className="crm-label">From</label>
+                <input type="date" className="crm-input" value={exportFrom} max={exportTo || undefined} onChange={e => setExportFrom(e.target.value)} />
+              </div>
+              <div className="crm-form-group">
+                <label className="crm-label">To</label>
+                <input type="date" className="crm-input" value={exportTo} min={exportFrom || undefined} onChange={e => setExportTo(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ fontSize: "0.78rem", color: rangeValid ? "var(--crm-text-muted)" : "#DC2626", marginBottom: "1rem" }}>
+              {rangeValid ? `${exportRows.length} lead${exportRows.length === 1 ? "" : "s"} in range` : "“From” must be on or before “To”."}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowExportDialog(false)}>Cancel</button>
+              <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={runExport} disabled={!rangeValid || exportRows.length === 0}>
+                <Download size={15} /> Export {exportRows.length}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="crm-page-header">
         <div>
           <h1 className="crm-page-title">Leads</h1>
           <p className="crm-page-subtitle">{filtered.length} of {leads.length} leads</p>
         </div>
         <div className="d-flex gap-2">
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={exportCSV}>
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => { setExportFrom(""); setExportTo(""); setShowExportDialog(true); }}>
             <Download size={15} /> Export
           </button>
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowWAImport(true)}>
