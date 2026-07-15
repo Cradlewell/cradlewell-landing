@@ -469,7 +469,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                   <Field label="Phone" value={lead.phone} field="phone"  editing={editing} draft={draft} setDraft={setDraft} />
                   <Field label="WhatsApp" value={lead.whatsapp} field="whatsapp"  editing={editing} draft={draft} setDraft={setDraft} />
                   <Field label="Source" value={lead.source} field="source"  editing={editing} draft={draft} setDraft={setDraft} />
-                  <Field label="Owner" value={lead.owner} field="owner"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <Field label="Relation with baby" value={lead.owner} field="owner"  editing={editing} draft={draft} setDraft={setDraft} />
                 </div>
               </div>
 
