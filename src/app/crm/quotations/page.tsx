@@ -12,7 +12,8 @@ export default function QuotationsPage() {
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
 
   const quotations = [...rawQuotations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const totalRevenue = quotations.reduce((s, q) => s + q.finalPrice, 0);
+  const totalQuotation = quotations.reduce((s, q) => s + q.quotedPrice, 0);
+  const totalPaid = quotations.reduce((s, q) => s + q.finalPrice, 0);
 
   return (
     <>
@@ -21,9 +22,22 @@ export default function QuotationsPage() {
       <div className="crm-page-header">
         <div>
           <h1 className="crm-page-title">Quotations</h1>
-          <p className="crm-page-subtitle">{quotations.length} quotations · Pipeline ₹{totalRevenue.toLocaleString("en-IN")}</p>
+          <p className="crm-page-subtitle">{quotations.length} quotations</p>
         </div>
       </div>
+
+      {quotations.length > 0 && (
+        <div className="crm-grid-2 mb-4" style={{ gridTemplateColumns: "repeat(2, minmax(0, 220px))" }}>
+          <div className="crm-stat-card">
+            <div className="crm-stat-label">Total Quotation Amount</div>
+            <div className="crm-stat-value">₹{totalQuotation.toLocaleString("en-IN")}</div>
+          </div>
+          <div className="crm-stat-card">
+            <div className="crm-stat-label">Total Paid Amount</div>
+            <div className="crm-stat-value" style={{ color: "var(--crm-primary)" }}>₹{totalPaid.toLocaleString("en-IN")}</div>
+          </div>
+        </div>
+      )}
 
       {quotations.length === 0 ? (
         <div className="crm-card">
@@ -44,7 +58,7 @@ export default function QuotationsPage() {
                 <th className="d-none d-md-table-cell">Shift</th>
                 <th>Quoted</th>
                 <th className="d-none d-md-table-cell">Discount</th>
-                <th>Final Price</th>
+                <th>Paid Amount</th>
                 <th>Date</th>
               </tr>
             </thead>

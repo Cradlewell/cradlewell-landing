@@ -254,6 +254,32 @@ export const api = {
       });
   },
 
+  updateQuotation(id: string, patch: Partial<Quotation>) {
+    const prev = _db.quotations.find((q) => q.id === id);
+    if (!prev) return;
+    const snap = { ...prev };
+    _db.quotations = _db.quotations.map((q) => q.id === id ? { ...q, ...patch } : q);
+    const lead = _db.leads.find((l) => l.id === snap.leadId);
+    if (lead) lead.lastActivityAt = now();
+    notify("leads", "quotations");
+    apiPut(`/api/crm/quotations/${id}`, patch).catch(() => {
+      _db.quotations = _db.quotations.map((q) => q.id === id ? snap : q);
+      notify("leads", "quotations");
+    });
+  },
+
+  deleteQuotation(id: string) {
+    const idx = _db.quotations.findIndex((q) => q.id === id);
+    if (idx === -1) return;
+    const snap = _db.quotations[idx];
+    _db.quotations = _db.quotations.filter((q) => q.id !== id);
+    notify("quotations");
+    apiDelete(`/api/crm/quotations/${id}`).catch(() => {
+      _db.quotations.splice(idx, 0, snap);
+      notify("quotations");
+    });
+  },
+
   closeLead(c: Omit<Closure, "id">) {
     const closure: Closure = { ...c, id: uid() };
     _db.closures.unshift(closure);

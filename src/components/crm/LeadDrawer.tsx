@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Phone, MessageCircle, Edit2, Save, Trash2, Plus, Check, Clock, ChevronDown } from "lucide-react";
 import { api, useDB, isOverdue, isToday } from "@/lib/crm-store";
-import type { Lead, LeadStage, FollowupType, LostReason, Closure } from "@/lib/crm-types";
+import type { Lead, LeadStage, FollowupType, LostReason, Closure, Quotation } from "@/lib/crm-types";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import StageBadge from "./StageBadge";
 import { toast } from "@/components/ui/toast";
@@ -59,6 +59,110 @@ function Field({ label, value, field, type = "text", editing, draft, setDraft }:
       ) : (
         <div className={`crm-field-value ${value ? "" : "empty"}`}>{value || "—"}</div>
       )}
+    </div>
+  );
+}
+
+// ── Quotation card ────────────────────────────────────────────────────────────
+// One card per quotation with its own edit state, plus delete. "Paid Amount"
+// (stored in finalPrice) can differ from Quoted − Discount, so it's editable.
+function QuotationCard({ quotation }: { quotation: Quotation }) {
+  const [editing, setEditing] = useState(false);
+  const [pkg, setPkg] = useState("");
+  const [hours, setHours] = useState("");
+  const [price, setPrice] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [paid, setPaid] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const startEdit = () => {
+    setPkg(quotation.package);
+    setHours(quotation.shiftHours);
+    setPrice(String(quotation.quotedPrice));
+    setDiscount(String(quotation.discount));
+    setPaid(String(quotation.finalPrice));
+    setNotes(quotation.notes);
+    setEditing(true);
+  };
+
+  const save = () => {
+    const p = Number(price) || 0;
+    const d = Number(discount) || 0;
+    const paidAmt = paid === "" ? p - d : Number(paid) || 0;
+    api.updateQuotation(quotation.id, {
+      package: pkg, shiftHours: hours, quotedPrice: p, discount: d, finalPrice: paidAmt, notes,
+    });
+    setEditing(false);
+    toast.success("Quotation updated");
+  };
+
+  const remove = async () => {
+    const ok = await confirm({
+      title: "Delete this quotation?",
+      body: "This quotation will be permanently removed.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (ok) { api.deleteQuotation(quotation.id); toast.success("Quotation removed"); }
+  };
+
+  if (editing) {
+    return (
+      <div className="crm-card p-3 mb-2">
+        <div className="crm-grid-2 mb-2">
+          <div className="crm-form-group">
+            <label className="crm-label">Package</label>
+            <input className="crm-input" value={pkg} onChange={e => setPkg(e.target.value)} />
+          </div>
+          <div className="crm-form-group">
+            <label className="crm-label">Shift Hours</label>
+            <input className="crm-input" value={hours} onChange={e => setHours(e.target.value)} />
+          </div>
+          <div className="crm-form-group">
+            <label className="crm-label">Quoted Price (₹)</label>
+            <input className="crm-input" type="number" value={price} onChange={e => setPrice(e.target.value)} />
+          </div>
+          <div className="crm-form-group">
+            <label className="crm-label">Discount (₹)</label>
+            <input className="crm-input" type="number" value={discount} onChange={e => setDiscount(e.target.value)} />
+          </div>
+          <div className="crm-form-group">
+            <label className="crm-label">Paid Amount (₹)</label>
+            <input className="crm-input" type="number" value={paid} onChange={e => setPaid(e.target.value)} />
+          </div>
+          <div className="crm-form-group">
+            <label className="crm-label">Notes</label>
+            <input className="crm-input" value={notes} onChange={e => setNotes(e.target.value)} />
+          </div>
+        </div>
+        <div className="d-flex gap-2">
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={save}><Save size={13} /> Save</button>
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="crm-card p-3 mb-2">
+      <div className="d-flex justify-content-between align-items-start">
+        <div>
+          <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{quotation.package} · {quotation.shiftHours}</div>
+          <div style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)", marginTop: 2 }}>
+            Quoted ₹{quotation.quotedPrice.toLocaleString("en-IN")} — Discount ₹{quotation.discount.toLocaleString("en-IN")}
+          </div>
+          {quotation.notes && <div style={{ fontSize: "0.78rem", marginTop: 4 }}>{quotation.notes}</div>}
+          <div className="d-flex gap-1 mt-2">
+            <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><Edit2 size={12} /> Edit</button>
+            <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={remove} style={{ color: "#DC2626" }} title="Delete quotation"><Trash2 size={12} /></button>
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Paid</div>
+          <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--crm-primary)" }}>₹{quotation.finalPrice.toLocaleString("en-IN")}</div>
+          <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)" }}>{format(new Date(quotation.date), "dd MMM")}</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -251,6 +355,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [qHours, setQHours] = useState("12h");
   const [qPrice, setQPrice] = useState("");
   const [qDiscount, setQDiscount] = useState("0");
+  const [qPaid, setQPaid] = useState("");
   const [qNotes, setQNotes] = useState("");
 
   const [closureType, setClosureType] = useState<"Won" | "Lost">("Won");
@@ -328,9 +433,10 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const addQuotation = () => {
     const p = Number(qPrice); if (!p) return;
     const d = Number(qDiscount) || 0;
-    api.addQuotation({ leadId: lead.id, package: qPkg, shiftHours: qHours, quotedPrice: p, discount: d, finalPrice: p - d, date: new Date().toISOString(), notes: qNotes });
-    setQPrice(""); setQDiscount("0"); setQNotes("");
-    toast.success("Quotation saved", { description: `₹${(p - d).toLocaleString("en-IN")} — ${qPkg}` });
+    const paid = qPaid === "" ? p - d : Number(qPaid) || 0;
+    api.addQuotation({ leadId: lead.id, package: qPkg, shiftHours: qHours, quotedPrice: p, discount: d, finalPrice: paid, date: new Date().toISOString(), notes: qNotes });
+    setQPrice(""); setQDiscount("0"); setQPaid(""); setQNotes("");
+    toast.success("Quotation saved", { description: `₹${paid.toLocaleString("en-IN")} — ${qPkg}` });
   };
   const submitClosure = () => {
     const closureDate = cDate ? new Date(`${cDate}T12:00:00`).toISOString() : new Date().toISOString();
@@ -672,38 +778,33 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                     <label className="crm-label">Discount (₹)</label>
                     <input className="crm-input" type="number" value={qDiscount} onChange={e => setQDiscount(e.target.value)} placeholder="0" />
                   </div>
-                </div>
-                {qPrice && (
-                  <div style={{ fontSize: "0.85rem", marginBottom: 8, color: "var(--crm-primary)", fontWeight: 600 }}>
-                    Final: ₹{(Number(qPrice) - Number(qDiscount || 0)).toLocaleString("en-IN")}
+                  <div className="crm-form-group">
+                    <label className="crm-label">Paid Amount (₹)</label>
+                    <input className="crm-input" type="number" value={qPaid} onChange={e => setQPaid(e.target.value)} placeholder={qPrice ? String(Number(qPrice) - Number(qDiscount || 0)) : "0"} />
                   </div>
-                )}
-                <div className="crm-form-group mb-2">
-                  <label className="crm-label">Notes</label>
-                  <input className="crm-input" value={qNotes} onChange={e => setQNotes(e.target.value)} placeholder="Package details..." />
+                  <div className="crm-form-group">
+                    <label className="crm-label">Notes</label>
+                    <input className="crm-input" value={qNotes} onChange={e => setQNotes(e.target.value)} placeholder="Package details..." />
+                  </div>
                 </div>
                 <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={addQuotation}><Plus size={14} /> Save Quotation</button>
               </div>
 
-              <p className="crm-section-title">Quotation History</p>
-              {leadQuotations.length === 0 && <div className="crm-empty" style={{ padding: "1.5rem" }}>No quotations yet.</div>}
-              {leadQuotations.map(q => (
-                <div key={q.id} className="crm-card p-3 mb-2">
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{q.package} · {q.shiftHours}</div>
-                      <div style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)", marginTop: 2 }}>
-                        Quoted ₹{q.quotedPrice.toLocaleString("en-IN")} — Discount ₹{q.discount.toLocaleString("en-IN")}
-                      </div>
-                      {q.notes && <div style={{ fontSize: "0.78rem", marginTop: 4 }}>{q.notes}</div>}
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--crm-primary)" }}>₹{q.finalPrice.toLocaleString("en-IN")}</div>
-                      <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)" }}>{format(new Date(q.date), "dd MMM")}</div>
-                    </div>
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <p className="crm-section-title" style={{ margin: 0 }}>Quotation History</p>
+                {leadQuotations.length > 0 && (
+                  <div style={{ display: "flex", gap: 14, fontSize: "0.72rem" }}>
+                    <span style={{ color: "var(--crm-text-muted)" }}>
+                      Quotation: <b style={{ color: "var(--crm-text)" }}>₹{leadQuotations.reduce((s, q) => s + q.quotedPrice, 0).toLocaleString("en-IN")}</b>
+                    </span>
+                    <span style={{ color: "var(--crm-text-muted)" }}>
+                      Paid: <b style={{ color: "var(--crm-primary)" }}>₹{leadQuotations.reduce((s, q) => s + q.finalPrice, 0).toLocaleString("en-IN")}</b>
+                    </span>
                   </div>
-                </div>
-              ))}
+                )}
+              </div>
+              {leadQuotations.length === 0 && <div className="crm-empty" style={{ padding: "1.5rem" }}>No quotations yet.</div>}
+              {leadQuotations.map(q => <QuotationCard key={q.id} quotation={q} />)}
             </div>
           )}
 
