@@ -1,12 +1,12 @@
 export type LeadStage =
   | "New Lead" | "Not Responding" | "Contacted"
   | "Nurse Required" | "Moba Required" | "Due date soon"
-  | "Follow-up" | "Negotiation"
+  | "Deferred Hot Lead" | "Follow-up" | "Negotiation"
   | "Closed Won" | "Closed Lost" | "Invalid Lead";
 
 export const LEAD_STAGES: LeadStage[] = [
   "New Lead", "Not Responding", "Contacted", "Nurse Required",
-  "Moba Required", "Due date soon", "Follow-up", "Negotiation",
+  "Moba Required", "Due date soon", "Deferred Hot Lead", "Follow-up", "Negotiation",
   "Closed Won", "Closed Lost", "Invalid Lead",
 ];
 

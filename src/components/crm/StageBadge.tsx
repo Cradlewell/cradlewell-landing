@@ -8,6 +8,7 @@ const STAGE_STYLES: Record<LeadStage, { bg: string; color: string }> = {
   "Nurse Required":  { bg: "#FFF7ED", color: "#C2410C" },
   "Moba Required":   { bg: "#FFF7ED", color: "#EA580C" },
   "Due date soon":   { bg: "#FFFBEB", color: "#B45309" },
+  "Deferred Hot Lead": { bg: "#FFF1F2", color: "#E11D48" },
   "Follow-up":       { bg: "#FFFBEB", color: "#92400E" },
   "Negotiation":     { bg: "#F5F3FF", color: "#7C3AED" },
   "Closed Won":      { bg: "#F0FDF4", color: "#15803D" },
