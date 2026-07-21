@@ -66,7 +66,7 @@ function Field({ label, value, field, type = "text", editing, draft, setDraft }:
 // ── Quotation card ────────────────────────────────────────────────────────────
 // One card per quotation with its own edit state, plus delete. "Paid Amount"
 // (stored in finalPrice) can differ from Quoted − Discount, so it's editable.
-function QuotationCard({ quotation }: { quotation: Quotation }) {
+function QuotationCard({ quotation, onClosed }: { quotation: Quotation; onClosed: () => void }) {
   const [editing, setEditing] = useState(false);
   const [pkg, setPkg] = useState("");
   const [hours, setHours] = useState("");
@@ -107,7 +107,8 @@ function QuotationCard({ quotation }: { quotation: Quotation }) {
   };
 
   // Close the lead straight from a quotation — creates a Closure (which also
-  // moves the lead to the matching stage and shows up in the Closure tab).
+  // moves the lead to the matching stage), removes the now-converted quotation,
+  // and jumps to the Closure tab so its full details are ready to review/edit.
   const closeAs = (type: "Won" | "Lost") => {
     if (type === "Won") {
       api.closeLead({
@@ -127,6 +128,8 @@ function QuotationCard({ quotation }: { quotation: Quotation }) {
       });
       toast.warning("Marked as Lost");
     }
+    api.deleteQuotation(quotation.id);
+    onClosed();
   };
 
   if (editing) {
@@ -831,7 +834,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                 )}
               </div>
               {leadQuotations.length === 0 && <div className="crm-empty" style={{ padding: "1.5rem" }}>No quotations yet.</div>}
-              {leadQuotations.map(q => <QuotationCard key={q.id} quotation={q} />)}
+              {leadQuotations.map(q => <QuotationCard key={q.id} quotation={q} onClosed={() => setTab("closure")} />)}
             </div>
           )}
 
