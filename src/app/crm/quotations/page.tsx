@@ -13,11 +13,17 @@ export default function QuotationsPage() {
   const leads = useLeads();
   const closures = useClosures();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
+  const [monthFilter, setMonthFilter] = useState(""); // "YYYY-MM", blank = all months
 
   const quotations = [...rawQuotations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const totalQuotation = quotations.reduce((s, q) => s + q.quotedPrice, 0);
-  const closedWon = closures.filter(c => c.type === "Won").reduce((s, c) => s + (c.finalAmount ?? 0), 0);
-  const closedLost = closures.filter(c => c.type === "Lost").reduce((s, c) => s + (c.finalAmount ?? 0), 0);
+
+  // Month filter — matches by quotation date (and by closure date for the totals).
+  const inMonth = (iso: string) => !monthFilter || format(new Date(iso), "yyyy-MM") === monthFilter;
+  const visibleQuotations = quotations.filter(q => inMonth(q.date));
+
+  const totalQuotation = visibleQuotations.reduce((s, q) => s + q.quotedPrice, 0);
+  const closedWon = closures.filter(c => c.type === "Won" && inMonth(c.closureDate)).reduce((s, c) => s + (c.finalAmount ?? 0), 0);
+  const closedLost = closures.filter(c => c.type === "Lost" && inMonth(c.closureDate)).reduce((s, c) => s + (c.finalAmount ?? 0), 0);
 
   // Payment status for a quotation is read from its lead's closure: a Won lead
   // carries the closure's payment status (Paid when closed Won), a Lost lead
@@ -120,12 +126,28 @@ export default function QuotationsPage() {
       <div className="crm-page-header">
         <div>
           <h1 className="crm-page-title">Quotations</h1>
-          <p className="crm-page-subtitle">{quotations.length} quotations</p>
+          <p className="crm-page-subtitle">
+            {visibleQuotations.length} quotation{visibleQuotations.length === 1 ? "" : "s"}
+            {monthFilter ? ` · ${format(new Date(`${monthFilter}-01`), "MMM yyyy")}` : ""}
+          </p>
         </div>
         {quotations.length > 0 && (
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => { setExportFrom(""); setExportTo(""); setShowExportDialog(true); }}>
-            <Download size={15} /> Export
-          </button>
+          <div className="d-flex align-items-center gap-2" style={{ flexWrap: "wrap" }}>
+            <input
+              type="month"
+              className="crm-input"
+              style={{ width: "auto" }}
+              value={monthFilter}
+              onChange={e => setMonthFilter(e.target.value)}
+              aria-label="Filter by month"
+            />
+            {monthFilter && (
+              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setMonthFilter("")}>All</button>
+            )}
+            <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => { setExportFrom(""); setExportTo(""); setShowExportDialog(true); }}>
+              <Download size={15} /> Export
+            </button>
+          </div>
         )}
       </div>
 
@@ -192,6 +214,15 @@ export default function QuotationsPage() {
             action={{ label: "Go to Leads", href: "/crm/leads" }}
           />
         </div>
+      ) : visibleQuotations.length === 0 ? (
+        <div className="crm-card">
+          <div className="crm-empty" style={{ padding: "2rem", textAlign: "center" }}>
+            No quotations for this month.
+            <div style={{ marginTop: 12 }}>
+              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setMonthFilter("")}>Show all</button>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="crm-table-wrap">
           <table className="crm-table">
@@ -207,7 +238,7 @@ export default function QuotationsPage() {
               </tr>
             </thead>
             <tbody>
-              {quotations.map(q => {
+              {visibleQuotations.map(q => {
                 const lead = leads.find(l => l.id === q.leadId);
                 const ps = paymentStatusFor(q.leadId);
                 return (
