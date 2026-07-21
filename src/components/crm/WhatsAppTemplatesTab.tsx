@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   MessageCircle, Search, RefreshCw, Plus, X, Trash2, Pencil,
-  BarChart2, Settings2, HelpCircle, Upload, Image as ImageIcon, Video, FileText, Loader2, MapPin,
+  HelpCircle, Upload, Image as ImageIcon, Video, FileText, Loader2, MapPin,
 } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { confirm } from "@/components/ui/confirm-dialog";
@@ -69,6 +69,7 @@ export default function WhatsAppTemplatesTab() {
   const [search, setSearch]     = useState("");
   const [liveMap, setLiveMap]   = useState<Record<string, boolean>>({});
   const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing]   = useState<TemplateRow | null>(null);
 
   useEffect(() => { setLiveMap(readLiveMap()); }, []);
 
@@ -211,10 +212,7 @@ export default function WhatsAppTemplatesTab() {
                     </td>
                     <td>
                       <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
-                        <IconBtn title="Analytics"><BarChart2 size={14} /></IconBtn>
-                        <IconBtn title="Details"><HelpCircle size={14} /></IconBtn>
-                        <IconBtn title="Configure"><Settings2 size={14} /></IconBtn>
-                        <IconBtn title="Edit" onClick={() => toast.info("Editing an existing template isn't supported by Meta — delete and recreate it.")}><Pencil size={14} /></IconBtn>
+                        <IconBtn title="Edit" onClick={() => setEditing(t)}><Pencil size={14} /></IconBtn>
                         <IconBtn title="Delete" danger onClick={() => handleDelete(t)}><Trash2 size={14} /></IconBtn>
                       </div>
                     </td>
@@ -226,10 +224,11 @@ export default function WhatsAppTemplatesTab() {
         </div>
       </div>
 
-      {showCreate && (
+      {(showCreate || editing) && (
         <CreateTemplateModal
-          onClose={() => setShowCreate(false)}
-          onCreated={() => { setShowCreate(false); load(); }}
+          editing={editing}
+          onClose={() => { setShowCreate(false); setEditing(null); }}
+          onCreated={() => { setShowCreate(false); setEditing(null); load(); }}
         />
       )}
     </div>
@@ -252,20 +251,29 @@ function IconBtn({ children, title, onClick, danger }: { children: React.ReactNo
   );
 }
 
-// ── Create template modal (image 2) ──────────────────────────────────────────
-function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [name, setName]           = useState("");
-  const [category, setCategory]   = useState("MARKETING");
-  const [language, setLanguage]   = useState("en");
-  const [headerFormat, setHeaderFormat] = useState("NONE");
-  const [headerText, setHeaderText]     = useState("");
-  const [bodyText, setBodyText]   = useState("");
-  const [footerText, setFooterText] = useState("");
-  const [buttons, setButtons]     = useState<DraftButton[]>([]);
+// ── Create / edit template modal (image 2) ───────────────────────────────────
+function CreateTemplateModal({ editing, onClose, onCreated }: { editing?: TemplateRow | null; onClose: () => void; onCreated: () => void }) {
+  const isEdit = !!editing;
+  const [name, setName]           = useState(editing?.name ?? "");
+  const [category, setCategory]   = useState(editing?.category ?? "MARKETING");
+  const [language, setLanguage]   = useState(editing?.language ?? "en");
+  const [headerFormat, setHeaderFormat] = useState(editing?.headerFormat && editing.headerFormat !== "NONE" ? editing.headerFormat : "NONE");
+  const [headerText, setHeaderText]     = useState(editing?.headerText ?? "");
+  const [bodyText, setBodyText]   = useState(editing?.bodyText ?? "");
+  const [footerText, setFooterText] = useState(editing?.footerText ?? "");
+  const [buttons, setButtons]     = useState<DraftButton[]>(
+    (editing?.buttons ?? []).map((b, i) => ({
+      id: i + 1,
+      type: (b.type === "URL" || b.type === "PHONE_NUMBER" ? b.type : "QUICK_REPLY") as BtnKind,
+      text: b.text ?? "",
+      url: b.url ?? "",
+      phone_number: b.phone_number ?? "",
+    }))
+  );
   const [bodyExamples, setBodyExamples] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr]             = useState<string | null>(null);
-  const [btnSeq, setBtnSeq]       = useState(1);
+  const [btnSeq, setBtnSeq]       = useState((editing?.buttons?.length ?? 0) + 1);
 
   // Media header (IMAGE / VIDEO / DOCUMENT) — uploaded to Meta for the example handle.
   const [headerHandle, setHeaderHandle]   = useState("");
@@ -335,25 +343,31 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
     if (isMediaHeader && !headerHandle)   { setErr(`Upload a ${headerFormat.toLowerCase()} for the header first.`); return; }
     setSubmitting(true);
     try {
+      const payload = {
+        id: editing?.id,
+        name, category, language,
+        headerFormat,
+        headerText: headerFormat === "TEXT" ? headerText : "",
+        headerHandle: isMediaHeader ? headerHandle : "",
+        bodyText, footerText,
+        bodyExamples,
+        buttons: buttons.map(b => ({ type: b.type, text: b.text, url: b.url, phone_number: b.phone_number })),
+      };
       const res = await fetch("/api/crm/whatsapp-templates", {
-        method: "POST",
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name, category, language,
-          headerFormat,
-          headerText: headerFormat === "TEXT" ? headerText : "",
-          headerHandle: isMediaHeader ? headerHandle : "",
-          bodyText, footerText,
-          bodyExamples,
-          buttons: buttons.map(b => ({ type: b.type, text: b.text, url: b.url, phone_number: b.phone_number })),
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        toast.success("Template sent to Meta for review");
+        toast.success(
+          isEdit
+            ? "Template updated — Meta will re-review it (status back to Pending)"
+            : `Template submitted to Meta — status: ${data.status ?? "PENDING"}. It’s reviewed by Meta, not approved instantly.`
+        );
         onCreated();
       } else {
-        setErr(data.error || "Failed to create template");
+        setErr(data.error || (isEdit ? "Failed to update template" : "Failed to create template"));
       }
     } finally {
       setSubmitting(false);
@@ -370,7 +384,7 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
       <div style={{ position: "relative", width: "min(1160px, 100%)", background: "#fff", borderRadius: 12, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", maxHeight: "95vh" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.5rem", borderBottom: "1px solid var(--crm-border)" }}>
-          <span style={{ fontWeight: 700, fontSize: "1rem", color: "var(--crm-text)" }}>Add New Template</span>
+          <span style={{ fontWeight: 700, fontSize: "1rem", color: "var(--crm-text)" }}>{isEdit ? "Edit Template" : "Add New Template"}</span>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--crm-text-muted)", padding: 4, display: "flex" }}><X size={18} /></button>
         </div>
 
@@ -386,12 +400,14 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
                 placeholder="Enter message template name in English"
                 value={name}
                 maxLength={200}
+                disabled={isEdit}
                 onChange={e => setName(e.target.value)}
+                style={isEdit ? { background: "#f1f3f5", color: "var(--crm-text-muted)", cursor: "not-allowed" } : undefined}
               />
               <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "var(--crm-text-muted)" }}>{name.length}/200</span>
             </div>
             <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)", marginTop: 4 }}>
-              Lowercase letters, numbers and underscores only — spaces become “_”.
+              {isEdit ? "Name and language can’t be changed after a template is created." : "Lowercase letters, numbers and underscores only — spaces become “_”."}
             </div>
           </div>
 
@@ -405,8 +421,9 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
             </div>
             <div>
               <label style={labelStyle}>{req} Language</label>
-              <select className="crm-input" value={language} onChange={e => setLanguage(e.target.value)}>
+              <select className="crm-input" value={language} disabled={isEdit} onChange={e => setLanguage(e.target.value)} style={isEdit ? { background: "#f1f3f5", color: "var(--crm-text-muted)", cursor: "not-allowed" } : undefined}>
                 {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
+                {isEdit && !LANGUAGES.some(l => l.code === language) && <option value={language}>{language}</option>}
               </select>
               <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)", marginTop: 4 }}>
                 Please note, the language of the text below must match with the language selected above.
@@ -639,7 +656,7 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
             disabled={submitting}
             style={{ background: submitting ? "#8fb9f0" : "var(--crm-primary)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 20px", fontSize: "0.82rem", fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer" }}
           >
-            {submitting ? "Sending…" : "Send to review"}
+            {submitting ? "Saving…" : isEdit ? "Save changes" : "Send to review"}
           </button>
         </div>
       </div>

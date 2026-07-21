@@ -81,9 +81,62 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ templates: rows.map(toRow) });
 }
 
-// ── POST: create a template (submit to Meta for review) ──────────────────────
+// ── Shared: build Meta `components` from the form body ───────────────────────
 type ButtonInput = { type: "PHONE_NUMBER" | "URL" | "QUICK_REPLY"; text: string; url?: string; phone_number?: string };
 
+function buildComponents(body: Record<string, unknown>): { components?: Record<string, unknown>[]; error?: string } {
+  const headerFormat: string = (body.headerFormat ?? "NONE").toString().toUpperCase();
+  const headerText: string = (body.headerText ?? "").toString();
+  const headerHandle: string = (body.headerHandle ?? "").toString();
+  const bodyText: string = (body.bodyText ?? "").toString();
+  const footerText: string = (body.footerText ?? "").toString();
+  const buttons: ButtonInput[] = Array.isArray(body.buttons) ? (body.buttons as ButtonInput[]) : [];
+
+  if (!bodyText.trim()) return { error: "Template body is required" };
+
+  const components: Record<string, unknown>[] = [];
+
+  // Header
+  if (headerFormat === "TEXT" && headerText.trim()) {
+    components.push({ type: "HEADER", format: "TEXT", text: headerText.trim() });
+  } else if (["IMAGE", "VIDEO", "DOCUMENT"].includes(headerFormat)) {
+    if (!headerHandle) return { error: `Upload a ${headerFormat.toLowerCase()} for the header first.` };
+    // Media headers need an example asset (the uploaded media handle).
+    components.push({ type: "HEADER", format: headerFormat, example: { header_handle: [headerHandle] } });
+  } else if (headerFormat === "LOCATION") {
+    components.push({ type: "HEADER", format: "LOCATION" });
+  }
+
+  // Body — Meta requires an example set when the body has {{n}} variables.
+  const varMatches = bodyText.match(/\{\{\s*\d+\s*\}\}/g) ?? [];
+  const bodyComponent: Record<string, unknown> = { type: "BODY", text: bodyText };
+  if (varMatches.length > 0) {
+    const examples = Array.isArray(body.bodyExamples) && (body.bodyExamples as unknown[]).length === varMatches.length
+      ? (body.bodyExamples as unknown[]).map(v => String(v ?? "").trim() || "sample")
+      : varMatches.map((_, i) => `sample${i + 1}`);
+    bodyComponent.example = { body_text: [examples] };
+  }
+  components.push(bodyComponent);
+
+  // Footer
+  if (footerText.trim()) components.push({ type: "FOOTER", text: footerText.trim() });
+
+  // Buttons
+  if (buttons.length > 0) {
+    const metaButtons = buttons
+      .filter(b => (b.text ?? "").trim())
+      .map(b => {
+        if (b.type === "URL")          return { type: "URL", text: b.text.trim(), url: (b.url ?? "").trim() };
+        if (b.type === "PHONE_NUMBER") return { type: "PHONE_NUMBER", text: b.text.trim(), phone_number: (b.phone_number ?? "").trim() };
+        return { type: "QUICK_REPLY", text: b.text.trim() };
+      });
+    if (metaButtons.length) components.push({ type: "BUTTONS", buttons: metaButtons });
+  }
+
+  return { components };
+}
+
+// ── POST: create a template (submit to Meta for review) ──────────────────────
 export async function POST(req: NextRequest) {
   const authErr = requireAuth(req);
   if (authErr) return authErr;
@@ -96,63 +149,15 @@ export async function POST(req: NextRequest) {
   const name = rawName.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
   const category: string = (body.category ?? "MARKETING").toString().toUpperCase();
   const language: string = (body.language ?? "en").toString();
-  const headerFormat: string = (body.headerFormat ?? "NONE").toString().toUpperCase();
-  const headerText: string = (body.headerText ?? "").toString();
-  const headerHandle: string = (body.headerHandle ?? "").toString();
-  const bodyText: string = (body.bodyText ?? "").toString();
-  const footerText: string = (body.footerText ?? "").toString();
-  const buttons: ButtonInput[] = Array.isArray(body.buttons) ? body.buttons : [];
+  if (!name) return NextResponse.json({ error: "Template name is required" }, { status: 400 });
 
-  if (!name)     return NextResponse.json({ error: "Template name is required" }, { status: 400 });
-  if (!bodyText.trim()) return NextResponse.json({ error: "Template body is required" }, { status: 400 });
-
-  const components: MetaComponent[] & Record<string, unknown>[] = [];
-
-  // Header
-  if (headerFormat === "TEXT" && headerText.trim()) {
-    components.push({ type: "HEADER", format: "TEXT", text: headerText.trim() });
-  } else if (["IMAGE", "VIDEO", "DOCUMENT"].includes(headerFormat)) {
-    if (!headerHandle) {
-      return NextResponse.json({ error: `Upload a ${headerFormat.toLowerCase()} for the header first.` }, { status: 400 });
-    }
-    // Media headers need an example asset (the uploaded media handle).
-    components.push({ type: "HEADER", format: headerFormat, example: { header_handle: [headerHandle] } } as unknown as MetaComponent);
-  } else if (headerFormat === "LOCATION") {
-    components.push({ type: "HEADER", format: "LOCATION" });
-  }
-
-  // Body — Meta requires an example set when the body has {{n}} variables.
-  const varMatches = bodyText.match(/\{\{\s*\d+\s*\}\}/g) ?? [];
-  const bodyComponent: Record<string, unknown> = { type: "BODY", text: bodyText };
-  if (varMatches.length > 0) {
-    const examples = Array.isArray(body.bodyExamples) && body.bodyExamples.length === varMatches.length
-      ? body.bodyExamples.map((v: unknown) => String(v ?? "").trim() || "sample")
-      : varMatches.map((_, i) => `sample${i + 1}`);
-    bodyComponent.example = { body_text: [examples] };
-  }
-  components.push(bodyComponent as MetaComponent);
-
-  // Footer
-  if (footerText.trim()) {
-    components.push({ type: "FOOTER", text: footerText.trim() });
-  }
-
-  // Buttons
-  if (buttons.length > 0) {
-    const metaButtons = buttons
-      .filter(b => (b.text ?? "").trim())
-      .map(b => {
-        if (b.type === "URL")          return { type: "URL", text: b.text.trim(), url: (b.url ?? "").trim() };
-        if (b.type === "PHONE_NUMBER") return { type: "PHONE_NUMBER", text: b.text.trim(), phone_number: (b.phone_number ?? "").trim() };
-        return { type: "QUICK_REPLY", text: b.text.trim() };
-      });
-    if (metaButtons.length) components.push({ type: "BUTTONS", buttons: metaButtons } as MetaComponent);
-  }
+  const built = buildComponents(body);
+  if (built.error) return NextResponse.json({ error: built.error }, { status: 400 });
 
   const res = await fetch(`${GRAPH}/${WABA_ID}/message_templates`, {
     method: "POST",
     headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ name, category, language, components }),
+    body: JSON.stringify({ name, category, language, components: built.components }),
   });
 
   const json = await res.json().catch(() => ({}));
@@ -163,6 +168,40 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, id: json.id, status: json.status ?? "PENDING", name });
+}
+
+// ── PUT: edit an existing template (Meta re-reviews it) ──────────────────────
+export async function PUT(req: NextRequest) {
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
+  if (!WABA_ID) {
+    return NextResponse.json({ error: "WHATSAPP_WABA_ID is not configured" }, { status: 400 });
+  }
+
+  const body = await req.json();
+  const id: string = (body.id ?? "").toString();
+  const category: string = (body.category ?? "MARKETING").toString().toUpperCase();
+  if (!id) return NextResponse.json({ error: "Template id is required" }, { status: 400 });
+
+  const built = buildComponents(body);
+  if (built.error) return NextResponse.json({ error: built.error }, { status: 400 });
+
+  // Meta edits the template by POSTing new components to its id. Name & language
+  // can't change; an approved template goes back to PENDING for re-review.
+  const res = await fetch(`${GRAPH}/${id}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ category, components: built.components }),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = json?.error?.error_user_msg || json?.error?.message || "Failed to update template";
+    console.error("[whatsapp-templates PUT] Meta API error", JSON.stringify(json?.error ?? json));
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
 
 // ── DELETE: remove a template by name ────────────────────────────────────────
