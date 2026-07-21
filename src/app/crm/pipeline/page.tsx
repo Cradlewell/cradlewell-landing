@@ -7,7 +7,7 @@ import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
 import { useHScroll, HScrollButtons } from "@/components/crm/HScrollControls";
-import { Plus, StickyNote, Calendar } from "lucide-react";
+import { Plus, StickyNote, Calendar, Search } from "lucide-react";
 import { format } from "date-fns";
 
 function fmtLeadDate(l: Lead): string {
@@ -28,12 +28,33 @@ export default function PipelinePage() {
   const kanbanScroll = useHScroll<HTMLDivElement>(leads.length);
   const kanbanRef = kanbanScroll.ref;
   const scrollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [search, setSearch] = useState("");
+  const colRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => () => stopScroll(), []);
 
   const grouped: Record<LeadStage, Lead[]> = {} as Record<LeadStage, Lead[]>;
   LEAD_STAGES.forEach(s => { grouped[s] = []; });
   leads.forEach(l => { if (grouped[l.stage]) grouped[l.stage].push(l); });
+
+  // Search by name / phone / WhatsApp number. Matching cards are highlighted,
+  // and the board auto-scrolls to the first stage that contains a match.
+  const q = search.trim().toLowerCase();
+  const matchLead = (l: Lead) =>
+    !!q && (
+      l.name.toLowerCase().includes(q) ||
+      (l.phone ?? "").toLowerCase().includes(q) ||
+      (l.whatsapp ?? "").toLowerCase().includes(q)
+    );
+  const matchCount = q ? leads.filter(matchLead).length : 0;
+
+  useEffect(() => {
+    if (!q) return;
+    const stage = LEAD_STAGES.find(s => leads.some(l => l.stage === s && matchLead(l)));
+    const el = stage ? colRefs.current[stage] : null;
+    if (el) el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, leads]);
 
   const stopScroll = () => {
     if (scrollTimerRef.current) { clearInterval(scrollTimerRef.current); scrollTimerRef.current = null; }
@@ -84,11 +105,27 @@ export default function PipelinePage() {
       <div className="crm-page-header">
         <div>
           <h1 className="crm-page-title">Pipeline</h1>
-          <p className="crm-page-subtitle">{leads.length} leads across {LEAD_STAGES.length} stages</p>
+          <p className="crm-page-subtitle">
+            {q
+              ? `${matchCount} match${matchCount === 1 ? "" : "es"} for “${search.trim()}”`
+              : `${leads.length} leads across ${LEAD_STAGES.length} stages`}
+          </p>
         </div>
-        <button className="crm-btn crm-btn-primary" onClick={() => setShowNewLead(true)}>
-          <Plus size={16} /> New Lead
-        </button>
+        <div className="d-flex align-items-center gap-2" style={{ flexWrap: "wrap" }}>
+          <div style={{ position: "relative" }}>
+            <Search size={15} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--crm-text-muted)", pointerEvents: "none" }} />
+            <input
+              className="crm-input"
+              placeholder="Search name or number…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ paddingLeft: 32, width: 220 }}
+            />
+          </div>
+          <button className="crm-btn crm-btn-primary" onClick={() => setShowNewLead(true)}>
+            <Plus size={16} /> New Lead
+          </button>
+        </div>
       </div>
 
       <div
@@ -101,6 +138,7 @@ export default function PipelinePage() {
           return (
             <div
               key={stage}
+              ref={el => { colRefs.current[stage] = el; }}
               className={`crm-kanban-col ${overStage === stage ? "drag-over" : ""}`}
               onDragOver={e => { onDragOver(e); setOverStage(stage); }}
               onDrop={e => onDrop(e, stage)}
@@ -116,7 +154,9 @@ export default function PipelinePage() {
                 {leads.length === 0 && (
                   <div className="crm-kanban-empty">Drop leads here</div>
                 )}
-                {leads.map(l => (
+                {leads.map(l => {
+                  const hit = matchLead(l);
+                  return (
                   <div
                     key={l.id}
                     className="crm-kanban-card"
@@ -126,7 +166,11 @@ export default function PipelinePage() {
                     onDragOver={onDragOver}
                     onDrop={e => onDrop(e, stage)}
                     onClick={() => setSelectedLead(l.id)}
-                    style={{ opacity: dragId === l.id ? 0.4 : 1 }}
+                    style={{
+                      opacity: dragId === l.id ? 0.4 : (q && !hit ? 0.4 : 1),
+                      outline: hit ? "2px solid var(--crm-primary)" : undefined,
+                      outlineOffset: hit ? 2 : undefined,
+                    }}
                   >
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 6 }}>
                       <span style={{ fontWeight: 600, fontSize: "0.8rem", color: "var(--crm-text)" }}>{l.name}</span>
@@ -150,7 +194,8 @@ export default function PipelinePage() {
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
