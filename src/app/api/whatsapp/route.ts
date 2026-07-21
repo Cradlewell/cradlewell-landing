@@ -827,9 +827,9 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
             await storeMessage(waPhone, "outbound", retry);
             return;
         }
-        await upsertSession(waPhone, { due_date: text, step: "ask_service" }, session);
-        const msg = "What kind of care are you looking for?";
-        await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
+        await upsertSession(waPhone, { due_date: text, service: "Nurse", step: "ask_shift" }, session);
+        const msg = "Would you need *Day care* or *Night care*?";
+        await sendButtonMessage(waPhone, msg, NURSE_SHIFT_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
         return;
     }
@@ -899,9 +899,9 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
     // ── Collect baby weight ───────────────────────────────────────────────────
     if (session.step === "ask_baby_weight") {
         const baby_weight = matchBabyWeight(text);
-        await upsertSession(waPhone, { baby_weight, step: "ask_service" }, session);
-        const msg = "What kind of care are you looking for?";
-        await sendButtonMessage(waPhone, msg, SERVICE_BUTTONS);
+        await upsertSession(waPhone, { baby_weight, service: "Nurse", step: "ask_shift" }, session);
+        const msg = "Would you need *Day care* or *Night care*?";
+        await sendButtonMessage(waPhone, msg, NURSE_SHIFT_BUTTONS);
         await storeMessage(waPhone, "outbound", msg);
         return;
     }

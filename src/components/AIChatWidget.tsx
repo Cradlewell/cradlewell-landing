@@ -350,13 +350,8 @@ export default function AIChatWidget() {
                 ? "Expecting"
                 : "";
 
-            // Service type
-            let service = "";
-            if (/caregiver|japa|moba|postnatal caregiver/.test(userText)) {
-                service = "Postnatal Caregiver (Japa/MOBA)";
-            } else if (/\bnurse\b|certified nurse/.test(userText)) {
-                service = "Nurse";
-            }
+            // Service type — Cradlewell provides Certified Nurse care only (Day or Night)
+            const service = "Nurse";
 
             // Shift type
             const shiftType = /night/.test(userText) ? "Night" : /day/.test(userText) ? "Day" : "";

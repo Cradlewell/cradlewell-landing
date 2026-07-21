@@ -5,7 +5,7 @@ import { Modal } from 'react-bootstrap';
 import { Check, ArrowRight, ArrowLeft } from 'lucide-react';
 
 type ModalContextType = {
-  openModal: (service?: string) => void;
+  openModal: (shiftType?: string) => void;
   closeModal: () => void;
 };
 
@@ -19,7 +19,7 @@ export const useModal = () => useContext(ModalContext);
 const defaultForm = {
   name: '',
   phone: '',
-  service: '',
+  service: 'Nurse Care',
   babyStatus: '',
   hospitalName: '',
   birthStageStatus: '',
@@ -43,24 +43,13 @@ const HOSPITALS = [
 
 function getShiftHours(service: string, shiftType: string): string[] {
   if (!service || !shiftType) return [];
-  if (service === 'Nurse Care') return shiftType === 'Day' ? ['8 Hours'] : ['9 Hours'];
-  if (service === 'MOBA Care') return shiftType === 'Day' ? ['8 Hours', '10 Hours', '12 Hours'] : ['10 Hours', '12 Hours'];
-  return [];
+  return shiftType === 'Day' ? ['8 Hours'] : ['9 Hours'];
 }
 
 function getShiftTimes(service: string, shiftType: string, shiftHours: string): string[] {
   if (!service || !shiftType || !shiftHours) return [];
-  if (service === 'Nurse Care') {
-    if (shiftType === 'Day' && shiftHours === '8 Hours') return ['8:00 AM – 4:00 PM', '9:00 AM – 5:00 PM', '10:00 AM – 6:00 PM'];
-    if (shiftType === 'Night' && shiftHours === '9 Hours') return ['9:00 PM – 6:00 AM'];
-  }
-  if (service === 'MOBA Care') {
-    if (shiftType === 'Day' && shiftHours === '8 Hours')  return ['8:00 AM – 4:00 PM', '9:00 AM – 5:00 PM', '10:00 AM – 6:00 PM'];
-    if (shiftType === 'Day' && shiftHours === '10 Hours') return ['9:00 AM – 7:00 PM'];
-    if (shiftType === 'Day' && shiftHours === '12 Hours') return ['8:00 AM – 8:00 PM'];
-    if (shiftType === 'Night' && shiftHours === '10 Hours') return ['9:00 PM – 7:00 AM'];
-    if (shiftType === 'Night' && shiftHours === '12 Hours') return ['8:00 PM – 8:00 AM'];
-  }
+  if (shiftType === 'Day' && shiftHours === '8 Hours') return ['8:00 AM – 4:00 PM', '9:00 AM – 5:00 PM', '10:00 AM – 6:00 PM'];
+  if (shiftType === 'Night' && shiftHours === '9 Hours') return ['9:00 PM – 6:00 AM'];
   return [];
 }
 
@@ -77,8 +66,8 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const [form, setForm] = useState(defaultForm);
   const [step, setStep] = useState(1);
 
-  const openModal = (service?: string) => {
-    setForm(prev => ({ ...defaultForm, service: service ?? prev.service }));
+  const openModal = (shiftType?: string) => {
+    setForm({ ...defaultForm, shiftType: shiftType ?? '' });
     setSubmitted(false);
     setStep(1);
     setShowModal(true);
@@ -113,7 +102,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   // Per-step validation — gates Next button
   const isStepValid = (s: number): boolean => {
     if (s === 1) {
-      return !!form.name.trim() && /^[A-Za-z ]+$/.test(form.name) && /^[0-9]{10}$/.test(form.phone) && !!form.service;
+      return !!form.name.trim() && /^[A-Za-z ]+$/.test(form.name) && /^[0-9]{10}$/.test(form.phone);
     }
     if (s === 2) {
       return !!form.babyStatus && !!form.address.trim();
@@ -285,24 +274,6 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                       placeholder="10-digit mobile"
                       autoComplete="tel"
                       value={form.phone} onChange={handleChange} />
-                  </div>
-                  <div className="cw-field">
-                    <label className="cw-field-label">Which service are you looking for?</label>
-                    <div className="cw-choice-grid">
-                      {['Nurse Care', 'MOBA Care'].map(opt => (
-                        <button
-                          type="button"
-                          key={opt}
-                          className={`cw-choice ${form.service === opt ? 'selected' : ''}`}
-                          onClick={() => setForm(prev => ({ ...prev, service: opt, shiftHours: '', shiftTime: '' }))}
-                        >
-                          <div className="cw-choice-title">{opt}</div>
-                          <div className="cw-choice-sub">
-                            {opt === 'Nurse Care' ? 'Clinical, hospital-grade' : 'Trained caregiver support'}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 </>
               )}

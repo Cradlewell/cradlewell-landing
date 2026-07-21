@@ -12,14 +12,10 @@ const RequestSchema = z.object({
     pageTitle: z.string().optional().default("Unknown Page"),
 });
 
-type ServiceType = "nurse" | "japa" | null;
 type CareType = "day" | "night" | null;
-type Duration = "8" | "9" | "10" | "12" | null;
 
 interface FlowState {
-    serviceType: ServiceType;
     careType: CareType;
-    duration: Duration;
     timeSlot: string | null;
 }
 
@@ -47,26 +43,10 @@ function isBabyStageConfirmed(messages: Array<{ role: string; content: string }>
 
 // ── State machine helpers ─────────────────────────────────────────────────────
 
-function detectServiceType(text: string): ServiceType {
-    const t = text.toLowerCase();
-    if (/\bnurse\b/.test(t)) return "nurse";
-    if (/\bjapa\b|\bmoba\b|\bcaregiver\b|\bpostnatal caregiver\b/.test(t)) return "japa";
-    return null;
-}
-
 function detectCareType(text: string): CareType {
     const t = text.toLowerCase();
     if (/\bnight\b/.test(t)) return "night";
     if (/\bday\b/.test(t)) return "day";
-    return null;
-}
-
-function detectDuration(text: string): Duration {
-    const t = text.toLowerCase().replace(/\s+/g, "");
-    if (/12/.test(t) || /twelve/.test(t)) return "12";
-    if (/10/.test(t) || /ten/.test(t)) return "10";
-    if (/\b9\b|nine/.test(text.toLowerCase())) return "9";
-    if (/8/.test(t) || /eight/.test(t)) return "8";
     return null;
 }
 
@@ -79,9 +59,7 @@ function detectTimeSlot(text: string): string | null {
 }
 
 function parseFlowState(messages: Array<{ role: string; content: string }>): FlowState {
-    let serviceType: ServiceType = null;
     let careType: CareType = null;
-    let duration: Duration = null;
     let timeSlot: string | null = null;
 
     for (let i = 0; i < messages.length; i++) {
@@ -90,19 +68,9 @@ function parseFlowState(messages: Array<{ role: string; content: string }>): Flo
 
         const prevAssistant = messages.slice(0, i).reverse().find((m) => m.role === "assistant")?.content ?? "";
 
-        if (!serviceType && /nurse.*japa|japa.*nurse|certified nurse|postnatal caregiver/i.test(prevAssistant)) {
-            const st = detectServiceType(msg.content);
-            if (st) serviceType = st;
-        }
-
-        if (!careType && /day.*night|night.*day/i.test(prevAssistant)) {
+        if (!careType && /day care or night care|day.*night|night.*day/i.test(prevAssistant)) {
             const ct = detectCareType(msg.content);
             if (ct) careType = ct;
-        }
-
-        if (!duration && /8.*10.*12|8-hour|10-hour|12-hour|8 hrs|10 hrs|12 hrs|which suits|which works|9 hrs|9 pm|8 pm/i.test(prevAssistant)) {
-            const d = detectDuration(msg.content);
-            if (d) duration = d;
         }
 
         if (!timeSlot && /8 am.*4 pm|9 am.*5 pm|10 am.*6 pm|which slot|which start time|which time/i.test(prevAssistant)) {
@@ -111,51 +79,25 @@ function parseFlowState(messages: Array<{ role: string; content: string }>): Flo
         }
     }
 
-    return { serviceType, careType, duration, timeSlot };
+    return { careType, timeSlot };
 }
 
-function getFlowReply(state: FlowState, isFirstServiceQuestion: boolean): string {
-    const { serviceType, careType, duration, timeSlot } = state;
+function getFlowReply(state: FlowState, isFirstQuestion: boolean): string {
+    const { careType, timeSlot } = state;
     const TIME_SLOT_OPTIONS = "[[OPTIONS:8 AM–4 PM|9 AM–5 PM|10 AM–6 PM]]";
 
-    if (!serviceType) {
-        const welcome = isFirstServiceQuestion ? "Lovely, we're here to help! 🌸 " : "";
-        return `${welcome}Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?\n[[OPTIONS:Certified Nurse|Postnatal Caregiver (Japa)]]`;
-    }
-
     if (!careType) {
-        const label = serviceType === "nurse" ? "Certified Nurse" : "Japa/MOBA caregiver";
-        return `Great, a ${label} it is! Would you need day care or night care?\n[[OPTIONS:Day care|Night care]]`;
+        const welcome = isFirstQuestion ? "Lovely, we're here to help! 🌸 " : "";
+        return `${welcome}Our certified nurses are available for day care or night care — which would you like?\n[[OPTIONS:Day care|Night care]]`;
     }
 
-    if (serviceType === "nurse") {
-        if (careType === "night") {
-            return "Our nurse night shift is 9 PM–6 AM (9 hrs). Let me get you connected!\n[[COLLECT_LEAD]]";
-        }
-        if (careType === "day") {
-            if (!timeSlot) return `Which time slot works for you?\n${TIME_SLOT_OPTIONS}`;
-            return `${timeSlot} — noted! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
-        }
+    if (careType === "night") {
+        return "Our nurse night shift is 9 PM–6 AM (9 hrs). Let me get you connected!\n[[COLLECT_LEAD]]";
     }
 
-    if (serviceType === "japa") {
-        if (careType === "night") {
-            if (!duration) return "We have two night options — 9 hrs (9 PM–6 AM) or 12 hrs (8 PM–8 AM). Which works for you?\n[[OPTIONS:9 hrs (9 PM–6 AM)|12 hrs (8 PM–8 AM)]]";
-            const shift = duration === "12" ? "8 PM–8 AM" : "9 PM–6 AM";
-            return `${shift} — great choice! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
-        }
-        if (careType === "day") {
-            if (!duration) return `We have 8, 10, or 12-hour day shifts. Which suits you best?\n[[OPTIONS:8 hours|10 hours|12 hours]]`;
-            if (duration === "8") {
-                if (!timeSlot) return `Which slot works best for you?\n${TIME_SLOT_OPTIONS}`;
-                return `${timeSlot} — perfect! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
-            }
-            if (duration === "10") return "That's our 9 AM–7 PM shift. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
-            if (duration === "12") return "That's our 8 AM–8 PM shift. Let me connect you with our care team.\n[[COLLECT_LEAD]]";
-        }
-    }
-
-    return `Are you looking for a Certified Nurse or a Postnatal Caregiver (Japa/MOBA)?\n[[OPTIONS:Certified Nurse|Postnatal Caregiver (Japa)]]`;
+    // day care
+    if (!timeSlot) return `Which time slot works for you?\n${TIME_SLOT_OPTIONS}`;
+    return `${timeSlot} — noted! Let me connect you with our care team.\n[[COLLECT_LEAD]]`;
 }
 
 // ── Pre-flow greeting: deterministic scripted replies ─────────────────────────
@@ -171,7 +113,7 @@ function getGreetingReply(lastUserMsg: string): string {
 
     // What do you do / services
     if (/what.*(do|offer|provide|serv)|serv|nurse|japa|moba|caregiver|nanny|postnatal|newborn care/.test(t)) {
-        return `At Cradlewell, we provide Certified Nurse care and Japa/MOBA postnatal caregiver services — trained professionals who support your baby and you around the clock. To find the right fit, ${BABY_Q}`;
+        return `At Cradlewell, we provide Certified Nurse care — day or night — trained healthcare professionals who support your baby and you around the clock. To find the right fit, ${BABY_Q}`;
     }
 
     // Pricing / cost
@@ -191,7 +133,7 @@ function getGreetingReply(lastUserMsg: string): string {
 
     // Experience / trust
     if (/experience|trust|safe|background|trained|qualify|certif/.test(t)) {
-        return `All our caregivers are background-verified, trained professionals with experience in newborn and postnatal care. You're in safe hands. ${BABY_Q}`;
+        return `All our nurses are background-verified, trained healthcare professionals with experience in newborn and postnatal care. You're in safe hands. ${BABY_Q}`;
     }
 
     // Area / location
@@ -217,8 +159,8 @@ export async function POST(req: NextRequest) {
         if (babyStageConfirmed) {
             const state = parseFlowState(messages);
             const lastAssistantMsg = [...messages].reverse().find((m) => m.role === "assistant")?.content ?? "";
-            const isFirstServiceQuestion = !/nurse.*japa|japa.*nurse|certified nurse|postnatal caregiver|day.*night|night.*day|8.*10.*12|which slot|which start time/i.test(lastAssistantMsg);
-            const flowReply = getFlowReply(state, isFirstServiceQuestion);
+            const isFirstQuestion = !/day care or night care|day.*night|night.*day|which time slot|which slot|which start time/i.test(lastAssistantMsg);
+            const flowReply = getFlowReply(state, isFirstQuestion);
             return NextResponse.json({ reply: flowReply });
         }
 

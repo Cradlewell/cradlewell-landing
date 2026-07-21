@@ -7,7 +7,7 @@ import { useModal } from "./ModalContext";
 type PlanColor = 'violet' | 'indigo';
 
 type Plan = {
-  id: 'nurse' | 'moba';
+  id: 'day' | 'night';
   name: string;
   tagline: string;
   badge: string;
@@ -20,60 +20,51 @@ type Plan = {
   color: PlanColor;
 };
 
+const NURSE_FEATURES = [
+  'Clinical newborn care & monitoring',
+  'Feeding support (breastfeeding guidance + schedule setup)',
+  'Baby bathing, hygiene & sterilization protocols',
+  'Burping cycles, colic observation & comfort care',
+  'Mother recovery support (postpartum monitoring)',
+  'Basic vitals tracking & health observations',
+  'Sleep routine structuring for baby',
+  'Escalation support if any concern arises',
+  'Daily reporting & structured handover',
+  'Trained, verified & hospital-experienced nurses',
+];
+
 const plans: Plan[] = [
   {
-    id: 'nurse',
-    name: 'Nurse Care',
-    tagline: 'Clinical, hospital-grade',
-    badge: 'Most Trusted',
+    id: 'day',
+    name: 'Day Care',
+    tagline: 'Daytime nurse support',
+    badge: 'Most Chosen by Families',
     price: '2,000',
     unit: '/day',
-    perNote: 'Per nurse, per shift',
+    perNote: 'Per nurse, per day shift',
     Icon: Stethoscope,
     color: 'violet',
-    cta: 'Get Nurse Care',
-    features: [
-      'Clinical newborn care & monitoring',
-      'Feeding support (breastfeeding guidance + schedule setup)',
-      'Baby bathing, hygiene & sterilization protocols',
-      'Burping cycles, colic observation & comfort care',
-      'Mother recovery support (postpartum monitoring)',
-      'Basic vitals tracking & health observations',
-      'Sleep routine structuring for baby',
-      'Escalation support if any concern arises',
-      'Daily reporting & structured handover',
-      'Trained, verified & hospital-experienced nurses',
-    ],
+    cta: 'Get Day Care',
+    features: NURSE_FEATURES,
   },
   {
-    id: 'moba',
-    name: 'MOBA Care',
-    tagline: 'Trained caregiver support',
-    badge: 'Most Chosen by Families',
-    price: '1,500',
-    unit: '/day',
-    perNote: 'Per caregiver, per shift',
+    id: 'night',
+    name: 'Night Care',
+    tagline: 'Overnight nurse support',
+    badge: 'Best for Recovery',
+    price: '2,000',
+    unit: '/night',
+    perNote: 'Per nurse, per night shift',
     Icon: Heart,
     color: 'indigo',
-    cta: 'Get MOBA Care',
-    features: [
-      'Baby feeding assistance (as per parent guidance)',
-      'Diapering, cleaning & hygiene care',
-      'Gentle baby massage & safe bathing support',
-      'Burping & soothing the baby',
-      'Sleep routine & calming techniques',
-      'Baby laundry & organization',
-      'Mother comfort support (rest, positioning, hydration reminders)',
-      'Emotional reassurance during recovery phase',
-      'Age-appropriate baby engagement',
-      'Trained, verified & guided caregivers',
-    ],
+    cta: 'Get Night Care',
+    features: NURSE_FEATURES,
   },
 ];
 
-const colorMap: Record<PlanColor, { primary: string; light: string; serviceArg: string }> = {
-  violet: { primary: '#5F47FF', light: 'rgba(95,71,255,0.08)', serviceArg: 'Nurse Care' },
-  indigo: { primary: '#6388FF', light: 'rgba(99,136,255,0.10)', serviceArg: 'MOBA Care' },
+const colorMap: Record<PlanColor, { primary: string; light: string; shiftArg: string }> = {
+  violet: { primary: '#5F47FF', light: 'rgba(95,71,255,0.08)', shiftArg: 'Day' },
+  indigo: { primary: '#6388FF', light: 'rgba(99,136,255,0.10)', shiftArg: 'Night' },
 };
 
 const PricingSection = () => {
@@ -198,7 +189,7 @@ const PricingSection = () => {
                 <button
                   type="button"
                   className="cw-pricing-cta"
-                  onClick={() => openModal(tone.serviceArg)}
+                  onClick={() => openModal(tone.shiftArg)}
                   style={{ background: tone.primary }}
                 >
                   {plan.cta}
