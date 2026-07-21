@@ -116,7 +116,7 @@ function QuotationCard({ quotation, onClosed }: { quotation: Quotation; onClosed
         type: "Won",
         finalPackage: quotation.package,
         finalAmount: quotation.finalPrice,
-        paymentStatus: "Pending",
+        paymentStatus: "Paid",
         closureDate: new Date().toISOString(),
       });
       toast.success("Closed Won", { description: `₹${quotation.finalPrice.toLocaleString("en-IN")} · ${quotation.package}` });
