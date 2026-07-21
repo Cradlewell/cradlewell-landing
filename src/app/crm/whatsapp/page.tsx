@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageCircle, Search, RefreshCw, Send, UserCheck, Bot, MapPin, FileText, X, ChevronRight } from "lucide-react";
+import { MessageCircle, Search, RefreshCw, Send, UserCheck, Bot, MapPin, FileText, X, ChevronRight, Smile, Paperclip } from "lucide-react";
 import WhatsAppTemplatesTab from "@/components/crm/WhatsAppTemplatesTab";
 
 interface WATemplate {
@@ -168,6 +168,14 @@ const MESSAGES_POLL_MS = 3000;
 const CONTACTS_POLL_MS = 10000;
 const WINDOW_MS        = 24 * 60 * 60 * 1000;
 
+const EMOJIS = [
+    "😀","😄","😁","😊","😍","😘","😎","🤩","🥰","😇",
+    "🙂","😉","🤗","🤔","😅","😂","🤣","😴","😌","😋",
+    "👍","👎","👏","🙏","💪","🙌","👌","🤝","✌️","🤞",
+    "❤️","🧡","💛","💚","💙","💜","🖤","💕","💯","🔥",
+    "🎉","🎊","✅","❌","⭐","🌟","💐","🌸","👶","🍼",
+];
+
 export default function WhatsAppPage() {
     const [contacts, setContacts]           = useState<Contact[]>([]);
     const [selected, setSelected]           = useState<string | null>(null);
@@ -178,6 +186,9 @@ export default function WhatsAppPage() {
     const [live, setLive]                   = useState(false);
     const [replyText, setReplyText]         = useState("");
     const [sending, setSending]             = useState(false);
+    const [showEmoji, setShowEmoji]         = useState(false);
+    const [sendingMedia, setSendingMedia]   = useState(false);
+    const fileInputRef                      = useRef<HTMLInputElement>(null);
     const [now, setNow]                     = useState(() => Date.now());
     const [tab, setTab]                     = useState<"chats" | "templates">("chats");
 
@@ -313,6 +324,43 @@ export default function WhatsAppPage() {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSend();
+        }
+    }
+
+    // Insert an emoji at the caret (falls back to appending).
+    function insertEmoji(emoji: string) {
+        const el = inputRef.current;
+        if (!el) { setReplyText(t => t + emoji); return; }
+        const start = el.selectionStart ?? replyText.length;
+        const end   = el.selectionEnd ?? replyText.length;
+        const next  = replyText.slice(0, start) + emoji + replyText.slice(end);
+        setReplyText(next);
+        requestAnimationFrame(() => {
+            el.focus();
+            const pos = start + emoji.length;
+            el.setSelectionRange(pos, pos);
+        });
+    }
+
+    // Upload + send an attachment (image / video / audio / document).
+    async function handleAttach(file: File) {
+        if (!selected || !windowOpen || sendingMedia) return;
+        setSendingMedia(true);
+        try {
+            const fd = new FormData();
+            fd.append("phone", selected);
+            fd.append("file", file);
+            if (replyText.trim()) fd.append("caption", replyText.trim());
+            const res = await fetch("/api/crm/whatsapp-chat", { method: "POST", body: fd });
+            if (res.ok) {
+                setReplyText("");
+                fetchMessages(selected, false);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || "Failed to send attachment");
+            }
+        } finally {
+            setSendingMedia(false);
         }
     }
 
@@ -723,20 +771,72 @@ export default function WhatsAppPage() {
                     ) : agentActive ? (
                             /* Agent reply box */
                             <div style={{
+                                position: "relative",
                                 padding: "0.75rem 1.25rem",
                                 background: "#f0f2f5",
                                 borderTop: "1px solid var(--crm-border)",
                                 display: "flex",
-                                gap: "0.75rem",
+                                gap: "0.5rem",
                                 alignItems: "flex-end",
                             }}>
+                                {/* Emoji picker popover */}
+                                {showEmoji && (
+                                    <>
+                                        <div onClick={() => setShowEmoji(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
+                                        <div style={{
+                                            position: "absolute", bottom: 62, left: 16, zIndex: 21,
+                                            background: "#fff", border: "1px solid var(--crm-border)", borderRadius: 12,
+                                            boxShadow: "0 8px 28px rgba(0,0,0,0.18)", padding: "0.6rem",
+                                            width: 288, display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 2,
+                                        }}>
+                                            {EMOJIS.map(em => (
+                                                <button
+                                                    key={em}
+                                                    onClick={() => { insertEmoji(em); }}
+                                                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.15rem", lineHeight: 1, padding: "3px 0", borderRadius: 6 }}
+                                                    onMouseEnter={e => (e.currentTarget.style.background = "#f0f2f5")}
+                                                    onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                                                >
+                                                    {em}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Emoji button */}
+                                <button
+                                    onClick={() => setShowEmoji(s => !s)}
+                                    title="Emoji"
+                                    style={{ width: 40, height: 40, borderRadius: "50%", border: "none", background: "none", cursor: "pointer", color: showEmoji ? "#25D366" : "#54656f", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                                >
+                                    <Smile size={22} />
+                                </button>
+
+                                {/* Attach button */}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
+                                    style={{ display: "none" }}
+                                    onChange={e => { const f = e.target.files?.[0]; if (f) handleAttach(f); e.target.value = ""; }}
+                                />
+                                <button
+                                    onClick={() => !sendingMedia && fileInputRef.current?.click()}
+                                    title="Attach a file"
+                                    disabled={sendingMedia}
+                                    style={{ width: 40, height: 40, borderRadius: "50%", border: "none", background: "none", cursor: sendingMedia ? "wait" : "pointer", color: "#54656f", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                                >
+                                    <Paperclip size={21} />
+                                </button>
+
                                 <textarea
                                     ref={inputRef}
                                     rows={1}
                                     value={replyText}
                                     onChange={e => setReplyText(e.target.value)}
                                     onKeyDown={handleKeyDown}
-                                    placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
+                                    placeholder={sendingMedia ? "Sending attachment…" : "Type a message… (Enter to send, Shift+Enter for newline)"}
                                     style={{
                                         flex: 1,
                                         resize: "none",

@@ -7,9 +7,28 @@ const ACCESS_TOKEN    = process.env.WHATSAPP_ACCESS_TOKEN!;
 const WABA_ID         = process.env.WHATSAPP_WABA_ID ?? process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
 const WINDOW_MS       = 24 * 60 * 60 * 1000;
 
+// Whether the 24-hour customer-service window is currently open for a number.
+async function windowState(phone: string): Promise<{ optedOut: boolean; open: boolean; hasInbound: boolean }> {
+  const { data: session } = await supabase
+    .from("whatsapp_sessions").select("step").eq("wa_phone", phone).maybeSingle();
+  const { data: lastInbound } = await supabase
+    .from("whatsapp_messages").select("created_at")
+    .eq("wa_phone", phone).eq("direction", "inbound")
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const hasInbound = !!lastInbound;
+  const open = hasInbound && Date.now() - new Date(lastInbound!.created_at).getTime() <= WINDOW_MS;
+  return { optedOut: session?.step === "opted_out", open, hasInbound };
+}
+
 export async function POST(req: NextRequest) {
   const authErr = requireAuth(req);
   if (authErr) return authErr;
+
+  // Attachments arrive as multipart/form-data (a file can't ride inside JSON).
+  const contentType = req.headers.get("content-type") || "";
+  if (contentType.includes("multipart/form-data")) {
+    return handleMediaSend(req);
+  }
 
   const { action, phone, message, templateName, language, variables, preview } = await req.json();
 
@@ -133,6 +152,80 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+}
+
+// Send a photo / video / audio / document inside the 24-hour window. The file is
+// first uploaded to Meta (returns a media id), then sent as a media message.
+async function handleMediaSend(req: NextRequest) {
+  const form    = await req.formData();
+  const phone   = (form.get("phone") ?? "").toString();
+  const caption = (form.get("caption") ?? "").toString();
+  const file    = form.get("file");
+
+  if (!phone || !file || !(file instanceof File)) {
+    return NextResponse.json({ error: "Missing phone or file" }, { status: 400 });
+  }
+
+  const { optedOut, open, hasInbound } = await windowState(phone);
+  if (optedOut)   return NextResponse.json({ error: "User has opted out — cannot send messages" }, { status: 403 });
+  if (!hasInbound) return NextResponse.json({ error: "No customer message — window not open" }, { status: 400 });
+  if (!open)      return NextResponse.json({ error: "24-hour window closed" }, { status: 400 });
+
+  const mime = file.type || "application/octet-stream";
+  const waType = mime.startsWith("image/") ? "image"
+    : mime.startsWith("video/") ? "video"
+    : mime.startsWith("audio/") ? "audio"
+    : "document";
+
+  // 1) Upload the file to Meta → media id.
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const upload = new FormData();
+  upload.append("messaging_product", "whatsapp");
+  upload.append("type", mime);
+  upload.append("file", new Blob([bytes], { type: mime }), file.name);
+
+  const upRes = await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/media`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
+    body: upload,
+  });
+  const upJson = await upRes.json().catch(() => ({}));
+  if (!upRes.ok || !upJson.id) {
+    console.error("[whatsapp-chat media:upload] Meta error", JSON.stringify(upJson?.error ?? upJson));
+    return NextResponse.json({ error: upJson?.error?.message || "Failed to upload attachment" }, { status: 400 });
+  }
+
+  // 2) Send the media message.
+  const mediaObj: Record<string, string> = { id: upJson.id };
+  if (caption && waType !== "audio") mediaObj.caption = caption;
+  if (waType === "document") mediaObj.filename = file.name;
+
+  const sendRes = await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", to: phone, type: waType, [waType]: mediaObj }),
+  });
+  if (!sendRes.ok) {
+    const detail = await sendRes.text().catch(() => "");
+    console.error("[whatsapp-chat media:send] Meta error", detail);
+    return NextResponse.json({ error: "Failed to send attachment" }, { status: 400 });
+  }
+
+  const label = caption.trim() || (
+    waType === "image" ? "📷 Photo" :
+    waType === "video" ? "🎥 Video" :
+    waType === "audio" ? "🎵 Audio" :
+    `📄 ${file.name}`
+  );
+  await supabase.from("whatsapp_messages").insert({
+    id: crypto.randomUUID(),
+    wa_phone: phone,
+    direction: "outbound",
+    message: label,
+    created_at: new Date().toISOString(),
+  });
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function GET(req: NextRequest) {
