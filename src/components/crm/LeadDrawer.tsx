@@ -124,9 +124,10 @@ function QuotationCard({ quotation, onClosed }: { quotation: Quotation; onClosed
       api.closeLead({
         leadId: quotation.leadId,
         type: "Lost",
+        finalAmount: quotation.finalPrice,
         closureDate: new Date().toISOString(),
       });
-      toast.warning("Marked as Lost");
+      toast.warning("Marked as Lost", { description: `Lost amount ₹${quotation.finalPrice.toLocaleString("en-IN")}` });
     }
     api.deleteQuotation(quotation.id);
     onClosed();
@@ -221,7 +222,6 @@ function ClosureCard({ closure }: { closure: Closure }) {
   const [advance, setAdvance] = useState("");
   const [payStatus, setPayStatus] = useState<"Pending" | "Partial" | "Paid">("Pending");
   const [lostReason, setLostReason] = useState<LostReason>("Competitor selected");
-  const [competitor, setCompetitor] = useState("");
   const [notes, setNotes] = useState("");
   const [dateStr, setDateStr] = useState("");
 
@@ -231,7 +231,6 @@ function ClosureCard({ closure }: { closure: Closure }) {
     setAdvance(String(closure.advanceReceived ?? ""));
     setPayStatus((closure.paymentStatus as "Pending" | "Partial" | "Paid") ?? "Pending");
     setLostReason((closure.lostReason as LostReason) ?? "Competitor selected");
-    setCompetitor(closure.competitorName ?? "");
     setNotes(closure.notes ?? "");
     setDateStr(isoToDay(closure.closureDate));
     setEditing(true);
@@ -248,7 +247,7 @@ function ClosureCard({ closure }: { closure: Closure }) {
         closureDate,
       });
     } else {
-      api.updateClosure(closure.id, { lostReason, competitorName: competitor, notes, closureDate });
+      api.updateClosure(closure.id, { lostReason, finalAmount: Number(amount) || undefined, notes, closureDate });
     }
     setEditing(false);
     toast.success("Closure updated");
@@ -323,8 +322,8 @@ function ClosureCard({ closure }: { closure: Closure }) {
               </select>
             </div>
             <div className="crm-form-group">
-              <label className="crm-label">Competitor Name</label>
-              <input className="crm-input" value={competitor} onChange={e => setCompetitor(e.target.value)} />
+              <label className="crm-label">Lost Amount (₹)</label>
+              <input className="crm-input" type="number" value={amount} onChange={e => setAmount(e.target.value)} />
             </div>
             <div className="crm-form-group">
               <label className="crm-label">Closure Date</label>
@@ -356,7 +355,7 @@ function ClosureCard({ closure }: { closure: Closure }) {
           {closure.type === "Lost" && (
             <div className="crm-grid-2">
               <div><div className="crm-section-title mb-1">Reason</div><div style={{ fontSize: "0.875rem" }}>{closure.lostReason || "—"}</div></div>
-              <div><div className="crm-section-title mb-1">Competitor</div><div style={{ fontSize: "0.875rem" }}>{closure.competitorName || "—"}</div></div>
+              <div><div className="crm-section-title mb-1">Lost Amount</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#DC2626" }}>{closure.finalAmount ? `₹${closure.finalAmount.toLocaleString("en-IN")}` : "—"}</div></div>
               {closure.notes && <div style={{ gridColumn: "1/-1" }}><div className="crm-section-title mb-1">Notes</div><div style={{ fontSize: "0.875rem" }}>{closure.notes}</div></div>}
             </div>
           )}
@@ -394,7 +393,6 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [cAdvance, setCAdvance] = useState("");
   const [cPayStatus, setCPayStatus] = useState<"Pending"|"Partial"|"Paid">("Pending");
   const [cLostReason, setCLostReason] = useState<LostReason>("Competitor selected");
-  const [cCompetitor, setCCompetitor] = useState("");
   const [cNotes, setCNotes] = useState("");
   const [cDate, setCDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [showAddClosure, setShowAddClosure] = useState(false);
@@ -474,12 +472,12 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
       api.closeLead({ leadId: lead.id, type: "Won", finalPackage: cPkg, finalAmount: Number(cAmount) || undefined, advanceReceived: Number(cAdvance) || undefined, paymentStatus: cPayStatus, closureDate });
       toast.success("Closed Won!", { description: cAmount ? `₹${Number(cAmount).toLocaleString("en-IN")} · ${cPayStatus}` : undefined });
     } else {
-      api.closeLead({ leadId: lead.id, type: "Lost", lostReason: cLostReason, competitorName: cCompetitor, notes: cNotes, closureDate });
+      api.closeLead({ leadId: lead.id, type: "Lost", lostReason: cLostReason, finalAmount: Number(cAmount) || undefined, notes: cNotes, closureDate });
       toast.warning("Marked as Lost", { description: cLostReason });
     }
     // Reset the add-closure form so the next entry starts blank, and collapse it.
     setCPkg(""); setCAmount(""); setCAdvance(""); setCPayStatus("Pending");
-    setCLostReason("Competitor selected"); setCCompetitor(""); setCNotes("");
+    setCLostReason("Competitor selected"); setCNotes("");
     setCDate(format(new Date(), "yyyy-MM-dd"));
     setShowAddClosure(false);
   };
@@ -903,8 +901,8 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                           </select>
                         </div>
                         <div className="crm-form-group">
-                          <label className="crm-label">Competitor Name</label>
-                          <input className="crm-input" value={cCompetitor} onChange={e => setCCompetitor(e.target.value)} placeholder="NurtureNest" />
+                          <label className="crm-label">Lost Amount (₹)</label>
+                          <input className="crm-input" type="number" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="40000" />
                         </div>
                         <div className="crm-form-group">
                           <label className="crm-label">Closure Date</label>
