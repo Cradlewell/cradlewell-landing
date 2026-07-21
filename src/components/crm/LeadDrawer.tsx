@@ -106,6 +106,29 @@ function QuotationCard({ quotation }: { quotation: Quotation }) {
     if (ok) { api.deleteQuotation(quotation.id); toast.success("Quotation removed"); }
   };
 
+  // Close the lead straight from a quotation — creates a Closure (which also
+  // moves the lead to the matching stage and shows up in the Closure tab).
+  const closeAs = (type: "Won" | "Lost") => {
+    if (type === "Won") {
+      api.closeLead({
+        leadId: quotation.leadId,
+        type: "Won",
+        finalPackage: quotation.package,
+        finalAmount: quotation.finalPrice,
+        paymentStatus: "Pending",
+        closureDate: new Date().toISOString(),
+      });
+      toast.success("Closed Won", { description: `₹${quotation.finalPrice.toLocaleString("en-IN")} · ${quotation.package}` });
+    } else {
+      api.closeLead({
+        leadId: quotation.leadId,
+        type: "Lost",
+        closureDate: new Date().toISOString(),
+      });
+      toast.warning("Marked as Lost");
+    }
+  };
+
   if (editing) {
     return (
       <div className="crm-card p-3 mb-2">
@@ -155,6 +178,10 @@ function QuotationCard({ quotation }: { quotation: Quotation }) {
           <div className="d-flex gap-1 mt-2">
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={startEdit}><Edit2 size={12} /> Edit</button>
             <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={remove} style={{ color: "#DC2626" }} title="Delete quotation"><Trash2 size={12} /></button>
+          </div>
+          <div className="d-flex gap-1 mt-2">
+            <button className="crm-btn crm-btn-sm" style={{ background: "#F0FDF4", color: "#16A34A" }} onClick={() => closeAs("Won")}><Check size={12} /> Closed Won</button>
+            <button className="crm-btn crm-btn-sm" style={{ background: "#FEF2F2", color: "#DC2626" }} onClick={() => closeAs("Lost")}><X size={12} /> Closed Lost</button>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
