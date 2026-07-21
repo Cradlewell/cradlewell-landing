@@ -107,8 +107,9 @@ function QuotationCard({ quotation, onClosed }: { quotation: Quotation; onClosed
   };
 
   // Close the lead straight from a quotation — creates a Closure (which also
-  // moves the lead to the matching stage), removes the now-converted quotation,
-  // and jumps to the Closure tab so its full details are ready to review/edit.
+  // moves the lead to the matching stage) and jumps to the Closure tab so its
+  // full details are ready to review/edit. The quotation stays in the list; its
+  // Payment Status on the Quotations page reflects the new closure.
   const closeAs = (type: "Won" | "Lost") => {
     if (type === "Won") {
       api.closeLead({
@@ -129,7 +130,6 @@ function QuotationCard({ quotation, onClosed }: { quotation: Quotation; onClosed
       });
       toast.warning("Marked as Lost", { description: `Lost amount ₹${quotation.finalPrice.toLocaleString("en-IN")}` });
     }
-    api.deleteQuotation(quotation.id);
     onClosed();
   };
 
@@ -189,7 +189,6 @@ function QuotationCard({ quotation, onClosed }: { quotation: Quotation; onClosed
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "0.62rem", fontWeight: 600, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Paid</div>
           <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--crm-primary)" }}>₹{quotation.finalPrice.toLocaleString("en-IN")}</div>
           <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)" }}>{format(new Date(quotation.date), "dd MMM")}</div>
         </div>
@@ -824,9 +823,6 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                   <div style={{ display: "flex", gap: 14, fontSize: "0.72rem" }}>
                     <span style={{ color: "var(--crm-text-muted)" }}>
                       Quotation: <b style={{ color: "var(--crm-text)" }}>₹{leadQuotations.reduce((s, q) => s + q.quotedPrice, 0).toLocaleString("en-IN")}</b>
-                    </span>
-                    <span style={{ color: "var(--crm-text-muted)" }}>
-                      Paid: <b style={{ color: "var(--crm-primary)" }}>₹{leadQuotations.reduce((s, q) => s + q.finalPrice, 0).toLocaleString("en-IN")}</b>
                     </span>
                   </div>
                 )}
