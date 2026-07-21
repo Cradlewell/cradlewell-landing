@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuotations, useLeads, useClosures } from "@/lib/crm-store";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import { EmptyState } from "@/components/ui/empty-state";
-import { FileText } from "lucide-react";
+import { FileText, Trophy, XCircle } from "lucide-react";
 import { format } from "date-fns";
 
 export default function QuotationsPage() {
@@ -29,19 +29,75 @@ export default function QuotationsPage() {
       </div>
 
       {quotations.length > 0 && (
-        <div className="crm-grid-2 mb-4" style={{ gridTemplateColumns: "repeat(3, minmax(0, 220px))" }}>
-          <div className="crm-stat-card">
-            <div className="crm-stat-label">Total Quotation Amount</div>
-            <div className="crm-stat-value">₹{totalQuotation.toLocaleString("en-IN")}</div>
-          </div>
-          <div className="crm-stat-card">
-            <div className="crm-stat-label">Closed Won Amount</div>
-            <div className="crm-stat-value" style={{ color: "#16A34A" }}>₹{closedWon.toLocaleString("en-IN")}</div>
-          </div>
-          <div className="crm-stat-card">
-            <div className="crm-stat-label">Closed Lost Amount</div>
-            <div className="crm-stat-value" style={{ color: "#DC2626" }}>₹{closedLost.toLocaleString("en-IN")}</div>
-          </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+            gap: 16,
+            marginBottom: 28,
+            maxWidth: 760,
+          }}
+        >
+          {[
+            { label: "Total Quotation Amount", value: totalQuotation, Icon: FileText, color: "#5F47FF", tint: "rgba(95,71,255,0.08)", valueColor: "#0F172A" },
+            { label: "Closed Won Amount", value: closedWon, Icon: Trophy, color: "#16A34A", tint: "#F0FDF4", valueColor: "#16A34A" },
+            { label: "Closed Lost Amount", value: closedLost, Icon: XCircle, color: "#DC2626", tint: "#FEF2F2", valueColor: "#DC2626" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              style={{
+                background: "#fff",
+                border: "1px solid rgba(15,23,42,0.06)",
+                borderRadius: 14,
+                padding: "16px 18px",
+                boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  background: s.tint,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <s.Icon size={20} color={s.color} strokeWidth={2} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "#94A3B8",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {s.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.45rem",
+                    fontWeight: 800,
+                    color: s.valueColor,
+                    letterSpacing: "-0.02em",
+                    fontVariantNumeric: "tabular-nums",
+                    marginTop: 3,
+                  }}
+                >
+                  ₹{s.value.toLocaleString("en-IN")}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
