@@ -38,6 +38,9 @@ interface Message {
     direction: "inbound" | "outbound";
     message: string;
     created_at: string;
+    delivery_status?: string | null;   // sent | delivered | read | failed
+    billable?: boolean | null;         // Meta pricing.billable
+    billing_category?: string | null;  // marketing | utility | authentication | service
 }
 
 function fmtTime(iso: string) {
@@ -147,6 +150,37 @@ function renderMessageContent(msg: string, isOut: boolean): React.ReactNode {
         );
     }
     return !isOut ? decodePayload(msg) : msg;
+}
+
+// Delivery ticks for an outbound message, driven by Meta's status webhook.
+function deliveryTick(msg: Message): { mark: string; color: string } {
+    switch (msg.delivery_status) {
+        case "read":      return { mark: "✓✓", color: "#53bdeb" };
+        case "delivered": return { mark: "✓✓", color: "#8a8a8a" };
+        case "failed":    return { mark: "✗",  color: "#e53935" };
+        case "sent":      return { mark: "✓",  color: "#8a8a8a" };
+        default:          return { mark: "✓",  color: "#8a8a8a" };
+    }
+}
+
+// Billing chip — shows whether Meta charged for this message (from pricing.billable).
+function billingChip(msg: Message): React.ReactNode {
+    if (msg.billable == null) return null;               // no status webhook yet
+    const cat = msg.billing_category
+        ? msg.billing_category.charAt(0).toUpperCase() + msg.billing_category.slice(1)
+        : "";
+    if (msg.billable) {
+        return (
+            <span title={`Billed by Meta${cat ? ` · ${cat}` : ""}`} style={{ background: "#FFF3E0", color: "#E65100", borderRadius: 4, padding: "0 5px", fontWeight: 600, fontSize: "0.62rem", whiteSpace: "nowrap" }}>
+                💰 Billed{cat ? ` · ${cat}` : ""}
+            </span>
+        );
+    }
+    return (
+        <span title="Not billed by Meta (free)" style={{ background: "#E8F5E9", color: "#2E7D32", borderRadius: 4, padding: "0 5px", fontWeight: 600, fontSize: "0.62rem", whiteSpace: "nowrap" }}>
+            Free
+        </span>
+    );
 }
 
 function Avatar({ name, phone, size = 40 }: { name?: string; phone: string; size?: number }) {
@@ -742,9 +776,10 @@ export default function WhatsAppPage() {
                                             <div style={{ fontSize: "0.855rem", whiteSpace: "pre-wrap", lineHeight: 1.45, color: "#1a1a1a", wordBreak: "break-word" }}>
                                                 {renderMessageContent(msg.message, isOut)}
                                             </div>
-                                            <div style={{ fontSize: "0.68rem", color: "#8a8a8a", textAlign: "right", marginTop: 2, lineHeight: 1 }}>
+                                            <div style={{ fontSize: "0.68rem", color: "#8a8a8a", textAlign: "right", marginTop: 2, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
+                                                {isOut && billingChip(msg)}
                                                 {fmtTime(msg.created_at)}
-                                                {isOut && <span style={{ marginLeft: 3, color: "#53bdeb" }}>✓✓</span>}
+                                                {isOut && <span style={{ color: deliveryTick(msg).color }}>{deliveryTick(msg).mark}</span>}
                                             </div>
                                         </div>
                                     </div>

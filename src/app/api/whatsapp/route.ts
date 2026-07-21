@@ -1141,6 +1141,33 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ status: "ok" });
         }
 
+        // ── Message status updates (sent / delivered / read / failed) ─────────
+        // These carry Meta's `pricing` object, which tells us whether a message
+        // was billable and its category — this is how the CRM shows if money is
+        // being deducted for template / marketing sends.
+        const statuses = body.entry?.[0]?.changes?.[0]?.value?.statuses;
+        if (statuses?.length) {
+            for (const st of statuses) {
+                await supabase.from("whatsapp_events").insert({
+                    id: crypto.randomUUID(),
+                    event_type: "message_status",
+                    payload: {
+                        wamid: st.id ?? null,
+                        status: st.status ?? null,
+                        recipient_id: st.recipient_id ?? null,
+                        billable: st.pricing?.billable ?? null,
+                        category: st.pricing?.category ?? st.conversation?.origin?.type ?? null,
+                        pricing_model: st.pricing?.pricing_model ?? null,
+                        errors: st.errors ?? null,
+                    },
+                    created_at: new Date().toISOString(),
+                }).then(({ error }) => {
+                    if (error) console.error("[WA] Failed to store message_status:", error.message);
+                });
+            }
+            return NextResponse.json({ status: "ok" });
+        }
+
         const messages = body.entry?.[0]?.changes?.[0]?.value?.messages;
         if (!messages?.length) return NextResponse.json({ status: "ok" });
 

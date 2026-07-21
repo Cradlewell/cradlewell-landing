@@ -92,11 +92,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
     }
 
+    const sendJson = await waRes.json().catch(() => ({}));
     await supabase.from("whatsapp_messages").insert({
       id: crypto.randomUUID(),
       wa_phone: phone,
       direction: "outbound",
       message,
+      wa_message_id: sendJson?.messages?.[0]?.id ?? null,
       created_at: new Date().toISOString(),
     });
 
@@ -140,11 +142,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to send template message" }, { status: 500 });
     }
 
+    const tplJson = await waRes.json().catch(() => ({}));
     await supabase.from("whatsapp_messages").insert({
       id: crypto.randomUUID(),
       wa_phone: phone,
       direction: "outbound",
       message: (preview && String(preview)) || `[Template] ${templateName}`,
+      wa_message_id: tplJson?.messages?.[0]?.id ?? null,
       created_at: new Date().toISOString(),
     });
 
@@ -211,6 +215,7 @@ async function handleMediaSend(req: NextRequest) {
     return NextResponse.json({ error: "Failed to send attachment" }, { status: 400 });
   }
 
+  const sendJson = await sendRes.json().catch(() => ({}));
   const label = caption.trim() || (
     waType === "image" ? "📷 Photo" :
     waType === "video" ? "🎥 Video" :
@@ -222,6 +227,7 @@ async function handleMediaSend(req: NextRequest) {
     wa_phone: phone,
     direction: "outbound",
     message: label,
+    wa_message_id: sendJson?.messages?.[0]?.id ?? null,
     created_at: new Date().toISOString(),
   });
 
@@ -311,7 +317,35 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: true });
 
     if (error) { console.error("[whatsapp-chat messages]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
-    return NextResponse.json({ messages: data ?? [] });
+
+    // Attach delivery + billing (Meta's `pricing`) to each outbound message so
+    // the CRM can show whether a send was actually billed by Meta.
+    const { data: events } = await supabase
+      .from("whatsapp_events")
+      .select("payload, created_at")
+      .eq("event_type", "message_status")
+      .filter("payload->>recipient_id", "eq", phone)
+      .order("created_at", { ascending: true });
+
+    type Billing = { status: string | null; billable: boolean | null; category: string | null };
+    const byWamid: Record<string, Billing> = {};
+    for (const ev of events ?? []) {
+      const p = (ev.payload ?? {}) as { wamid?: string; status?: string; billable?: boolean | null; category?: string | null };
+      if (!p.wamid) continue;
+      const cur = byWamid[p.wamid] ?? { status: null, billable: null, category: null };
+      byWamid[p.wamid] = {
+        status: p.status ?? cur.status,                       // latest status wins
+        billable: p.billable ?? cur.billable,                 // keep once seen
+        category: p.category ?? cur.category,
+      };
+    }
+
+    const messages = (data ?? []).map(m => {
+      const b = m.wa_message_id ? byWamid[m.wa_message_id] : undefined;
+      return b ? { ...m, delivery_status: b.status, billable: b.billable, billing_category: b.category } : m;
+    });
+
+    return NextResponse.json({ messages });
   }
 
   return NextResponse.json({ error: "Invalid request" }, { status: 400 });
