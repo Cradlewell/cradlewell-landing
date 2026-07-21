@@ -20,7 +20,7 @@ type Plan = {
   color: PlanColor;
 };
 
-const NURSE_FEATURES = [
+const DAY_FEATURES = [
   'Clinical newborn care & monitoring',
   'Feeding support (breastfeeding guidance + schedule setup)',
   'Baby bathing, hygiene & sterilization protocols',
@@ -33,32 +33,45 @@ const NURSE_FEATURES = [
   'Trained, verified & hospital-experienced nurses',
 ];
 
+const NIGHT_FEATURES = [
+  'Overnight newborn care & monitoring while you sleep',
+  'Night feeds — breastfeeding support or formula prep',
+  'Diaper changes, soothing & settling through the night',
+  'Safe sleep positioning & night-time sleep routine building',
+  'Colic, reflux & fussiness comfort care at night',
+  'Mother night-time rest & recovery support',
+  'Vitals & health observation through the night',
+  'Escalation support if any concern arises overnight',
+  'Calm morning handover with a full night summary',
+  'Trained, verified & hospital-experienced night nurses',
+];
+
 const plans: Plan[] = [
   {
     id: 'day',
     name: 'Day Care',
     tagline: 'Daytime nurse support',
     badge: 'Most Chosen by Families',
-    price: '2,000',
-    unit: '/day',
+    price: '2,500',
+    unit: '+ GST / day',
     perNote: 'Per nurse, per day shift',
     Icon: Stethoscope,
     color: 'violet',
     cta: 'Get Day Care',
-    features: NURSE_FEATURES,
+    features: DAY_FEATURES,
   },
   {
     id: 'night',
     name: 'Night Care',
-    tagline: 'Overnight nurse support',
+    tagline: 'Overnight nurse support, so you can rest',
     badge: 'Best for Recovery',
-    price: '2,000',
-    unit: '/night',
+    price: '3,000',
+    unit: '+ GST / night',
     perNote: 'Per nurse, per night shift',
     Icon: Heart,
     color: 'indigo',
     cta: 'Get Night Care',
-    features: NURSE_FEATURES,
+    features: NIGHT_FEATURES,
   },
 ];
 
