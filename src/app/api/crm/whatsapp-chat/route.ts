@@ -327,22 +327,26 @@ export async function GET(req: NextRequest) {
       .filter("payload->>recipient_id", "eq", phone)
       .order("created_at", { ascending: true });
 
-    type Billing = { status: string | null; billable: boolean | null; category: string | null };
+    type MetaErr = { code?: number; title?: string; message?: string; error_data?: { details?: string } };
+    type Billing = { status: string | null; billable: boolean | null; category: string | null; error: string | null };
     const byWamid: Record<string, Billing> = {};
     for (const ev of events ?? []) {
-      const p = (ev.payload ?? {}) as { wamid?: string; status?: string; billable?: boolean | null; category?: string | null };
+      const p = (ev.payload ?? {}) as { wamid?: string; status?: string; billable?: boolean | null; category?: string | null; errors?: MetaErr[] };
       if (!p.wamid) continue;
-      const cur = byWamid[p.wamid] ?? { status: null, billable: null, category: null };
+      const cur = byWamid[p.wamid] ?? { status: null, billable: null, category: null, error: null };
+      const e = Array.isArray(p.errors) ? p.errors[0] : undefined;
+      const errStr = e ? `${e.code ? `[${e.code}] ` : ""}${e.error_data?.details || e.title || e.message || "Failed"}` : null;
       byWamid[p.wamid] = {
         status: p.status ?? cur.status,                       // latest status wins
         billable: p.billable ?? cur.billable,                 // keep once seen
         category: p.category ?? cur.category,
+        error: errStr ?? cur.error,
       };
     }
 
     const messages = (data ?? []).map(m => {
       const b = m.wa_message_id ? byWamid[m.wa_message_id] : undefined;
-      return b ? { ...m, delivery_status: b.status, billable: b.billable, billing_category: b.category } : m;
+      return b ? { ...m, delivery_status: b.status, billable: b.billable, billing_category: b.category, delivery_error: b.error } : m;
     });
 
     return NextResponse.json({ messages });

@@ -41,6 +41,7 @@ interface Message {
     delivery_status?: string | null;   // sent | delivered | read | failed
     billable?: boolean | null;         // Meta pricing.billable
     billing_category?: string | null;  // marketing | utility | authentication | service
+    delivery_error?: string | null;    // Meta failure reason (when failed)
 }
 
 function fmtTime(iso: string) {
@@ -781,6 +782,11 @@ export default function WhatsAppPage() {
                                                 {fmtTime(msg.created_at)}
                                                 {isOut && <span style={{ color: deliveryTick(msg).color }}>{deliveryTick(msg).mark}</span>}
                                             </div>
+                                            {isOut && msg.delivery_status === "failed" && msg.delivery_error && (
+                                                <div style={{ marginTop: 4, fontSize: "0.68rem", color: "#c62828", background: "#fdecec", borderRadius: 6, padding: "3px 7px", lineHeight: 1.35 }}>
+                                                    ⚠ {msg.delivery_error}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
