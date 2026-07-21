@@ -4,13 +4,14 @@ import { requireAuth } from "@/lib/auth-guard";
 
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!;
 const ACCESS_TOKEN    = process.env.WHATSAPP_ACCESS_TOKEN!;
+const WABA_ID         = process.env.WHATSAPP_WABA_ID ?? process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
 const WINDOW_MS       = 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   const authErr = requireAuth(req);
   if (authErr) return authErr;
 
-  const { action, phone, message } = await req.json();
+  const { action, phone, message, templateName, language, variables, preview } = await req.json();
 
   if (action === "takeover") {
     const { error } = await supabase
@@ -83,6 +84,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Template message — the only kind allowed OUTSIDE the 24-hour window.
+  if (action === "send_template" && phone && templateName) {
+    const { data: session } = await supabase
+      .from("whatsapp_sessions")
+      .select("step")
+      .eq("wa_phone", phone)
+      .maybeSingle();
+    if (session?.step === "opted_out") {
+      return NextResponse.json({ error: "User has opted out — cannot send messages" }, { status: 403 });
+    }
+
+    const vars: string[] = Array.isArray(variables) ? variables.map((v: unknown) => String(v ?? "")) : [];
+    const components = vars.length
+      ? [{ type: "body", parameters: vars.map((text) => ({ type: "text", text })) }]
+      : [];
+
+    const waRes = await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: phone,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: language || "en" },
+          ...(components.length ? { components } : {}),
+        },
+      }),
+    });
+
+    if (!waRes.ok) {
+      const detail = await waRes.text().catch(() => "");
+      console.error("[whatsapp-chat send_template] Meta API error", detail);
+      return NextResponse.json({ error: "Failed to send template message" }, { status: 500 });
+    }
+
+    await supabase.from("whatsapp_messages").insert({
+      id: crypto.randomUUID(),
+      wa_phone: phone,
+      direction: "outbound",
+      message: (preview && String(preview)) || `[Template] ${templateName}`,
+      created_at: new Date().toISOString(),
+    });
+
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }
 
@@ -124,6 +173,41 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ contacts });
+  }
+
+  if (type === "templates") {
+    if (!WABA_ID) {
+      return NextResponse.json({ templates: [], error: "WHATSAPP_WABA_ID is not configured" });
+    }
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${WABA_ID}/message_templates?limit=200&fields=name,language,status,category,components`,
+      { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } }
+    );
+    if (!res.ok) {
+      console.error("[whatsapp-chat templates] Meta API error");
+      return NextResponse.json({ templates: [], error: "Failed to load templates from Meta" }, { status: 502 });
+    }
+    const json = await res.json();
+    type MetaComponent = { type: string; text?: string; format?: string };
+    type MetaTemplate = { name: string; language: string; status: string; category: string; components?: MetaComponent[] };
+    const rows: MetaTemplate[] = Array.isArray(json.data) ? json.data : [];
+    const templates = rows
+      .filter((t) => t.status === "APPROVED")
+      .map((t) => {
+        const body = (t.components ?? []).find((c) => c.type === "BODY");
+        const header = (t.components ?? []).find((c) => c.type === "HEADER");
+        const bodyText: string = body?.text ?? "";
+        const varCount = (bodyText.match(/\{\{\s*\d+\s*\}\}/g) ?? []).length;
+        return {
+          name: t.name,
+          language: t.language,
+          category: t.category,
+          headerText: header?.format === "TEXT" ? header?.text ?? "" : "",
+          bodyText,
+          varCount,
+        };
+      });
+    return NextResponse.json({ templates });
   }
 
   if (type === "messages" && phone) {

@@ -1,6 +1,25 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageCircle, Search, RefreshCw, Send, UserCheck, Bot, MapPin } from "lucide-react";
+import { MessageCircle, Search, RefreshCw, Send, UserCheck, Bot, MapPin, FileText, X, ChevronRight } from "lucide-react";
+import WhatsAppTemplatesTab from "@/components/crm/WhatsAppTemplatesTab";
+
+interface WATemplate {
+    name: string;
+    language: string;
+    category: string;
+    headerText: string;
+    bodyText: string;
+    varCount: number;
+}
+
+// Substitute {{1}}, {{2}}… in a template body with the agent-entered variables.
+function buildTemplatePreview(t: WATemplate, vars: string[]): string {
+    let text = t.bodyText;
+    vars.forEach((v, i) => {
+        text = text.replace(new RegExp(`\\{\\{\\s*${i + 1}\\s*\\}\\}`, "g"), v || `{{${i + 1}}}`);
+    });
+    return (t.headerText ? `${t.headerText}\n\n` : "") + text;
+}
 
 interface Contact {
     wa_phone: string;
@@ -160,6 +179,16 @@ export default function WhatsAppPage() {
     const [replyText, setReplyText]         = useState("");
     const [sending, setSending]             = useState(false);
     const [now, setNow]                     = useState(() => Date.now());
+    const [tab, setTab]                     = useState<"chats" | "templates">("chats");
+
+    // WhatsApp template messages (for use outside the 24-hour window)
+    const [showTemplates, setShowTemplates]       = useState(false);
+    const [templates, setTemplates]               = useState<WATemplate[]>([]);
+    const [templatesLoading, setTemplatesLoading] = useState(false);
+    const [templatesError, setTemplatesError]     = useState<string | null>(null);
+    const [selectedTemplate, setSelectedTemplate] = useState<WATemplate | null>(null);
+    const [templateVars, setTemplateVars]         = useState<string[]>([]);
+    const [sendingTemplate, setSendingTemplate]   = useState(false);
 
     const bottomRef    = useRef<HTMLDivElement>(null);
     const msgCountRef  = useRef(0);
@@ -287,16 +316,109 @@ export default function WhatsAppPage() {
         }
     }
 
+    // ── Template messages ─────────────────────────────────────────────────────
+    async function openTemplates() {
+        setShowTemplates(true);
+        setSelectedTemplate(null);
+        setTemplatesError(null);
+        setTemplatesLoading(true);
+        try {
+            const res = await fetch("/api/crm/whatsapp-chat?type=templates");
+            const data = await res.json();
+            setTemplates(data.templates ?? []);
+            if (data.error) setTemplatesError(data.error);
+        } catch {
+            setTemplatesError("Failed to load templates");
+        } finally {
+            setTemplatesLoading(false);
+        }
+    }
+
+    function pickTemplate(t: WATemplate) {
+        setSelectedTemplate(t);
+        setTemplateVars(Array.from({ length: t.varCount }, () => ""));
+        setTemplatesError(null);
+    }
+
+    async function sendTemplate() {
+        if (!selected || !selectedTemplate || sendingTemplate) return;
+        if (templateVars.some(v => !v.trim())) { setTemplatesError("Fill in all variables first."); return; }
+        setSendingTemplate(true);
+        setTemplatesError(null);
+        try {
+            const preview = buildTemplatePreview(selectedTemplate, templateVars);
+            const res = await fetch("/api/crm/whatsapp-chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    action: "send_template",
+                    phone: selected,
+                    templateName: selectedTemplate.name,
+                    language: selectedTemplate.language,
+                    variables: templateVars,
+                    preview,
+                }),
+            });
+            if (res.ok) {
+                setShowTemplates(false);
+                setSelectedTemplate(null);
+                fetchMessages(selected, false);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setTemplatesError(data.error || "Failed to send template message");
+            }
+        } finally {
+            setSendingTemplate(false);
+        }
+    }
+
     const filtered = contacts.filter(c => {
         const q = search.toLowerCase();
         return !q || (c.name ?? "").toLowerCase().includes(q) || c.wa_phone.includes(q);
     });
 
     return (
+      <div style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "calc(100dvh - var(--crm-header-height))",
+          margin: "-1.5rem",
+          overflow: "hidden",
+          background: "#f0f2f5",
+      }}>
+        {/* ── Sub-tabs: Chats / Templates ────────────────────────────────── */}
+        <div style={{ display: "flex", gap: 4, background: "#fff", borderBottom: "1px solid var(--crm-border)", padding: "0 1rem", flexShrink: 0 }}>
+            {([["chats", "Chats"], ["templates", "Templates"]] as const).map(([key, label]) => (
+                <button
+                    key={key}
+                    onClick={() => setTab(key)}
+                    style={{
+                        background: "none",
+                        border: "none",
+                        borderBottom: tab === key ? "2px solid #25D366" : "2px solid transparent",
+                        padding: "0.85rem 0.5rem",
+                        margin: "0 0.5rem",
+                        fontSize: "0.86rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        color: tab === key ? "var(--crm-text)" : "var(--crm-text-muted)",
+                    }}
+                >
+                    {label}
+                </button>
+            ))}
+        </div>
+
+        {tab === "templates" ? (
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <WhatsAppTemplatesTab />
+          </div>
+        ) : (
+        <>
         <div style={{
             display: "flex",
-            height: "calc(100dvh - var(--crm-header-height))",
-            margin: "-1.5rem",
+            flex: 1,
+            minHeight: 0,
             overflow: "hidden",
             background: "#f0f2f5",
         }}>
@@ -585,8 +707,20 @@ export default function WhatsAppPage() {
                     </div>
 
                     {/* Footer */}
-                    {agentActive ? (
-                        windowOpen ? (
+                    {!windowOpen ? (
+                        /* Outside the 24-hour window — only approved templates can be sent */
+                        <div style={{ padding: "0.9rem 1.25rem", background: "#f0f2f5", borderTop: "1px solid var(--crm-border)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                            <div style={{ fontSize: "0.82rem", color: "#667781", textAlign: "center" }}>
+                                The message can not be sent outside the 24-hour window.
+                            </div>
+                            <button
+                                onClick={openTemplates}
+                                style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #d1d7db", borderRadius: 10, padding: "9px 18px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", color: "#128C7E", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
+                            >
+                                <FileText size={15} /> I want to send a Template Message
+                            </button>
+                        </div>
+                    ) : agentActive ? (
                             /* Agent reply box */
                             <div style={{
                                 padding: "0.75rem 1.25rem",
@@ -635,23 +769,6 @@ export default function WhatsAppPage() {
                                     <Send size={17} color="#fff" />
                                 </button>
                             </div>
-                        ) : (
-                            /* Window closed — agent active but can't reply */
-                            <div style={{ padding: "0.75rem 1.25rem", background: "#f0f2f5", borderTop: "1px solid var(--crm-border)" }}>
-                                <div style={{
-                                    background: "#FEECEC",
-                                    borderRadius: 12,
-                                    padding: "0.6rem 1rem",
-                                    fontSize: "0.82rem",
-                                    color: "#C62828",
-                                    border: "1px solid #FFCDD2",
-                                    display: "flex", alignItems: "center", gap: "0.5rem",
-                                }}>
-                                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#C62828", flexShrink: 0, display: "inline-block" }} />
-                                    24-hour window closed — cannot send messages until customer replies
-                                </div>
-                            </div>
-                        )
                     ) : (
                         /* Bot is handling */
                         <div style={{ padding: "0.75rem 1.25rem", background: "#f0f2f5", borderTop: "1px solid var(--crm-border)" }}>
@@ -674,5 +791,93 @@ export default function WhatsAppPage() {
                 </div>
             )}
         </div>
+
+        {/* ── Template message picker ─────────────────────────────────────── */}
+        {showTemplates && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 1060, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+            <div onClick={() => setShowTemplates(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
+            <div style={{ position: "relative", width: "min(520px, 100%)", maxHeight: "82vh", background: "#fff", borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.25rem", borderBottom: "1px solid var(--crm-border)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <FileText size={17} color="#128C7E" />
+                  <span style={{ fontWeight: 700, fontSize: "1rem", color: "var(--crm-text)" }}>
+                    {selectedTemplate ? "Send Template" : "Approved Templates"}
+                  </span>
+                </div>
+                <button onClick={() => setShowTemplates(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--crm-text-muted)", padding: 4, display: "flex" }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ padding: "1rem 1.25rem", overflowY: "auto" }}>
+                {templatesLoading ? (
+                  <div style={{ padding: "2rem", textAlign: "center", color: "var(--crm-text-muted)", fontSize: "0.85rem" }}>Loading templates…</div>
+                ) : !selectedTemplate ? (
+                  <>
+                    {templatesError && (
+                      <div style={{ background: "#FEECEC", border: "1px solid #FFCDD2", color: "#C62828", borderRadius: 8, padding: "0.6rem 0.9rem", fontSize: "0.8rem", marginBottom: 12 }}>
+                        {templatesError}
+                      </div>
+                    )}
+                    {templates.length === 0 ? (
+                      !templatesError && (
+                        <div style={{ padding: "2rem", textAlign: "center", color: "var(--crm-text-muted)", fontSize: "0.85rem" }}>
+                          No approved templates found.
+                        </div>
+                      )
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {templates.map(t => (
+                          <button key={`${t.name}-${t.language}`} onClick={() => pickTemplate(t)} style={{ textAlign: "left", background: "#fff", border: "1px solid var(--crm-border)", borderRadius: 10, padding: "0.7rem 0.9rem", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--crm-text)" }}>{t.name}</span>
+                                <span style={{ fontSize: "0.65rem", background: "#EEF9F2", color: "#128C7E", borderRadius: 4, padding: "1px 6px", fontWeight: 600 }}>{t.language}</span>
+                              </div>
+                              <div style={{ fontSize: "0.76rem", color: "var(--crm-text-muted)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {t.bodyText || "—"}
+                              </div>
+                            </div>
+                            <ChevronRight size={16} style={{ color: "var(--crm-text-muted)", flexShrink: 0 }} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div>
+                    {selectedTemplate.varCount > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+                        {templateVars.map((v, i) => (
+                          <div key={i} className="crm-form-group">
+                            <label className="crm-label">{`Variable {{${i + 1}}}`}</label>
+                            <input className="crm-input" value={v} onChange={e => setTemplateVars(prev => prev.map((x, j) => j === i ? e.target.value : x))} placeholder={`Value for {{${i + 1}}}`} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--crm-text-muted)", marginBottom: 6 }}>Preview</div>
+                    <div style={{ background: "#dcf8c6", borderRadius: "12px 12px 2px 12px", padding: "0.6rem 0.8rem", fontSize: "0.86rem", whiteSpace: "pre-wrap", color: "#1a1a1a", lineHeight: 1.45 }}>
+                      {buildTemplatePreview(selectedTemplate, templateVars)}
+                    </div>
+                    {templatesError && <div style={{ color: "#C62828", fontSize: "0.78rem", marginTop: 10 }}>{templatesError}</div>}
+                  </div>
+                )}
+              </div>
+
+              {selectedTemplate && (
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "0.9rem 1.25rem", borderTop: "1px solid var(--crm-border)" }}>
+                  <button onClick={() => setSelectedTemplate(null)} style={{ background: "#fff", border: "1px solid var(--crm-border)", borderRadius: 8, padding: "8px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", color: "var(--crm-text)" }}>Back</button>
+                  <button onClick={sendTemplate} disabled={sendingTemplate} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: sendingTemplate ? "#9dd9b4" : "#25D366", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: sendingTemplate ? "not-allowed" : "pointer", color: "#fff" }}>
+                    <Send size={14} /> {sendingTemplate ? "Sending…" : "Send Template"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        </>
+        )}
+      </div>
     );
 }
