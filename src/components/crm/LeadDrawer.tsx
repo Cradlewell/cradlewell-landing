@@ -412,6 +412,12 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
     .sort((a, b) => new Date(b.closureDate).getTime() - new Date(a.closureDate).getTime());
   const leadActivity = db.activity.filter(a => a.leadId === lead.id).reverse();
 
+  // Once the lead is closed, its quotations "move" to the Closure tab — hide them
+  // from the drawer's Quotation History. They still appear on the standalone
+  // Quotations page (with their Paid/Lost payment status).
+  const isLeadClosed = leadClosures.length > 0;
+  const openQuotations = isLeadClosed ? [] : leadQuotations;
+
   const saveEdits = () => {
     // callNotes is owned by the Notes thread, not the profile form. Exclude it
     // so a stale draft snapshot can't overwrite notes added after the drawer opened.
@@ -819,16 +825,20 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
 
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <p className="crm-section-title" style={{ margin: 0 }}>Quotation History</p>
-                {leadQuotations.length > 0 && (
+                {openQuotations.length > 0 && (
                   <div style={{ display: "flex", gap: 14, fontSize: "0.72rem" }}>
                     <span style={{ color: "var(--crm-text-muted)" }}>
-                      Quotation: <b style={{ color: "var(--crm-text)" }}>₹{leadQuotations.reduce((s, q) => s + q.quotedPrice, 0).toLocaleString("en-IN")}</b>
+                      Quotation: <b style={{ color: "var(--crm-text)" }}>₹{openQuotations.reduce((s, q) => s + q.quotedPrice, 0).toLocaleString("en-IN")}</b>
                     </span>
                   </div>
                 )}
               </div>
-              {leadQuotations.length === 0 && <div className="crm-empty" style={{ padding: "1.5rem" }}>No quotations yet.</div>}
-              {leadQuotations.map(q => <QuotationCard key={q.id} quotation={q} onClosed={() => setTab("closure")} />)}
+              {openQuotations.length === 0 && (
+                <div className="crm-empty" style={{ padding: "1.5rem" }}>
+                  {isLeadClosed && leadQuotations.length > 0 ? "Quotation moved to the Closure tab." : "No quotations yet."}
+                </div>
+              )}
+              {openQuotations.map(q => <QuotationCard key={q.id} quotation={q} onClosed={() => setTab("closure")} />)}
             </div>
           )}
 
