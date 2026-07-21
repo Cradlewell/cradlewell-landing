@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
   const language: string = (body.language ?? "en").toString();
   const headerFormat: string = (body.headerFormat ?? "NONE").toString().toUpperCase();
   const headerText: string = (body.headerText ?? "").toString();
+  const headerHandle: string = (body.headerHandle ?? "").toString();
   const bodyText: string = (body.bodyText ?? "").toString();
   const footerText: string = (body.footerText ?? "").toString();
   const buttons: ButtonInput[] = Array.isArray(body.buttons) ? body.buttons : [];
@@ -110,8 +111,14 @@ export async function POST(req: NextRequest) {
   // Header
   if (headerFormat === "TEXT" && headerText.trim()) {
     components.push({ type: "HEADER", format: "TEXT", text: headerText.trim() });
-  } else if (["IMAGE", "VIDEO", "DOCUMENT", "LOCATION"].includes(headerFormat)) {
-    components.push({ type: "HEADER", format: headerFormat });
+  } else if (["IMAGE", "VIDEO", "DOCUMENT"].includes(headerFormat)) {
+    if (!headerHandle) {
+      return NextResponse.json({ error: `Upload a ${headerFormat.toLowerCase()} for the header first.` }, { status: 400 });
+    }
+    // Media headers need an example asset (the uploaded media handle).
+    components.push({ type: "HEADER", format: headerFormat, example: { header_handle: [headerHandle] } } as unknown as MetaComponent);
+  } else if (headerFormat === "LOCATION") {
+    components.push({ type: "HEADER", format: "LOCATION" });
   }
 
   // Body — Meta requires an example set when the body has {{n}} variables.

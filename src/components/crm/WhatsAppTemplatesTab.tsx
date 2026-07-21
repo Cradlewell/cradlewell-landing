@@ -1,8 +1,8 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   MessageCircle, Search, RefreshCw, Plus, X, Trash2, Pencil,
-  BarChart2, Settings2, HelpCircle,
+  BarChart2, Settings2, HelpCircle, Upload, Image as ImageIcon, Video, FileText, Loader2, MapPin,
 } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { confirm } from "@/components/ui/confirm-dialog";
@@ -267,11 +267,53 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
   const [err, setErr]             = useState<string | null>(null);
   const [btnSeq, setBtnSeq]       = useState(1);
 
+  // Media header (IMAGE / VIDEO / DOCUMENT) — uploaded to Meta for the example handle.
+  const [headerHandle, setHeaderHandle]   = useState("");
+  const [headerFileName, setHeaderFileName] = useState("");
+  const [headerPreviewUrl, setHeaderPreviewUrl] = useState("");
+  const [headerUploading, setHeaderUploading]   = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isMediaHeader = ["IMAGE", "VIDEO", "DOCUMENT"].includes(headerFormat);
+  const acceptFor = headerFormat === "IMAGE" ? "image/*" : headerFormat === "VIDEO" ? "video/*" : ".pdf,application/pdf";
+
   // Keep the example inputs in sync with the {{n}} placeholders in the body.
   const varCount = (bodyText.match(/\{\{\s*\d+\s*\}\}/g) ?? []).length;
   useEffect(() => {
     setBodyExamples(prev => Array.from({ length: varCount }, (_, i) => prev[i] ?? ""));
   }, [varCount]);
+
+  // Release the last object URL when the modal unmounts.
+  useEffect(() => () => { if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl); }, [headerPreviewUrl]);
+
+  // Reset any uploaded media when the header type changes.
+  function changeHeaderFormat(fmt: string) {
+    setHeaderFormat(fmt);
+    setHeaderHandle("");
+    setHeaderFileName("");
+    setHeaderPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return ""; });
+  }
+
+  async function handleFile(file: File) {
+    setErr(null);
+    setHeaderUploading(true);
+    setHeaderFileName(file.name);
+    setHeaderPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return headerFormat === "DOCUMENT" ? "" : URL.createObjectURL(file); });
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/crm/whatsapp-templates/upload", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.handle) {
+        setHeaderHandle(data.handle);
+      } else {
+        setHeaderHandle("");
+        setErr(data.error || "Failed to upload media");
+      }
+    } finally {
+      setHeaderUploading(false);
+    }
+  }
 
   function addButton(type: BtnKind) {
     if (buttons.length >= 3) { setErr("A template can have at most 3 buttons here."); return; }
@@ -289,6 +331,8 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
     setErr(null);
     if (!name.trim())     { setErr("Template name is required."); return; }
     if (!bodyText.trim()) { setErr("Body is required."); return; }
+    if (isMediaHeader && headerUploading) { setErr("Wait for the media upload to finish."); return; }
+    if (isMediaHeader && !headerHandle)   { setErr(`Upload a ${headerFormat.toLowerCase()} for the header first.`); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/crm/whatsapp-templates", {
@@ -298,6 +342,7 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
           name, category, language,
           headerFormat,
           headerText: headerFormat === "TEXT" ? headerText : "",
+          headerHandle: isMediaHeader ? headerHandle : "",
           bodyText, footerText,
           bodyExamples,
           buttons: buttons.map(b => ({ type: b.type, text: b.text, url: b.url, phone_number: b.phone_number })),
@@ -320,16 +365,18 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1080, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "2.5vh 1rem", overflowY: "auto" }}>
+      <style>{`.crm-spin{animation:crm-spin 0.8s linear infinite}@media (max-width:900px){.wa-preview-col{display:none!important}}`}</style>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
-      <div style={{ position: "relative", width: "min(880px, 100%)", background: "#fff", borderRadius: 12, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", maxHeight: "95vh" }}>
+      <div style={{ position: "relative", width: "min(1160px, 100%)", background: "#fff", borderRadius: 12, boxShadow: "0 24px 70px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", maxHeight: "95vh" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.5rem", borderBottom: "1px solid var(--crm-border)" }}>
           <span style={{ fontWeight: 700, fontSize: "1rem", color: "var(--crm-text)" }}>Add New Template</span>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--crm-text-muted)", padding: 4, display: "flex" }}><X size={18} /></button>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: "1.25rem 1.5rem", overflowY: "auto" }}>
+        {/* Body: form (left) + live preview (right) */}
+        <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0, padding: "1.25rem 1.5rem", overflowY: "auto" }}>
           {/* Name */}
           <div style={{ marginBottom: 18 }}>
             <label style={labelStyle}>{req} Name</label>
@@ -390,24 +437,75 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
           </div>
 
           {/* Header */}
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Header</label>
-              {headerFormat === "TEXT" && (
-                <input className="crm-input" placeholder="Header text" value={headerText} maxLength={60} onChange={e => setHeaderText(e.target.value)} />
-              )}
-              {["IMAGE", "VIDEO", "DOCUMENT", "LOCATION"].includes(headerFormat) && (
-                <div style={{ fontSize: "0.72rem", color: "#B7791F", marginTop: 4 }}>
-                  Media headers need an example asset uploaded in Meta before approval.
-                </div>
-              )}
-            </div>
-            <div style={{ width: 200 }}>
-              <label style={{ ...labelStyle, visibility: "hidden" }}>.</label>
-              <select className="crm-input" value={headerFormat} onChange={e => setHeaderFormat(e.target.value)}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 8 }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Header</label>
+              <select className="crm-input" style={{ width: 200 }} value={headerFormat} onChange={e => changeHeaderFormat(e.target.value)}>
                 {HEADER_FORMATS.map(f => <option key={f} value={f}>{f === "NONE" ? "None" : f.charAt(0) + f.slice(1).toLowerCase()}</option>)}
               </select>
             </div>
+
+            {headerFormat === "TEXT" && (
+              <input className="crm-input" placeholder="Header text" value={headerText} maxLength={60} onChange={e => setHeaderText(e.target.value)} />
+            )}
+
+            {isMediaHeader && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={acceptFor}
+                  style={{ display: "none" }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+                />
+                <div
+                  onClick={() => !headerUploading && fileInputRef.current?.click()}
+                  style={{
+                    border: "1.5px dashed var(--crm-border)", borderRadius: 10,
+                    padding: "1.5rem 1rem", textAlign: "center", cursor: headerUploading ? "default" : "pointer",
+                    background: "#fafbfc", color: "var(--crm-text-muted)",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                  }}
+                >
+                  {headerUploading ? (
+                    <>
+                      <Loader2 size={22} className="crm-spin" />
+                      <span style={{ fontSize: "0.8rem" }}>Uploading…</span>
+                    </>
+                  ) : headerFileName ? (
+                    <>
+                      {headerFormat === "IMAGE" && headerPreviewUrl
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={headerPreviewUrl} alt="" style={{ maxHeight: 120, maxWidth: "100%", borderRadius: 8, objectFit: "cover" }} />
+                        : headerFormat === "VIDEO"
+                        ? <Video size={26} />
+                        : <FileText size={26} />}
+                      <span style={{ fontSize: "0.8rem", color: "var(--crm-text)", fontWeight: 600, wordBreak: "break-all" }}>{headerFileName}</span>
+                      <span style={{ fontSize: "0.72rem", color: headerHandle ? "#1B9E4B" : "#D64545" }}>
+                        {headerHandle ? "Uploaded ✓ — click to replace" : "Upload failed — click to retry"}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {headerFormat === "IMAGE" ? <ImageIcon size={26} /> : headerFormat === "VIDEO" ? <Video size={26} /> : <FileText size={26} />}
+                      <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                        <Upload size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />
+                        {headerFormat === "IMAGE" ? "Upload an image" : headerFormat === "VIDEO" ? "Upload a video" : "Upload a document"}
+                      </span>
+                      <span style={{ fontSize: "0.72rem" }}>
+                        {headerFormat === "IMAGE" ? "JPG or PNG" : headerFormat === "VIDEO" ? "MP4" : "PDF"} · used as the sample for Meta review
+                      </span>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {headerFormat === "LOCATION" && (
+              <div style={{ border: "1.5px dashed var(--crm-border)", borderRadius: 10, padding: "1rem", textAlign: "center", color: "var(--crm-text-muted)", fontSize: "0.78rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <MapPin size={15} /> A location is attached when the template is sent.
+              </div>
+            )}
           </div>
 
           {/* Body */}
@@ -482,6 +580,55 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
           </div>
 
           {err && <div style={{ marginTop: 14, background: "#FDECEC", border: "1px solid #F5C2C2", color: "#C0392B", borderRadius: 8, padding: "0.65rem 0.9rem", fontSize: "0.8rem" }}>{err}</div>}
+        </div>
+
+        {/* Live preview column */}
+        <div className="wa-preview-col" style={{ width: 360, flexShrink: 0, borderLeft: "1px solid var(--crm-border)", background: "#eae6df", padding: "1.25rem", overflowY: "auto" }}>
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#667781", marginBottom: 12 }}>Preview</div>
+          <div style={{ background: "#fff", borderRadius: "8px 8px 8px 2px", boxShadow: "0 1px 2px rgba(0,0,0,0.18)", padding: 8, maxWidth: 320 }}>
+            {/* Header media / text */}
+            {isMediaHeader && (
+              <div style={{ borderRadius: 6, overflow: "hidden", marginBottom: 6, background: "#f0f2f5", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 150 }}>
+                {headerFormat === "IMAGE" && headerPreviewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={headerPreviewUrl} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", display: "block" }} />
+                ) : headerFormat === "VIDEO" && headerPreviewUrl ? (
+                  <video src={headerPreviewUrl} style={{ width: "100%", maxHeight: 200 }} controls />
+                ) : (
+                  <div style={{ color: "#8696a0", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 24 }}>
+                    {headerFormat === "VIDEO" ? <Video size={30} /> : headerFormat === "DOCUMENT" ? <FileText size={30} /> : <ImageIcon size={30} />}
+                    <span style={{ fontSize: "0.72rem" }}>{headerFormat.charAt(0) + headerFormat.slice(1).toLowerCase()}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {headerFormat === "TEXT" && headerText.trim() && (
+              <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "#111b21", padding: "2px 4px 4px" }}>{headerText}</div>
+            )}
+            {/* Body */}
+            <div style={{ fontSize: "0.85rem", color: "#111b21", whiteSpace: "pre-wrap", lineHeight: 1.4, padding: "2px 4px", wordBreak: "break-word" }}>
+              {bodyText.trim()
+                ? bodyText.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, n) => bodyExamples[Number(n) - 1]?.trim() || `{{${n}}}`)
+                : <span style={{ color: "#8696a0" }}>Your message body appears here…</span>}
+            </div>
+            {/* Footer */}
+            {footerText.trim() && (
+              <div style={{ fontSize: "0.72rem", color: "#8696a0", padding: "4px 4px 2px" }}>{footerText}</div>
+            )}
+            {/* Time */}
+            <div style={{ fontSize: "0.64rem", color: "#8696a0", textAlign: "right", padding: "0 4px 2px" }}>12:00 pm</div>
+            {/* Buttons */}
+            {buttons.length > 0 && (
+              <div style={{ borderTop: "1px solid #e9edef", margin: "4px -8px -8px", }}>
+                {buttons.map(b => (
+                  <div key={b.id} style={{ textAlign: "center", color: "#00a5f4", fontSize: "0.82rem", fontWeight: 500, padding: "8px", borderTop: "1px solid #e9edef" }}>
+                    {b.text || (b.type === "URL" ? "Visit link" : b.type === "PHONE_NUMBER" ? "Call" : "Reply")}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         </div>
 
         {/* Footer actions */}
