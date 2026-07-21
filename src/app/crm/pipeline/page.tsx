@@ -29,7 +29,7 @@ export default function PipelinePage() {
   const kanbanRef = kanbanScroll.ref;
   const scrollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [search, setSearch] = useState("");
-  const colRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => () => stopScroll(), []);
 
@@ -50,9 +50,16 @@ export default function PipelinePage() {
 
   useEffect(() => {
     if (!q) return;
-    const stage = LEAD_STAGES.find(s => leads.some(l => l.stage === s && matchLead(l)));
-    const el = stage ? colRefs.current[stage] : null;
-    if (el) el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    // Find the first matching lead (in pipeline-stage order) and scroll its
+    // actual card into view — this scrolls both the board horizontally to the
+    // right column and the column vertically to the card, even if it's last.
+    let targetId: string | null = null;
+    for (const s of LEAD_STAGES) {
+      const hit = leads.find(l => l.stage === s && matchLead(l));
+      if (hit) { targetId = hit.id; break; }
+    }
+    const el = targetId ? cardRefs.current[targetId] : null;
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, leads]);
 
@@ -138,7 +145,6 @@ export default function PipelinePage() {
           return (
             <div
               key={stage}
-              ref={el => { colRefs.current[stage] = el; }}
               className={`crm-kanban-col ${overStage === stage ? "drag-over" : ""}`}
               onDragOver={e => { onDragOver(e); setOverStage(stage); }}
               onDrop={e => onDrop(e, stage)}
@@ -159,6 +165,7 @@ export default function PipelinePage() {
                   return (
                   <div
                     key={l.id}
+                    ref={el => { cardRefs.current[l.id] = el; }}
                     className="crm-kanban-card"
                     draggable
                     onDragStart={() => onDragStart(l.id)}
