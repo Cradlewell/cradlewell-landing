@@ -321,11 +321,27 @@ export const api = {
     if (idx === -1) return;
     const snap = _db.closures[idx];
     _db.closures = _db.closures.filter((c) => c.id !== id);
-    notify("closures");
+
+    // If the lead has no closures left, move it back to Negotiation so it
+    // returns to the active pipeline instead of staying in a Closed column.
+    const lead = _db.leads.find((l) => l.id === snap.leadId);
+    const stillClosed = _db.closures.some((c) => c.leadId === snap.leadId);
+    const prevStage = lead?.stage;
+    const revert = !!lead && !stillClosed && (lead.stage === "Closed Won" || lead.stage === "Closed Lost");
+    if (revert && lead) {
+      lead.stage = "Negotiation";
+      lead.lastActivityAt = now();
+    }
+    notify("closures", "leads");
+
     apiDelete(`/api/crm/closures/${id}`).catch(() => {
       _db.closures.splice(idx, 0, snap);
-      notify("closures");
+      if (revert && lead && prevStage) lead.stage = prevStage;
+      notify("closures", "leads");
     });
+    if (revert && lead) {
+      apiPut(`/api/crm/leads/${snap.leadId}`, { stage: "Negotiation", lastActivityAt: now() }).catch(console.error);
+    }
   },
 
   importLeads(rows: Lead[]) {
