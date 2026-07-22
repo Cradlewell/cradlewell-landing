@@ -27,8 +27,8 @@ export default function Home() {
       <TrustedByStrip />
       <StepsSection />
       <PricingSection />
-      <TestimonialsSection />
       <FoundersCarousel />
+      <TestimonialsSection />
       <FAQSection />
       <PromoTrialSection />
       <StickyMobileCTA />
