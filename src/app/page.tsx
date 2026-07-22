@@ -6,7 +6,6 @@ export const metadata: Metadata = {
     canonical: 'https://www.cradlewell.com',
   },
 };
-import DarkBreakSection from "@/components/DarkBreakSection";
 import FAQSection from "@/components/FAQSection";
 import Footer from "@/components/Footer";
 import FoundersCarousel from "@/components/FoundersCarousel";
@@ -29,7 +28,6 @@ export default function Home() {
       <StepsSection />
       <PricingSection />
       <TestimonialsSection />
-      <DarkBreakSection />
       <FoundersCarousel />
       <FAQSection />
       <PromoTrialSection />
