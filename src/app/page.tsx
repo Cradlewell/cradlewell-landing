@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 };
 import FAQSection from "@/components/FAQSection";
 import Footer from "@/components/Footer";
+import FoundersCarousel from "@/components/FoundersCarousel";
 import HeroBelow from "@/components/HeroBelow";
 import HeroHeader1, { HeroHeaderShape } from "@/components/HeroHeaderShape";
 import PricingSection from "@/components/PricingSection";
@@ -27,6 +28,7 @@ export default function Home() {
       <StepsSection />
       <PricingSection />
       <TestimonialsSection />
+      <FoundersCarousel />
       <FAQSection />
       <PromoTrialSection />
       <StickyMobileCTA />
