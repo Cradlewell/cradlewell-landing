@@ -45,13 +45,6 @@ const HeroHeader1 = () => {
         <Row className="align-items-center">
           <Col lg={6} className="pe-xl-5 text-center text-lg-start">
 
-            {/* Trust bar — above-fold social proof */}
-            <div className="d-flex justify-content-center justify-content-lg-start mb-4 hero-enter hero-enter-d1">
-              <div className="hero-trust-bar">
-                <span>100+ Families</span>
-              </div>
-            </div>
-
             <h1 className="ezy__header1-heading mb-4 hero-enter hero-enter-d2">
               <span className="primary-color">Expert</span>{" "}
               <br />
