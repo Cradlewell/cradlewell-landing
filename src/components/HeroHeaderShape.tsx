@@ -52,8 +52,6 @@ const HeroHeader1 = () => {
                 <span>4.8 Rated</span>
                 <span className="divider" />
                 <span>100+ Families</span>
-                <span className="divider" />
-                <span>ISO Certified</span>
               </div>
             </div>
 
@@ -114,19 +112,6 @@ const HeroHeader1 = () => {
                 height="500"
                 style={{ borderRadius: 20, boxShadow: "var(--cw-shadow-lg)", width: "100%", display: "block" }}
               />
-
-              {/* Floating badge — Google rating (single anchor) */}
-              <div className="hero-badge hero-badge-br">
-                <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} size={11} strokeWidth={0} fill="#F59E0B" />
-                  ))}
-                </div>
-                <div>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#0F172A", lineHeight: 1.2, fontVariantNumeric: "tabular-nums" }}>4.8 / 5.0</div>
-                  <div style={{ fontSize: "0.64rem", color: "#64748B", fontWeight: 500 }}>Google Reviews · 28+</div>
-                </div>
-              </div>
             </div>
           </Col>
         </Row>
