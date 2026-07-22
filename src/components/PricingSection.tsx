@@ -52,8 +52,8 @@ const plans: Plan[] = [
     name: 'Day Care',
     tagline: 'Daytime nurse support',
     badge: 'Most Chosen by Families',
-    price: '2,500',
-    unit: '+ GST / day',
+    price: '3,000',
+    unit: '/ day',
     perNote: 'Per nurse, per day shift',
     Icon: Stethoscope,
     color: 'violet',
@@ -65,8 +65,8 @@ const plans: Plan[] = [
     name: 'Night Care',
     tagline: 'Overnight nurse support, so you can rest',
     badge: 'Best for Recovery',
-    price: '3,000',
-    unit: '+ GST / night',
+    price: '4,000',
+    unit: '/ night',
     perNote: 'Per nurse, per night shift',
     Icon: Heart,
     color: 'indigo',
@@ -141,17 +141,6 @@ const PricingSection = () => {
 
                 {/* Price block — confident, no pill */}
                 <div style={{ marginBottom: 28 }}>
-                  <div style={{
-                    fontFamily: "'Lexend', system-ui, sans-serif",
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.10em',
-                    textTransform: 'uppercase',
-                    color: 'var(--cw-text-muted)',
-                    marginBottom: 6,
-                  }}>
-                    Starting from
-                  </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                     <span style={{
                       fontFamily: "'Lexend', system-ui, sans-serif",
