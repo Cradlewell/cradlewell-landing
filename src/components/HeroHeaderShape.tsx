@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Col, Container, Row } from "react-bootstrap";
-import { Star, ArrowRight, MessageCircle } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 import { useModal } from './ModalContext';
 
 const HeroHeaderShape = () => (
@@ -48,9 +48,6 @@ const HeroHeader1 = () => {
             {/* Trust bar — above-fold social proof */}
             <div className="d-flex justify-content-center justify-content-lg-start mb-4 hero-enter hero-enter-d1">
               <div className="hero-trust-bar">
-                <Star size={13} strokeWidth={0} fill="#F59E0B" style={{ flexShrink: 0 }} />
-                <span>4.8 Rated</span>
-                <span className="divider" />
                 <span>100+ Families</span>
               </div>
             </div>
