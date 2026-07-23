@@ -15,7 +15,18 @@ function fmtLeadDate(l: Lead): string {
   if (!raw) return "";
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return typeof raw === "string" ? raw : "";
-  return format(d, "dd MMM yyyy");
+  // Show time alongside the date so the newest-first ordering is visible.
+  // leadDate-only fallbacks have no meaningful time, so show date only.
+  const hasTime = !!l.createdAt;
+  return format(d, hasTime ? "dd MMM yyyy, h:mm a" : "dd MMM yyyy");
+}
+
+// Sort key for "fresh on top" ordering — uses the same date the card shows
+// (createdAt, falling back to leadDate). Undated leads sort to the bottom.
+function leadTime(l: Lead): number {
+  const raw = l.createdAt || l.leadDate;
+  const t = raw ? new Date(raw).getTime() : 0;
+  return Number.isNaN(t) ? 0 : t;
 }
 
 export default function PipelinePage() {
@@ -36,6 +47,8 @@ export default function PipelinePage() {
   const grouped: Record<LeadStage, Lead[]> = {} as Record<LeadStage, Lead[]>;
   LEAD_STAGES.forEach(s => { grouped[s] = []; });
   leads.forEach(l => { if (grouped[l.stage]) grouped[l.stage].push(l); });
+  // Freshest lead on top: sort each column descending by creation date.
+  LEAD_STAGES.forEach(s => grouped[s].sort((a, b) => leadTime(b) - leadTime(a)));
 
   // Search by name / phone / WhatsApp number. Matching cards are highlighted,
   // and the board auto-scrolls to the first stage that contains a match.
