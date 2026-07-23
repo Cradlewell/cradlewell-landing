@@ -722,7 +722,16 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    // ── New user or completed — restart ───────────────────────────────────────
+    // ── Completed — flow is finished; stay silent so we never re-open the bot ─
+    // The client has confirmed a care request ("✅ Care Request Confirmed"); a
+    // human advisor takes over from here. STOP/opt-out and agent takeover are
+    // handled above, and the Main Menu check above still lets them start a fresh
+    // request explicitly by typing "menu" — but any other message gets no reply.
+    if (session?.step === "completed") {
+        return;
+    }
+
+    // ── New user — start intake ───────────────────────────────────────────────
     const CLEAR_FIELDS = {
         baby_status: "", location: "", hospital: "", birth_stage: "", baby_age: "", baby_weight: "",
         service: "", shift: "", japa_hours: "", time_slot: "", due_date: "", care_start_date: "", service_days: "",
@@ -758,7 +767,7 @@ async function handleMessage(waPhone: string, incomingText: string, profileName?
         return;
     }
 
-    if (!session || session.step === "completed") {
+    if (!session) {
         if (profileName) {
             await upsertSession(waPhone, { step: "ask_baby_status", name: profileName, ...CLEAR_FIELDS }, session ?? null);
             const greet = `Hi ${profileName}! Welcome to Cradlewell — Bengaluru's trusted newborn and postnatal care experts.`;
