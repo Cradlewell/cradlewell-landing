@@ -209,15 +209,16 @@ export default function ReportsPage() {
     try {
       const r = await fetch("/api/crm/backfill-zones", { method: "POST" });
       const d = await r.json();
-      if (!r.ok) throw new Error();
+      if (!r.ok) throw new Error(d?.error || "");
       toast.success(
-        `Zones set for ${d.updated} of ${d.total} located leads` +
-          (d.skipped ? ` (${d.skipped} out of range)` : "") +
+        `Zones set for ${d.updated} of ${d.total} leads` +
+          (d.recoveredFromMessages ? ` · ${d.recoveredFromMessages} recovered from chat` : "") +
+          (d.noCoords ? ` · ${d.noCoords} have no location shared` : "") +
           ". Refresh the Leads tab to see the column."
       );
       setReloadKey((k) => k + 1); // refresh the zone chart
-    } catch {
-      toast.error("Couldn't recompute zones. Check the zone column exists.");
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : "Couldn't recompute zones.");
     } finally {
       setZoning(false);
     }
