@@ -676,8 +676,9 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               <div style={{ marginBottom: "1.5rem" }}>
                 <div className="crm-section-title" style={{ marginBottom: "0.875rem" }}>Location</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                  <Field label="Area" value={lead.area} field="area"  editing={editing} draft={draft} setDraft={setDraft} />
-                  <Field label="City" value={lead.city} field="city"  editing={editing} draft={draft} setDraft={setDraft} />
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <Field label="Zone (nearest)" value={lead.zone} field="zone"  editing={editing} draft={draft} setDraft={setDraft} />
+                  </div>
                   <div style={{ gridColumn: "1 / -1" }}>
                     <Field label="Address" value={lead.address} field="address"  editing={editing} draft={draft} setDraft={setDraft} />
                   </div>

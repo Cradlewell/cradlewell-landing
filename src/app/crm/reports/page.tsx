@@ -5,9 +5,10 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { TrendingUp, TrendingDown, Minus, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Lock, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { ZONES } from "@/lib/zones";
+import { toast } from "@/components/ui/toast";
 
 const COLORS = ["#5F47FF", "#6388FF", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7", "#EC4899"];
 
@@ -187,6 +188,9 @@ export default function ReportsPage() {
     return p.toString();
   }, [period, date, month, year, quarter, fSource, fHospital, fShift, fZone]);
 
+  const [reloadKey, setReloadKey] = useState(0);
+  const [zoning, setZoning] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -197,7 +201,27 @@ export default function ReportsPage() {
       .catch(() => { if (!cancelled) setError(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [qs]);
+  }, [qs, reloadKey]);
+
+  // Backfill/recompute zones for existing leads that already have GPS coords.
+  const recomputeZones = async () => {
+    setZoning(true);
+    try {
+      const r = await fetch("/api/crm/backfill-zones", { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) throw new Error();
+      toast.success(
+        `Zones set for ${d.updated} of ${d.total} located leads` +
+          (d.skipped ? ` (${d.skipped} out of range)` : "") +
+          ". Refresh the Leads tab to see the column."
+      );
+      setReloadKey((k) => k + 1); // refresh the zone chart
+    } catch {
+      toast.error("Couldn't recompute zones. Check the zone column exists.");
+    } finally {
+      setZoning(false);
+    }
+  };
 
   const k = data?.kpis;
   const b = data?.breakdowns;
@@ -215,6 +239,10 @@ export default function ReportsPage() {
             {data ? `${data.range.startDate} → showing this ${periodWord}` : "Daily, monthly & quarterly sales tracking"}
           </p>
         </div>
+        <button className="crm-btn" onClick={recomputeZones} disabled={zoning}
+          title="Assign the nearest zone to existing leads that already shared their location">
+          <MapPin size={15} /> {zoning ? "Recomputing…" : "Recompute zones"}
+        </button>
       </div>
 
       {/* Tabs + period selector + filters */}
