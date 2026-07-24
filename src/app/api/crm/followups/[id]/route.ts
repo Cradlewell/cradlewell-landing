@@ -11,3 +11,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (error) { console.error("[followups PUT]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
   return NextResponse.json(dbToFollowup(data));
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authErr = requireAuth(req);
+  if (authErr) return authErr;
+  const { id } = await params;
+  const { error } = await supabase.from("followups").delete().eq("id", id);
+  if (error) { console.error("[followups DELETE]", error); return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
+  return NextResponse.json({ ok: true });
+}

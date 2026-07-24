@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Phone, MessageCircle, Edit2, Save, Trash2, Plus, Check, Clock, ChevronDown } from "lucide-react";
 import { api, useDB, isOverdue, isToday } from "@/lib/crm-store";
-import type { Lead, LeadStage, FollowupType, LostReason, Closure, Quotation } from "@/lib/crm-types";
+import type { Lead, LeadStage, FollowupType, LostReason, Closure, Quotation, Followup } from "@/lib/crm-types";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import StageBadge from "./StageBadge";
 import { toast } from "@/components/ui/toast";
@@ -375,6 +375,12 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [fuDue, setFuDue] = useState("");
   const [fuNote, setFuNote] = useState("");
 
+  // Inline edit state for an existing follow-up
+  const [editFuId, setEditFuId] = useState<string | null>(null);
+  const [editFuType, setEditFuType] = useState<FollowupType>("Callback + WhatsApp");
+  const [editFuDue, setEditFuDue] = useState("");
+  const [editFuNote, setEditFuNote] = useState("");
+
   const [noteDraft, setNoteDraft] = useState("");
   const [notesSort, setNotesSort] = useState<"recent-last" | "recent-first">("recent-last");
   const [hoverNote, setHoverNote] = useState<string | null>(null);
@@ -462,6 +468,28 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
     api.addFollowup({ leadId: lead.id, type: fuType, dueAt: new Date(fuDue).toISOString(), note: fuNote });
     setFuDue(""); setFuNote("");
     toast.success("Follow-up scheduled");
+  };
+  const startEditFollowup = (f: Followup) => {
+    setEditFuId(f.id);
+    setEditFuType(f.type);
+    // ISO → naive datetime-local so the field shows the stored time correctly
+    setEditFuDue(format(new Date(f.dueAt), "yyyy-MM-dd'T'HH:mm"));
+    setEditFuNote(f.note);
+  };
+  const saveEditFollowup = () => {
+    if (!editFuId || !editFuDue) return;
+    api.updateFollowup(editFuId, { type: editFuType, dueAt: new Date(editFuDue).toISOString(), note: editFuNote });
+    setEditFuId(null);
+    toast.success("Follow-up updated");
+  };
+  const removeFollowup = async (id: string) => {
+    const ok = await confirm({
+      title: "Delete this follow-up?",
+      body: "It will be permanently removed from this lead and the Follow-ups tab.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (ok) { api.deleteFollowup(id); if (editFuId === id) setEditFuId(null); toast.success("Follow-up removed"); }
   };
   const addQuotation = () => {
     const p = Number(qPrice); if (!p) return;
@@ -762,27 +790,57 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {leadFollowups.map(f => (
                   <div key={f.id} className="crm-card p-3" style={{ opacity: f.completed ? 0.6 : 1 }}>
-                    <div className="d-flex align-items-start justify-content-between gap-2">
-                      <div className="flex-1">
-                        <div className="d-flex align-items-center gap-2 flex-wrap mb-1">
-                          <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>{f.type}</span>
-                          {f.completed ? <span className="crm-badge" style={{ background: "#F0FDF4", color: "#16A34A" }}><Check size={11} /> Done</span>
-                            : isOverdue(f.dueAt) ? <span className="crm-badge" style={{ background: "#FEF2F2", color: "#DC2626" }}>Overdue</span>
-                            : isToday(f.dueAt) ? <span className="crm-badge" style={{ background: "#FFFBEB", color: "#B45309" }}>Today</span>
-                            : null}
+                    {editFuId === f.id ? (
+                      /* ── Inline edit form ── */
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                        <div className="crm-grid-2">
+                          <div className="crm-form-group">
+                            <label className="crm-label">Type</label>
+                            <select className="crm-select" value={editFuType} onChange={e => setEditFuType(e.target.value as FollowupType)}>
+                              {FOLLOWUP_TYPES.map(t => <option key={t}>{t}</option>)}
+                            </select>
+                          </div>
+                          <div className="crm-form-group">
+                            <label className="crm-label required">Due Date & Time</label>
+                            <input className="crm-input" type="datetime-local" value={editFuDue} onChange={e => setEditFuDue(e.target.value)} />
+                          </div>
                         </div>
-                        <div style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
-                          <Clock size={12} />{fmtDt(f.dueAt)}
+                        <div className="crm-form-group">
+                          <label className="crm-label">Note</label>
+                          <input className="crm-input" value={editFuNote} onChange={e => setEditFuNote(e.target.value)} placeholder="What to discuss..." />
                         </div>
-                        {f.note && <div style={{ fontSize: "0.8rem", marginTop: 4 }}>{f.note}</div>}
-                      </div>
-                      {!f.completed && (
                         <div className="d-flex gap-1">
-                          <button className="crm-btn crm-btn-sm" style={{ background: "#F0FDF4", color: "#16A34A" }} onClick={() => api.completeFollowup(f.id)}><Check size={13} /> Done</button>
-                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => api.rescheduleFollowup(f.id, new Date(new Date(f.dueAt).getTime() + 86400000).toISOString())} title="+1 day">+1d</button>
+                          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={saveEditFollowup}><Save size={13} /> Save</button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setEditFuId(null)}><X size={13} /> Cancel</button>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="d-flex align-items-start justify-content-between gap-2">
+                        <div className="flex-1">
+                          <div className="d-flex align-items-center gap-2 flex-wrap mb-1">
+                            <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>{f.type}</span>
+                            {f.completed ? <span className="crm-badge" style={{ background: "#F0FDF4", color: "#16A34A" }}><Check size={11} /> Done</span>
+                              : isOverdue(f.dueAt) ? <span className="crm-badge" style={{ background: "#FEF2F2", color: "#DC2626" }}>Overdue</span>
+                              : isToday(f.dueAt) ? <span className="crm-badge" style={{ background: "#FFFBEB", color: "#B45309" }}>Today</span>
+                              : null}
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "var(--crm-text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+                            <Clock size={12} />{fmtDt(f.dueAt)}
+                          </div>
+                          {f.note && <div style={{ fontSize: "0.8rem", marginTop: 4 }}>{f.note}</div>}
+                        </div>
+                        <div className="d-flex gap-1">
+                          {!f.completed && (
+                            <>
+                              <button className="crm-btn crm-btn-sm" style={{ background: "#F0FDF4", color: "#16A34A" }} onClick={() => api.completeFollowup(f.id)}><Check size={13} /> Done</button>
+                              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => api.rescheduleFollowup(f.id, new Date(new Date(f.dueAt).getTime() + 86400000).toISOString())} title="+1 day">+1d</button>
+                            </>
+                          )}
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => startEditFollowup(f)} title="Edit follow-up"><Edit2 size={13} /></button>
+                          <button className="crm-btn crm-btn-ghost crm-btn-sm" style={{ color: "#DC2626" }} onClick={() => removeFollowup(f.id)} title="Delete follow-up"><Trash2 size={13} /></button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

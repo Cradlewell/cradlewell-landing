@@ -234,6 +234,35 @@ export const api = {
     });
   },
 
+  // Edit an existing follow-up (type / due date / note). Optimistic with rollback.
+  updateFollowup(id: string, patch: Partial<Followup>) {
+    const prev = _db.followups.find((f) => f.id === id);
+    if (!prev) return;
+    const snap = { ...prev };
+    _db.followups = _db.followups.map((f) => f.id === id ? { ...f, ...patch } : f);
+    const lead = _db.leads.find((l) => l.id === snap.leadId);
+    if (lead) lead.lastActivityAt = now();
+    notify("leads", "followups");
+    apiPut(`/api/crm/followups/${id}`, patch).catch(() => {
+      _db.followups = _db.followups.map((f) => f.id === id ? snap : f);
+      notify("leads", "followups");
+    });
+  },
+
+  // Permanently remove a follow-up — disappears from the drawer AND the
+  // Follow-ups tab (both read this store). Optimistic with rollback.
+  deleteFollowup(id: string) {
+    const idx = _db.followups.findIndex((f) => f.id === id);
+    if (idx === -1) return;
+    const snap = _db.followups[idx];
+    _db.followups = _db.followups.filter((f) => f.id !== id);
+    notify("followups");
+    apiDelete(`/api/crm/followups/${id}`).catch(() => {
+      _db.followups.splice(idx, 0, snap);
+      notify("followups");
+    });
+  },
+
   addQuotation(q: Omit<Quotation, "id">) {
     const quotation: Quotation = { ...q, id: uid() };
     _db.quotations.unshift(quotation);
