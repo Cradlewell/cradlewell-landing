@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus, Lock } from "lucide-react";
 import { format } from "date-fns";
+import { ZONES } from "@/lib/zones";
 
 const COLORS = ["#5F47FF", "#6388FF", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7", "#EC4899"];
 
@@ -32,6 +33,7 @@ interface ReportData {
     avgDaysBornToPaid: number | null;
   };
   breakdowns: {
+    byZone: NameValue[];
     byHospital: NameValue[];
     byShift: NameValue[];
     byDayNight: NameValue[];
@@ -167,6 +169,7 @@ export default function ReportsPage() {
   const [fSource, setFSource] = useState("");
   const [fHospital, setFHospital] = useState("");
   const [fShift, setFShift] = useState("");
+  const [fZone, setFZone] = useState("");
 
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,8 +183,9 @@ export default function ReportsPage() {
     if (fSource) p.set("source", fSource);
     if (fHospital) p.set("hospital", fHospital);
     if (fShift) p.set("shift", fShift);
+    if (fZone) p.set("zone", fZone);
     return p.toString();
-  }, [period, date, month, year, quarter, fSource, fHospital, fShift]);
+  }, [period, date, month, year, quarter, fSource, fHospital, fShift, fZone]);
 
   useEffect(() => {
     let cancelled = false;
@@ -263,6 +267,10 @@ export default function ReportsPage() {
             <option value="">All shifts</option>
             {["Day", "Night", "24hrs"].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
+          <select className="crm-input" value={fZone} onChange={(e) => setFZone(e.target.value)}>
+            <option value="">All zones</option>
+            {ZONES.map((z) => <option key={z.name} value={z.name}>{z.name}</option>)}
+          </select>
           <input className="crm-input" placeholder="Hospital…" value={fHospital} style={{ width: 140 }}
             onChange={(e) => setFHospital(e.target.value)} />
         </div>
@@ -302,8 +310,12 @@ export default function ReportsPage() {
 
           {/* Breakdown charts */}
           <div className="crm-grid-2 mb-4">
+            <ChartCard title="Leads by Zone (nearest)"><BarBreakdown data={b.byZone} color="#22C55E" vertical /></ChartCard>
             <ChartCard title="Leads by Source"><PieBreakdown data={b.bySource} /></ChartCard>
+          </div>
+          <div className="crm-grid-2 mb-4">
             <ChartCard title="Leads by Hospital"><BarBreakdown data={b.byHospital} vertical /></ChartCard>
+            <ChartCard title="Leads by Service (Nurse / Japa)"><PieBreakdown data={b.byService} /></ChartCard>
           </div>
           <div className="crm-grid-2 mb-4">
             <ChartCard title="Leads by Shift"><BarBreakdown data={b.byShift} color="#6388FF" /></ChartCard>
@@ -313,8 +325,7 @@ export default function ReportsPage() {
             <ChartCard title="Leads by Birth Stage"><BarBreakdown data={b.byBirthStage} color="#A855F7" /></ChartCard>
             <ChartCard title="Leads by Baby Age"><BarBreakdown data={b.byBabyAge} color="#06B6D4" /></ChartCard>
           </div>
-          <div className="crm-grid-2 mb-4">
-            <ChartCard title="Leads by Service (Nurse / Japa)"><PieBreakdown data={b.byService} /></ChartCard>
+          <div className="mb-4">
             <ChartCard title="Lost Reasons"><BarBreakdown data={b.lostReasons} color="#EF4444" vertical /></ChartCard>
           </div>
 
@@ -365,7 +376,6 @@ export default function ReportsPage() {
             <h3 className="crm-card-title" style={{ color: "var(--crm-text-muted)" }}>Coming next (needs data capture)</h3>
           </div>
           <div className="crm-grid-3 mb-4">
-            <Placeholder title="Zone-wise leads" need="Send me your area → zone mapping and this fills in across Daily/Monthly/Quarterly." />
             <Placeholder title="Follow-ups by source" need="Add a channel (WhatsApp / Call) field to the follow-up form." />
             <Placeholder title="Follow-up outcomes" need="Add an outcome (Interested / Not Responding / Deferred / Price Concern / Converted / Lost) field to follow-ups." />
             <Placeholder title="Calls made / day" need="Connect a click-to-call telephony tool to log calls per lead." />

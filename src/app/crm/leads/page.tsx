@@ -112,7 +112,7 @@ export default function LeadsPage() {
   };
 
   const exportCSV = (rows: Lead[]) => {
-    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "WhatsApp Stage", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage"].join(",");
+    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "WhatsApp Stage", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Nearest Zone", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage"].join(",");
     const body = rows.map(l => [
       `"${l.name}"`,
       l.phone,
@@ -128,6 +128,7 @@ export default function LeadsPage() {
       l.babyAge ?? "",
       l.currentWeight ?? "",
       `"${l.address ?? ""}"`,
+      l.zone ?? "",
       l.preferredShift ?? "",
       l.shiftHoursCount ?? "",
       l.shiftTime ?? "",
@@ -250,6 +251,7 @@ export default function LeadsPage() {
                 <th>Baby Age</th>
                 <th>Weight</th>
                 <th>Address</th>
+                <th>Nearest Zone</th>
                 <th>Shift Type</th>
                 <th>Shift Hours</th>
                 <th>Shift Time</th>
@@ -282,6 +284,7 @@ export default function LeadsPage() {
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.babyAge || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.currentWeight || "—"}</td>
                   <td style={{ fontSize: "0.8rem", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.address ?? ""}>{l.address || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.zone || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.preferredShift || "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.shiftHoursCount ? `${l.shiftHoursCount} hrs` : "—"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>{l.shiftTime || "—"}</td>

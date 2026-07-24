@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-server";
+import { nearestZone } from "@/lib/zones";
 import { createHmac, timingSafeEqual } from "crypto";
 
 const PHONE_NUMBER_ID     = process.env.WHATSAPP_PHONE_NUMBER_ID!;
@@ -1094,9 +1095,14 @@ async function handleLocation(waPhone: string, latitude: number, longitude: numb
         ? [name, address].filter(Boolean).join(", ")
         : await reverseGeocode(latitude, longitude);
 
-    // Save coordinates to leads so Ops can do proximity ranking
+    // Save coordinates to leads so Ops can do proximity ranking, and assign the
+    // nearest operational zone from the shared GPS.
     const phone = waPhone.replace(/\D/g, "").slice(-10);
-    await supabase.from("leads").update({ home_lat: latitude, home_lng: longitude }).eq("phone", phone);
+    const nz = nearestZone(latitude, longitude);
+    await supabase
+        .from("leads")
+        .update({ home_lat: latitude, home_lng: longitude, ...(nz ? { zone: nz.name } : {}) })
+        .eq("phone", phone);
 
     await afterLocation(waPhone, session, locationText);
 }

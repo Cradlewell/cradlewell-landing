@@ -117,9 +117,10 @@ export async function GET(req: NextRequest) {
   const fSource = sp.get("source") || "";
   const fHospital = sp.get("hospital") || "";
   const fShift = sp.get("shift") || "";
+  const fZone = sp.get("zone") || "";
 
   const LEAD_COLS =
-    "id,name,source,hospital_name,preferred_shift,baby_status,baby_birth_stage_status,baby_age,stage,temperature,service_required,created_at";
+    "id,name,source,hospital_name,preferred_shift,baby_status,baby_birth_stage_status,baby_age,stage,temperature,service_required,zone,created_at";
 
   // 1. Leads received in the period (with optional filters)
   let leadsQ = supabase
@@ -131,6 +132,7 @@ export async function GET(req: NextRequest) {
   if (fSource) leadsQ = leadsQ.eq("source", fSource);
   if (fHospital) leadsQ = leadsQ.eq("hospital_name", fHospital);
   if (fShift) leadsQ = leadsQ.eq("preferred_shift", fShift);
+  if (fZone) leadsQ = leadsQ.eq("zone", fZone);
 
   const [
     leadsRes,
@@ -268,6 +270,7 @@ export async function GET(req: NextRequest) {
         avgDaysBornToPaid,
       },
       breakdowns: {
+        byZone: groupCount(leads, (l) => l.zone),
         byHospital: groupCount(leads, (l) => l.hospital_name),
         byShift: groupCount(leads, (l) => l.preferred_shift),
         byDayNight: groupCount(
@@ -296,7 +299,6 @@ export async function GET(req: NextRequest) {
       // Metrics awaiting new data capture (Phase 2) — UI renders these as
       // "Not tracked yet" placeholders.
       gaps: [
-        "byZone",
         "followupBySource",
         "followupOutcome",
         "callsMade",

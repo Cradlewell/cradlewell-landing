@@ -53,6 +53,7 @@ export interface Lead {
   careStartDate?: string;
   serviceDays?: number;
   whatsappStage?: string;
+  zone?: string;
 }
 
 export interface Followup {

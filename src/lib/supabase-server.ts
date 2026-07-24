@@ -45,6 +45,7 @@ export function dbToLead(r: Record<string, any>): Lead {
     careStartDate: r.care_start_date ?? undefined,
     serviceDays: r.service_days ?? undefined,
     whatsappStage: r.whatsapp_stage ?? undefined,
+    zone: r.zone ?? undefined,
   };
 }
 
@@ -82,6 +83,7 @@ export function leadToDb(l: Partial<Lead>): Record<string, unknown> {
   if (l.careStartDate !== undefined) r.care_start_date = l.careStartDate;
   if (l.serviceDays !== undefined) r.service_days = l.serviceDays;
   if (l.whatsappStage !== undefined) r.whatsapp_stage = l.whatsappStage;
+  if (l.zone !== undefined) r.zone = l.zone;
   return r;
 }
 
