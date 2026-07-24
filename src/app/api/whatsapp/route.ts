@@ -1088,21 +1088,26 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
 // ── Handle incoming GPS location share ───────────────────────────────────────
 
 async function handleLocation(waPhone: string, latitude: number, longitude: number, name?: string, address?: string) {
+    // Always capture the shared coordinates and assign the nearest operational
+    // zone (haversine vs the 45 zone centers) — regardless of where the lead is
+    // in the bot flow, so an unprompted or post-flow location share still zones
+    // the lead and gives Ops proximity data.
+    const phone = waPhone.replace(/\D/g, "").slice(-10);
+    if (phone) {
+        const nz = nearestZone(latitude, longitude);
+        await supabase
+            .from("leads")
+            .update({ home_lat: latitude, home_lng: longitude, ...(nz ? { zone: nz.name } : {}) })
+            .eq("phone", phone);
+    }
+
+    // Only advance the bot flow when we were actually waiting for a location.
     const session = await getSession(waPhone);
     if (!session || session.step !== "ask_location") return;
 
     const locationText = (name || address)
         ? [name, address].filter(Boolean).join(", ")
         : await reverseGeocode(latitude, longitude);
-
-    // Save coordinates to leads so Ops can do proximity ranking, and assign the
-    // nearest operational zone from the shared GPS.
-    const phone = waPhone.replace(/\D/g, "").slice(-10);
-    const nz = nearestZone(latitude, longitude);
-    await supabase
-        .from("leads")
-        .update({ home_lat: latitude, home_lng: longitude, ...(nz ? { zone: nz.name } : {}) })
-        .eq("phone", phone);
 
     await afterLocation(waPhone, session, locationText);
 }
