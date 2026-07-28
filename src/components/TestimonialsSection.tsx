@@ -3,27 +3,14 @@
 import React from 'react';
 import { Container } from 'react-bootstrap';
 import ScrollReveal from './ScrollReveal';
-import TestimonialsCoverflow from './TestimonialsCoverflow';
+import TestimonialsSwipeStack from './TestimonialsSwipeStack';
 
 const testimonials = [
-  {
-    name: 'Santosh Malpatra',
-    text: 'Very professional and excellent home nursing service. Nurses are well-trained and knowledgeable. Excellent quality of medical and personal care for our baby. Proper hygiene was maintained throughout.',
-    image: '/images/testimonial2.png',
-    location: 'Bangalore',
-  },
-  {
-    name: 'Yashul Srivastava',
-    text: 'They provided a genuine and well-trained caregiver for our baby. We opted for a care package and were very satisfied with the service. Would definitely consider them again if needed.',
-    image: '/images/testimonial1.png',
-    location: 'Bangalore',
-  },
-  {
-    name: 'Snehashis & Anita',
-    text: `We chose Cradlewell after our baby girl's birth, and as first-time parents, we were initially unsure. The caregivers were supportive and knowledgeable, guiding us through feeding and early baby care with patience.`,
-    image: '/images/testimonial3.png',
-    location: 'Bangalore',
-  },
+  { src: '/images/test1.png', alt: 'Testimonial letter from Sachin Sahu, a Cradlewell parent in Bangalore' },
+  { src: '/images/test2.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' },
+  { src: '/images/test3.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' },
+  { src: '/images/test4.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' },
+  { src: '/images/test5.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' },
 ];
 
 const TestimonialsSection = () => (
@@ -56,8 +43,18 @@ const TestimonialsSection = () => (
         </div>
       </ScrollReveal>
 
-      {/* 3D coverflow gallery */}
-      <TestimonialsCoverflow items={testimonials} />
+      {/* Draggable 3D card stack */}
+      <TestimonialsSwipeStack images={testimonials} />
+
+      <p style={{
+        textAlign: 'center',
+        color: '#94A3B8',
+        fontSize: '0.85rem',
+        fontFamily: "'Lexend', system-ui, sans-serif",
+        marginTop: 8,
+      }}>
+        Drag a card to read the next letter
+      </p>
     </Container>
   </section>
 );
