@@ -43,8 +43,8 @@ const TestimonialsSection = () => (
         </div>
       </ScrollReveal>
 
-      {/* 3D coverflow — click a card to bring it to centre */}
-      <TestimonialsCoverflow slides={testimonials} showTitle={false} />
+      {/* 3D coverflow — autoplays until the visitor clicks a card */}
+      <TestimonialsCoverflow slides={testimonials} showTitle={false} autoplay />
 
       <p style={{
         textAlign: 'center',
@@ -53,7 +53,7 @@ const TestimonialsSection = () => (
         fontFamily: "'Lexend', system-ui, sans-serif",
         marginTop: 8,
       }}>
-        Click a card to read the next letter
+        Click a card to read it in full
       </p>
     </Container>
   </section>

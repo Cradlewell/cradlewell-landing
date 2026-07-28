@@ -148,6 +148,10 @@ export default function TestimonialsCoverflow(props: Smooth3DSlideshowProps) {
     // Loop is always on.
     const loop = true;
     const [active, setActive] = useState(0);
+    // Once the visitor drives the carousel themselves, autoplay stays off — it
+    // shouldn't yank a letter away while they're reading it.
+    const [userTookOver, setUserTookOver] = useState(false);
+    const isAutoplaying = autoplay && !userTookOver;
 
     // Keep active valid if the slide list changes.
     useEffect(() => {
@@ -183,11 +187,12 @@ export default function TestimonialsCoverflow(props: Smooth3DSlideshowProps) {
 
     const handleCardClick = useCallback(
         (i: number) => {
-            if (autoplay || lockRef.current) return;
+            if (lockRef.current) return;
+            setUserTookOver(true);
             lock();
             setActive((a) => (i === a ? (a + 1) % n : i));
         },
-        [autoplay, n, lock]
+        [n, lock]
     );
 
     // Autoplay — the transition's Delay drives the time each card holds.
@@ -196,20 +201,22 @@ export default function TestimonialsCoverflow(props: Smooth3DSlideshowProps) {
             ? transition.delay
             : 2.5;
     useEffect(() => {
-        if (!autoplay || n < 2) return;
+        if (!isAutoplaying || n < 2) return;
         const ms = Math.max(0.3, delay) * 1000;
         const dir = autoplayDirection === 'leftToRight' ? -1 : 1;
         const id = window.setInterval(() => step(dir), ms);
         return () => window.clearInterval(id);
-    }, [autoplay, autoplayDirection, delay, n, step]);
+    }, [isAutoplaying, autoplayDirection, delay, n, step]);
 
     const onKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             if (e.key === 'ArrowRight') {
                 e.preventDefault();
+                setUserTookOver(true);
                 step(1);
             } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
+                setUserTookOver(true);
                 step(-1);
             }
         },
@@ -286,8 +293,9 @@ export default function TestimonialsCoverflow(props: Smooth3DSlideshowProps) {
                         transform: `translate(-50%, -50%) translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`,
                         transition: transitionCss,
                         opacity: visible ? 1 : 0,
-                        cursor: autoplay || isActive ? 'default' : 'pointer',
-                        pointerEvents: visible && !autoplay ? 'auto' : 'none',
+                        // Clickable even mid-autoplay — that click is what stops it.
+                        cursor: isActive ? 'default' : 'pointer',
+                        pointerEvents: visible ? 'auto' : 'none',
                         backgroundColor: '#1a1a1a',
                     };
 
