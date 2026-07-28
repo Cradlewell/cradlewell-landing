@@ -27,14 +27,25 @@ export default function NearbyStaffPage() {
   const [stageFilter, setStageFilter] = useState<LeadStage | "">("");
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showStaffLocations, setShowStaffLocations] = useState(false);
+  const [staffUnavailable, setStaffUnavailable] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const tableScroll = useHScroll<HTMLDivElement>(rows.length);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/crm/nearby-staff");
+      const res = await fetch("/api/crm/nearby-staff", { cache: "no-store" });
+      // A failed request previously fell through to `data.rows ?? []`, rendering
+      // the "no leads in these stages" empty state — indistinguishable from a
+      // genuinely empty board. Surface the failure instead.
+      if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
       setRows(data.rows ?? []);
+      setStaffUnavailable(!!data.staffUnavailable);
+      setLoadError(false);
+    } catch {
+      setRows([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -83,9 +94,25 @@ export default function NearbyStaffPage() {
         </select>
       </div>
 
+      {staffUnavailable && !loading && (
+        <div className="crm-card" style={{ padding: "0.75rem 1rem", marginBottom: "0.75rem", background: "#FFFBEB", borderColor: "#FDE68A" }}>
+          <span style={{ fontSize: "0.8rem", color: "#B45309" }}>
+            Staff roster unavailable — leads are listed without distances. If this is the first run, create the
+            <code style={{ margin: "0 4px" }}>crm_staff</code>
+            table using <code>migrations/crm-staff.sql</code>.
+          </span>
+        </div>
+      )}
+
       <div className="crm-table-wrap" ref={tableScroll.ref}>
         {loading ? (
           <div className="crm-empty" style={{ padding: "2rem" }}>Loading…</div>
+        ) : loadError ? (
+          <EmptyState
+            icon={<MapPin size={40} />}
+            title="Could not load the board"
+            description="The request failed. Check your connection and try Refresh."
+          />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<MapPin size={40} />}

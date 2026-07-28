@@ -31,14 +31,17 @@ export async function GET(req: NextRequest) {
     supabase.from("crm_staff").select("id, name, home_lat, home_lng"),
   ]);
 
+  // Leads are the board; without them there is nothing to render.
   if (leadsRes.error) {
     console.error("[crm/nearby-staff leads]", leadsRes.error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-  if (staffRes.error) {
-    console.error("[crm/nearby-staff staff]", staffRes.error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
+
+  // Staff are an enrichment — they add a distance ranking to each lead. A failure
+  // here (most often crm_staff not yet created) must not blank the lead list, so
+  // degrade to "no staff" and report it instead of failing the whole request.
+  const staffUnavailable = !!staffRes.error;
+  if (staffRes.error) console.error("[crm/nearby-staff staff]", staffRes.error);
 
   // Only staff with coordinates can be distance-ranked.
   const staff = ((staffRes.data ?? []) as StaffRow[]).filter(
@@ -67,5 +70,8 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({ rows, staffWithLocation: staff.length });
+  return NextResponse.json(
+    { rows, staffWithLocation: staff.length, staffUnavailable },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
