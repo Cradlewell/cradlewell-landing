@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { RefreshCw, MapPin, ChevronRight, ChevronDown } from "lucide-react";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
@@ -21,6 +21,9 @@ interface NearbyRow {
 
 const STAGES: LeadStage[] = ["Nurse Required", "Due date soon", "Deferred Hot Lead", "Follow-up", "Negotiation"];
 
+const MENU_W = 320;
+const MENU_MAX_H = 320;
+
 export default function NearbyStaffPage() {
   const [rows, setRows] = useState<NearbyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,8 +32,10 @@ export default function NearbyStaffPage() {
   const [showStaffLocations, setShowStaffLocations] = useState(false);
   const [staffUnavailable, setStaffUnavailable] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  // Single open row — one expanded ranking at a time keeps the board readable.
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Open ranking popover, anchored to the button that opened it. Position is
+  // captured at click time and the panel is fixed-positioned, so it floats above
+  // the table instead of being clipped by its horizontal scroll container.
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number; above: boolean } | null>(null);
   const tableScroll = useHScroll<HTMLDivElement>(rows.length);
 
   const load = useCallback(async () => {
@@ -54,6 +59,38 @@ export default function NearbyStaffPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // The panel is fixed-positioned against coordinates taken when it opened, so
+  // any scroll or resize would leave it detached from its button. Close instead
+  // of trying to track the anchor.
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenu(null); };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menu]);
+
+  const openMenu = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
+    if (menu?.id === id) { setMenu(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    // Flip above the button when there isn't room below, and keep the panel
+    // inside the viewport horizontally.
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const above = spaceBelow < MENU_MAX_H + 16 && rect.top > spaceBelow;
+    setMenu({
+      id,
+      x: Math.max(12, Math.min(rect.left, window.innerWidth - MENU_W - 12)),
+      y: above ? rect.top - 6 : rect.bottom + 6,
+      above,
+    });
+  };
 
   const filtered = useMemo(
     () => (stageFilter ? rows.filter(r => r.stage === stageFilter) : rows),
@@ -133,11 +170,10 @@ export default function NearbyStaffPage() {
             </thead>
             <tbody>
               {filtered.map(r => {
-                const open = expandedId === r.id;
+                const open = menu?.id === r.id;
                 const nearest = r.nurses[0];
                 return (
-                  <Fragment key={r.id}>
-                    <tr onClick={() => setSelectedLead(r.id)} style={{ cursor: "pointer" }}>
+                    <tr key={r.id} onClick={() => setSelectedLead(r.id)} style={{ cursor: "pointer" }}>
                       <td className="sticky-col" style={{ minWidth: 150 }}>
                         <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{r.name}</span>
                       </td>
@@ -156,8 +192,9 @@ export default function NearbyStaffPage() {
                           <button
                             type="button"
                             className="crm-btn crm-btn-ghost crm-btn-sm"
-                            onClick={() => setExpandedId(open ? null : r.id)}
+                            onClick={e => openMenu(e, r.id)}
                             aria-expanded={open}
+                            aria-haspopup="listbox"
                             title={open ? "Hide all staff" : "Show all staff, nearest first"}
                             style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%" }}
                           >
@@ -174,40 +211,6 @@ export default function NearbyStaffPage() {
                         )}
                       </td>
                     </tr>
-
-                    {open && (
-                      <tr>
-                        <td colSpan={4} style={{ background: "var(--crm-bg)", padding: "0.75rem 1rem" }}>
-                          <div style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--crm-text-3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                            All staff by distance from {r.name}
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 260, overflowY: "auto" }}>
-                            {r.nurses.map((n, i) => (
-                              <div
-                                key={n.id}
-                                style={{
-                                  display: "flex", alignItems: "center", gap: 10,
-                                  padding: "5px 10px", borderRadius: 6,
-                                  background: i === 0 ? "#EEF9F2" : "var(--crm-surface)",
-                                  border: "1px solid var(--crm-border)",
-                                }}
-                              >
-                                <span className="crm-tabular" style={{ fontSize: "0.72rem", color: "var(--crm-text-3)", minWidth: 20 }}>
-                                  {i + 1}
-                                </span>
-                                <span style={{ fontSize: "0.82rem", fontWeight: i === 0 ? 600 : 500, flex: 1 }}>
-                                  {n.name}
-                                </span>
-                                <span className="crm-tabular" style={{ fontSize: "0.8rem", color: i === 0 ? "#128C7E" : "var(--crm-text-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                                  {fmtKm(n.km)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
                 );
               })}
             </tbody>
@@ -216,6 +219,66 @@ export default function NearbyStaffPage() {
       </div>
 
       <HScrollButtons ctrl={tableScroll} />
+
+      {/* Ranking popover — floats above the table so a long roster scrolls inside
+          the panel instead of stretching the row. */}
+      {menu && (() => {
+        const row = filtered.find(r => r.id === menu.id);
+        if (!row) return null;
+        return (
+          <>
+            <div onClick={() => setMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 1070 }} />
+            <div
+              role="listbox"
+              aria-label={`Staff by distance from ${row.name}`}
+              style={{
+                position: "fixed",
+                left: menu.x,
+                ...(menu.above ? { bottom: window.innerHeight - menu.y } : { top: menu.y }),
+                width: MENU_W,
+                maxHeight: MENU_MAX_H,
+                zIndex: 1071,
+                display: "flex",
+                flexDirection: "column",
+                background: "var(--crm-surface)",
+                border: "1px solid var(--crm-border)",
+                borderRadius: "var(--crm-radius)",
+                boxShadow: "0 12px 32px rgba(17,17,16,0.16)",
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ padding: "0.6rem 0.75rem", borderBottom: "1px solid var(--crm-border)", background: "var(--crm-bg)" }}>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--crm-text-3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Staff by distance
+                </div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--crm-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {row.name}
+                </div>
+              </div>
+              <div style={{ overflowY: "auto", padding: "0.35rem" }}>
+                {row.nurses.map((n, i) => (
+                  <div
+                    key={n.id}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "6px 8px", borderRadius: 6,
+                      background: i === 0 ? "#EEF9F2" : "transparent",
+                    }}
+                  >
+                    <span className="crm-tabular" style={{ fontSize: "0.72rem", color: "var(--crm-text-3)", minWidth: 18 }}>{i + 1}</span>
+                    <span style={{ fontSize: "0.82rem", fontWeight: i === 0 ? 600 : 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {n.name}
+                    </span>
+                    <span className="crm-tabular" style={{ fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap", color: i === 0 ? "#128C7E" : "var(--crm-text-muted)" }}>
+                      {fmtKm(n.km)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </>
   );
 }
