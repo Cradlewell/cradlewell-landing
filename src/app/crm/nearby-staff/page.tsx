@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { RefreshCw, MapPin } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
+import { RefreshCw, MapPin, ChevronRight, ChevronDown } from "lucide-react";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import StaffLocationModal from "@/components/crm/StaffLocationModal";
@@ -29,6 +29,8 @@ export default function NearbyStaffPage() {
   const [showStaffLocations, setShowStaffLocations] = useState(false);
   const [staffUnavailable, setStaffUnavailable] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  // Single open row — one expanded ranking at a time keeps the board readable.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const tableScroll = useHScroll<HTMLDivElement>(rows.length);
 
   const load = useCallback(async () => {
@@ -130,41 +132,84 @@ export default function NearbyStaffPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(r => (
-                <tr key={r.id} onClick={() => setSelectedLead(r.id)} style={{ cursor: "pointer" }}>
-                  <td className="sticky-col" style={{ minWidth: 150 }}>
-                    <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{r.name}</span>
-                  </td>
-                  <td style={{ fontSize: "0.8rem", maxWidth: 260 }}>
-                    {r.address || <span style={{ color: "var(--crm-text-3)" }}>—</span>}
-                  </td>
-                  <td><StageBadge stage={r.stage} /></td>
-                  <td style={{ minWidth: 260 }}>
-                    {!r.hasLocation ? (
-                      <span style={{ fontSize: "0.78rem", color: "var(--crm-text-3)" }}>No location shared</span>
-                    ) : r.nurses.length === 0 ? (
-                      <span style={{ fontSize: "0.78rem", color: "var(--crm-text-3)" }}>No staff with location</span>
-                    ) : (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {r.nurses.map((n, i) => (
-                          <span
-                            key={n.id}
-                            className="crm-badge"
-                            style={{
-                              background: i === 0 ? "#EEF9F2" : "var(--crm-bg)",
-                              color: i === 0 ? "#128C7E" : "var(--crm-text)",
-                              fontSize: "0.72rem",
-                              whiteSpace: "nowrap",
-                            }}
+              {filtered.map(r => {
+                const open = expandedId === r.id;
+                const nearest = r.nurses[0];
+                return (
+                  <Fragment key={r.id}>
+                    <tr onClick={() => setSelectedLead(r.id)} style={{ cursor: "pointer" }}>
+                      <td className="sticky-col" style={{ minWidth: 150 }}>
+                        <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{r.name}</span>
+                      </td>
+                      <td style={{ fontSize: "0.8rem", maxWidth: 260 }}>
+                        {r.address || <span style={{ color: "var(--crm-text-3)" }}>—</span>}
+                      </td>
+                      <td><StageBadge stage={r.stage} /></td>
+                      {/* The row opens the lead drawer, so the disclosure control
+                          must not bubble — clicking it should only expand. */}
+                      <td style={{ minWidth: 260 }} onClick={e => e.stopPropagation()}>
+                        {!r.hasLocation ? (
+                          <span style={{ fontSize: "0.78rem", color: "var(--crm-text-3)" }}>No location shared</span>
+                        ) : r.nurses.length === 0 ? (
+                          <span style={{ fontSize: "0.78rem", color: "var(--crm-text-3)" }}>No staff with location</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="crm-btn crm-btn-ghost crm-btn-sm"
+                            onClick={() => setExpandedId(open ? null : r.id)}
+                            aria-expanded={open}
+                            title={open ? "Hide all staff" : "Show all staff, nearest first"}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%" }}
                           >
-                            {n.name} · {fmtKm(n.km)}
-                          </span>
-                        ))}
-                      </div>
+                            {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            <span className="crm-badge" style={{ background: "#EEF9F2", color: "#128C7E", fontSize: "0.72rem", whiteSpace: "nowrap" }}>
+                              {nearest.name} · {fmtKm(nearest.km)}
+                            </span>
+                            {r.nurses.length > 1 && (
+                              <span style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)", whiteSpace: "nowrap" }}>
+                                +{r.nurses.length - 1} more
+                              </span>
+                            )}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+
+                    {open && (
+                      <tr>
+                        <td colSpan={4} style={{ background: "var(--crm-bg)", padding: "0.75rem 1rem" }}>
+                          <div style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--crm-text-3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                            All staff by distance from {r.name}
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 260, overflowY: "auto" }}>
+                            {r.nurses.map((n, i) => (
+                              <div
+                                key={n.id}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 10,
+                                  padding: "5px 10px", borderRadius: 6,
+                                  background: i === 0 ? "#EEF9F2" : "var(--crm-surface)",
+                                  border: "1px solid var(--crm-border)",
+                                }}
+                              >
+                                <span className="crm-tabular" style={{ fontSize: "0.72rem", color: "var(--crm-text-3)", minWidth: 20 }}>
+                                  {i + 1}
+                                </span>
+                                <span style={{ fontSize: "0.82rem", fontWeight: i === 0 ? 600 : 500, flex: 1 }}>
+                                  {n.name}
+                                </span>
+                                <span className="crm-tabular" style={{ fontSize: "0.8rem", color: i === 0 ? "#128C7E" : "var(--crm-text-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                                  {fmtKm(n.km)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                </tr>
-              ))}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         )}

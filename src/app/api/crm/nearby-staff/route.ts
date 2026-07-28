@@ -11,7 +11,9 @@ const TARGET_STAGES = [
   "Follow-up",
   "Negotiation",
 ];
-const MAX_NURSES = 5;
+// Every located staff member is returned, ranked nearest first — the board's
+// per-lead dropdown shows the full ordering, so truncating here would silently
+// hide candidates. The roster is a hand-maintained list, so the list stays short.
 
 interface LeadRow { id: string; name: string; address: string | null; stage: string; home_lat: number | null; home_lng: number | null; }
 // crm_staff, not ops_staff — this board ranks the CRM's own roster, which is
@@ -58,7 +60,6 @@ export async function GET(req: NextRequest) {
             km: haversineKm(l.home_lat as number, l.home_lng as number, s.home_lat as number, s.home_lng as number),
           }))
           .sort((a, b) => a.km - b.km)
-          .slice(0, MAX_NURSES)
       : [];
     return {
       id: l.id,
