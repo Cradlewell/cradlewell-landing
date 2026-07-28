@@ -7,54 +7,170 @@ import {
     useRef,
     type CSSProperties,
 } from 'react';
+import Image from 'next/image';
 
-export interface Testimonial {
-    name: string;
-    text: string;
-    image: string;
-    location: string;
+export interface Slide {
+    image?: { src?: string; alt?: string };
+    title?: string;
 }
 
-// Fixed 3D internals — in a preserve-3d context paint order follows 3D
-// position, so the centre card is pushed nearest the viewer and neighbours
-// fall back behind it.
+type AutoplayDir = 'leftToRight' | 'rightToLeft';
+type TitleCorner = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
+
+interface Smooth3DSlideshowProps {
+    slides?: Slide[];
+    /** Falls back to a responsive width derived from the viewport. */
+    cardWidth?: number;
+    /** Falls back to cardWidth × 16/9 so the 1080×1920 letters aren't cropped. */
+    cardHeight?: number;
+    radius?: number;
+    tilt?: number;
+    sideTilt?: number;
+    gap?: number;
+    opacity?: number;
+    transition?: {
+        type?: string;
+        duration?: number;
+        delay?: number;
+        ease?: string | number[];
+    };
+    autoplay?: boolean;
+    autoplayDirection?: AutoplayDir;
+    showTitle?: boolean;
+    titleFont?: CSSProperties;
+    titleColor?: string;
+    titlePosition?: {
+        position?: TitleCorner;
+        paddingLeft?: number;
+        paddingRight?: number;
+        paddingTop?: number;
+        paddingBottom?: number;
+    };
+    style?: CSSProperties;
+}
+
+// Fixed internals (no longer exposed as controls).
 const PERSPECTIVE = 1600;
 const SCALE_STEP = 0.16;
 const MAX_VISIBLE = 2;
+// In a preserve-3d context paint order follows 3D position, not z-index, so the
+// centre is pushed nearest the viewer and neighbours fall back behind it.
 const DEPTH = 240;
-const TILT = 12;
-const SIDE_TILT = 8;
-const GAP = 8;
-const OPACITY = 60; // inactive visibility %
-const DUR = 0.6;
-const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const AUTOPLAY_MS = 3500;
 
-export default function TestimonialsCoverflow({ items }: { items: Testimonial[] }) {
-    const n = items.length;
-    const [active, setActive] = useState(0);
-    const [cardW, setCardW] = useState(400);
-    const cardH = 460;
+// Cards are 9:16 portrait letters — height tracks width.
+const ASPECT = 16 / 9;
 
-    // Responsive card width — never wider than the viewport minus breathing room.
+// Derive a CSS transition (duration + easing) from a Framer Transition value.
+function cssTransition(t: Smooth3DSlideshowProps['transition']): {
+    dur: number;
+    ease: string;
+} {
+    const dur = t && typeof t.duration === 'number' ? t.duration : 0.6;
+    let ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    const e = t?.ease;
+    if (Array.isArray(e) && e.length === 4) {
+        ease = `cubic-bezier(${e[0]}, ${e[1]}, ${e[2]}, ${e[3]})`;
+    } else if (typeof e === 'string') {
+        const map: Record<string, string> = {
+            linear: 'linear',
+            easeIn: 'ease-in',
+            easeOut: 'ease-out',
+            easeInOut: 'ease-in-out',
+        };
+        ease = map[e] || 'ease';
+    }
+    return { dur, ease };
+}
+
+// Responsive card width — never wider than the viewport minus breathing room.
+function useCardWidth(override?: number) {
+    const [width, setWidth] = useState(override ?? 330);
+
     useEffect(() => {
-        const update = () => setCardW(Math.max(260, Math.min(400, window.innerWidth - 72)));
+        if (override) return;
+        const update = () =>
+            setWidth(Math.max(230, Math.min(330, window.innerWidth - 80)));
         update();
         window.addEventListener('resize', update);
         return () => window.removeEventListener('resize', update);
-    }, []);
+    }, [override]);
 
-    // Keep active valid if the list changes.
+    return override ?? width;
+}
+
+/**
+ * Smooth 3D Slideshow
+ *
+ * A 3D coverflow: the active card sits upright in the spotlight while its
+ * neighbours tilt back in perspective. Click any card to smoothly bring it to
+ * centre. Recreated after Tanya Prokofieva's Framer original.
+ */
+export default function TestimonialsCoverflow(props: Smooth3DSlideshowProps) {
+    const {
+        slides = [],
+        cardWidth: cardWidthProp,
+        cardHeight: cardHeightProp,
+        radius = 3,
+        tilt = 12,
+        sideTilt = 8,
+        gap = 8,
+        opacity = 60,
+        transition = {
+            type: 'tween',
+            duration: 0.6,
+            delay: 2.5,
+            ease: [0.22, 1, 0.36, 1],
+        },
+        autoplay = false,
+        autoplayDirection = 'rightToLeft',
+        showTitle = true,
+        titleFont,
+        titleColor = '#ffffff',
+        titlePosition,
+        style,
+    } = props;
+
+    const cardWidth = useCardWidth(cardWidthProp);
+    const cardHeight = cardHeightProp ?? Math.round(cardWidth * ASPECT);
+
+    const tp = titlePosition || {};
+    const corner: TitleCorner = tp.position || 'bottomLeft';
+    const isTop = corner === 'topLeft' || corner === 'topRight';
+    const isRight = corner === 'topRight' || corner === 'bottomRight';
+    const padLeft = tp.paddingLeft ?? 22;
+    const padRight = tp.paddingRight ?? 22;
+    const padTop = tp.paddingTop ?? 24;
+    const padBottom = tp.paddingBottom ?? 24;
+
+    const list = slides;
+    const n = list.length;
+
+    // Loop is always on.
+    const loop = true;
+    const [active, setActive] = useState(0);
+
+    // Keep active valid if the slide list changes.
     useEffect(() => {
         setActive((a) => Math.max(0, Math.min(n - 1, a)));
     }, [n]);
 
-    // Lock input while a card is mid-move so rapid clicks/keys don't stack.
+    // Lock input while a card is mid-move; release once it settles, so rapid
+    // clicks/keys don't stack up and look jittery. Duration comes from the
+    // transition (default 0.6s).
+    const moveDur =
+        transition && typeof transition.duration === 'number'
+            ? transition.duration
+            : 0.6;
     const lockRef = useRef(false);
     const lock = useCallback(() => {
         lockRef.current = true;
-        window.setTimeout(() => { lockRef.current = false; }, Math.max(50, DUR * 1000));
-    }, []);
+        window.setTimeout(
+            () => {
+                lockRef.current = false;
+            },
+            Math.max(50, moveDur * 1000)
+        );
+    }, [moveDur]);
 
     const step = useCallback(
         (dir: number) => {
@@ -67,36 +183,54 @@ export default function TestimonialsCoverflow({ items }: { items: Testimonial[] 
 
     const handleCardClick = useCallback(
         (i: number) => {
-            if (lockRef.current) return;
+            if (autoplay || lockRef.current) return;
             lock();
             setActive((a) => (i === a ? (a + 1) % n : i));
         },
-        [n, lock]
+        [autoplay, n, lock]
     );
 
-    // Gentle autoplay — pauses while the pointer is over the gallery.
-    const [paused, setPaused] = useState(false);
+    // Autoplay — the transition's Delay drives the time each card holds.
+    const delay =
+        transition && typeof transition.delay === 'number'
+            ? transition.delay
+            : 2.5;
     useEffect(() => {
-        if (n < 2 || paused) return;
-        const id = window.setInterval(() => step(1), AUTOPLAY_MS);
+        if (!autoplay || n < 2) return;
+        const ms = Math.max(0.3, delay) * 1000;
+        const dir = autoplayDirection === 'leftToRight' ? -1 : 1;
+        const id = window.setInterval(() => step(dir), ms);
         return () => window.clearInterval(id);
-    }, [n, paused, step]);
+    }, [autoplay, autoplayDirection, delay, n, step]);
 
     const onKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
-            if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
-            else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                step(1);
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                step(-1);
+            }
         },
         [step]
     );
 
-    const transitionCss = `transform ${DUR}s ${EASE}, opacity ${DUR}s ${EASE}`;
-    const dim = 1 - Math.max(0, Math.min(100, OPACITY)) / 100;
+    const { dur, ease } = cssTransition(transition);
+    const transitionCss = `transform ${dur}s ${ease}, opacity ${dur}s ${ease}`;
+
+    // Rounded scale 0–20: boxy at 0, fully rounded (pill on the short axis) at 20.
+    const effectiveRadius =
+        (Math.max(0, Math.min(20, radius)) / 20) *
+        (Math.min(cardWidth, cardHeight) / 2);
+    // Inactive opacity: 100% = fully visible, 0% = hidden. Overlay is the inverse.
+    const dim = 1 - Math.max(0, Math.min(100, opacity)) / 100;
 
     const rootStyle: CSSProperties = {
+        ...(style || {}),
         position: 'relative',
         width: '100%',
-        height: cardH + 80,
+        height: cardHeight + 80,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -113,45 +247,47 @@ export default function TestimonialsCoverflow({ items }: { items: Testimonial[] 
             aria-roledescription="carousel"
             aria-label="Parent testimonials"
             onKeyDown={onKeyDown}
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
         >
             <div
                 style={{
                     position: 'relative',
-                    width: cardW,
-                    height: cardH,
+                    width: cardWidth,
+                    height: cardHeight,
                     transformStyle: 'preserve-3d',
                 }}
             >
-                {items.map((t, i) => {
+                {list.map((slide, i) => {
                     let rel = i - active;
-                    if (rel > n / 2) rel -= n;
-                    if (rel < -n / 2) rel += n;
+                    if (loop) {
+                        if (rel > n / 2) rel -= n;
+                        if (rel < -n / 2) rel += n;
+                    }
                     const ax = Math.abs(rel);
                     const visible = ax <= MAX_VISIBLE;
                     const isActive = rel === 0;
                     const sc = Math.max(0.4, 1 - ax * SCALE_STEP);
-                    const tx = rel * (GAP * 30);
+                    // Gap 0–20 → spacing 0 (stacked) to ~600px (far apart).
+                    const tx = rel * (gap * 30);
                     const tz = -ax * DEPTH;
-                    const ry = -rel * TILT;
-                    const rz = rel * SIDE_TILT;
+                    const ry = -rel * tilt;
+                    const rz = rel * sideTilt;
+                    const src = slide.image?.src || '';
 
                     const cardStyle: CSSProperties = {
                         position: 'absolute',
                         left: '50%',
                         top: '50%',
-                        width: cardW,
-                        height: cardH,
-                        borderRadius: 20,
+                        width: cardWidth,
+                        height: cardHeight,
+                        borderRadius: effectiveRadius,
                         overflow: 'hidden',
                         transformStyle: 'preserve-3d',
                         transformOrigin: 'center center',
                         transform: `translate(-50%, -50%) translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`,
                         transition: transitionCss,
                         opacity: visible ? 1 : 0,
-                        cursor: isActive ? 'default' : 'pointer',
-                        pointerEvents: visible ? 'auto' : 'none',
+                        cursor: autoplay || isActive ? 'default' : 'pointer',
+                        pointerEvents: visible && !autoplay ? 'auto' : 'none',
                         backgroundColor: '#1a1a1a',
                     };
 
@@ -160,83 +296,77 @@ export default function TestimonialsCoverflow({ items }: { items: Testimonial[] 
                             key={i}
                             style={cardStyle}
                             onClick={() => handleCardClick(i)}
-                            aria-label={`Testimonial from ${t.name}`}
+                            aria-label={slide.image?.alt || slide.title}
                             aria-hidden={!visible}
                         >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                                src={t.image}
-                                alt={t.name}
-                                draggable={false}
-                                style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                    objectPosition: 'center top',
-                                    display: 'block',
-                                    userSelect: 'none',
-                                }}
-                            />
-
-                            {/* Gradient for legibility */}
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    background: 'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.78) 100%)',
-                                    pointerEvents: 'none',
-                                }}
-                            />
-
-                            {/* Title — name + location, bottom-left */}
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    left: 24,
-                                    right: 24,
-                                    bottom: 22,
-                                    pointerEvents: 'none',
-                                }}
-                            >
-                                <div style={{ color: '#FBBF24', fontSize: '0.95rem', letterSpacing: 2, marginBottom: 8 }}>★★★★★</div>
-                                <span
+                            {src ? (
+                                <Image
+                                    src={src}
+                                    alt={slide.image?.alt || slide.title || ''}
+                                    fill
+                                    draggable={false}
+                                    sizes="(max-width: 420px) 260px, 340px"
                                     style={{
+                                        objectFit: 'cover',
                                         display: 'block',
-                                        color: '#ffffff',
-                                        fontFamily: "'Lexend', system-ui, sans-serif",
-                                        fontSize: 26,
-                                        fontWeight: 700,
-                                        lineHeight: '1.1em',
-                                        letterSpacing: '-0.02em',
-                                        textShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                                        userSelect: 'none',
                                     }}
-                                >
-                                    {t.name}
-                                </span>
-                                <span
-                                    style={{
-                                        display: 'block',
-                                        marginTop: 4,
-                                        color: 'rgba(255,255,255,0.82)',
-                                        fontFamily: "'Lexend', system-ui, sans-serif",
-                                        fontSize: 13,
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    {t.location} · Verified Parent
-                                </span>
-                            </div>
+                                />
+                            ) : null}
 
-                            {/* Dim overlay — darkens inactive cards */}
+                            {showTitle && (
+                                <>
+                                    {/* Gradient for legibility (matches corner) */}
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            background: isTop
+                                                ? 'linear-gradient(0deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.7) 100%)'
+                                                : 'linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.7) 100%)',
+                                            pointerEvents: 'none',
+                                        }}
+                                    />
+
+                                    {/* Title at chosen corner */}
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            left: padLeft,
+                                            right: padRight,
+                                            [isTop ? 'top' : 'bottom']: isTop
+                                                ? padTop
+                                                : padBottom,
+                                            textAlign: isRight ? 'right' : 'left',
+                                            pointerEvents: 'none',
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                color: titleColor,
+                                                fontSize: 28,
+                                                fontWeight: 700,
+                                                lineHeight: '1.1em',
+                                                letterSpacing: '-0.02em',
+                                                whiteSpace: 'pre-line',
+                                                textShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                                                ...(titleFont || {}),
+                                            }}
+                                        >
+                                            {slide.title}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Dim overlay (darkens inactive cards entirely) */}
                             <div
                                 style={{
                                     position: 'absolute',
                                     inset: 0,
                                     background: '#000000',
                                     opacity: isActive ? 0 : dim,
-                                    transition: `opacity ${DUR}s ${EASE}`,
+                                    transition: `opacity ${dur}s ${ease}`,
                                     pointerEvents: 'none',
                                 }}
                             />

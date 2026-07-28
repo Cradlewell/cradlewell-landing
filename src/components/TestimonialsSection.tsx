@@ -3,14 +3,14 @@
 import React from 'react';
 import { Container } from 'react-bootstrap';
 import ScrollReveal from './ScrollReveal';
-import TestimonialsSwipeStack from './TestimonialsSwipeStack';
+import TestimonialsCoverflow from './TestimonialsCoverflow';
 
 const testimonials = [
-  { src: '/images/test1.png', alt: 'Testimonial letter from Sachin Sahu, a Cradlewell parent in Bangalore' },
-  { src: '/images/test2.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' },
-  { src: '/images/test3.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' },
-  { src: '/images/test4.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' },
-  { src: '/images/test5.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' },
+  { image: { src: '/images/test1.png', alt: 'Testimonial letter from Sachin Sahu, a Cradlewell parent in Bangalore' } },
+  { image: { src: '/images/test2.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' } },
+  { image: { src: '/images/test3.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' } },
+  { image: { src: '/images/test4.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' } },
+  { image: { src: '/images/test5.png', alt: 'Testimonial letter from a Cradlewell parent in Bangalore' } },
 ];
 
 const TestimonialsSection = () => (
@@ -43,8 +43,8 @@ const TestimonialsSection = () => (
         </div>
       </ScrollReveal>
 
-      {/* Draggable 3D card stack */}
-      <TestimonialsSwipeStack images={testimonials} />
+      {/* 3D coverflow — click a card to bring it to centre */}
+      <TestimonialsCoverflow slides={testimonials} showTitle={false} />
 
       <p style={{
         textAlign: 'center',
@@ -53,7 +53,7 @@ const TestimonialsSection = () => (
         fontFamily: "'Lexend', system-ui, sans-serif",
         marginTop: 8,
       }}>
-        Drag a card to read the next letter
+        Click a card to read the next letter
       </p>
     </Container>
   </section>
