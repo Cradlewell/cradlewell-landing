@@ -14,6 +14,7 @@ interface NearbyRow {
   id: string;
   name: string;
   address: string | null;
+  zone: string | null;
   stage: LeadStage;
   hasLocation: boolean;
   nurses: Nurse[];
@@ -175,6 +176,7 @@ export default function NearbyStaffPage() {
               <tr>
                 <th className="sticky-col">Name</th>
                 <th>Address</th>
+                <th>Nearest Zone</th>
                 <th>Pipeline Stage</th>
                 <th>Nearby Staff (distance)</th>
               </tr>
@@ -190,6 +192,9 @@ export default function NearbyStaffPage() {
                       </td>
                       <td style={{ fontSize: "0.8rem", maxWidth: 260 }}>
                         {r.address || <span style={{ color: "var(--crm-text-3)" }}>—</span>}
+                      </td>
+                      <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>
+                        {r.zone || <span style={{ color: "var(--crm-text-3)" }}>—</span>}
                       </td>
                       <td><StageBadge stage={r.stage} /></td>
                       {/* The row opens the lead drawer, so the disclosure control

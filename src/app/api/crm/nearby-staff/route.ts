@@ -15,7 +15,7 @@ const TARGET_STAGES = [
 // per-lead dropdown shows the full ordering, so truncating here would silently
 // hide candidates. The roster is a hand-maintained list, so the list stays short.
 
-interface LeadRow { id: string; name: string; address: string | null; stage: string; home_lat: number | null; home_lng: number | null; }
+interface LeadRow { id: string; name: string; address: string | null; zone: string | null; stage: string; home_lat: number | null; home_lng: number | null; }
 // crm_staff, not ops_staff — this board ranks the CRM's own roster, which is
 // maintained by sales and kept independent of the operations staff list.
 interface StaffRow { id: string; name: string; home_lat: number | null; home_lng: number | null; }
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const [leadsRes, staffRes] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, name, address, stage, home_lat, home_lng")
+      .select("id, name, address, zone, stage, home_lat, home_lng")
       .in("stage", TARGET_STAGES)
       .order("last_activity_at", { ascending: false }),
     supabase.from("crm_staff").select("id, name, home_lat, home_lng"),
@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
       id: l.id,
       name: l.name,
       address: l.address ?? null,
+      zone: l.zone ?? null,
       stage: l.stage,
       hasLocation,
       nurses,
