@@ -446,6 +446,15 @@
 
 .crm-table th.sticky-col { background: var(--crm-bg); z-index: 20; }
 
+/* Keep the frozen column opaque while its row is hovered. `.crm-table tr:hover td`
+   is more specific than `.crm-table td.sticky-col`, so it would otherwise replace
+   the solid surface colour with a 1.5%-opacity tint — leaving the cell see-through
+   and letting the columns scrolling underneath it bleed through the name. Layering
+   the tint over the surface colour keeps the hover shading without the transparency. */
+.crm-table tr:hover td.sticky-col {
+  background: linear-gradient(rgba(0, 0, 0, 0.015), rgba(0, 0, 0, 0.015)), var(--crm-surface);
+}
+
 /* ─── Badges ─────────────────────────────────────────────────────────────────── */
 .crm-badge {
   display: inline-flex;
