@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useLeads, api, refreshStore } from "@/lib/crm-store";
+import { useLeads, useFollowups, api, refreshStore } from "@/lib/crm-store";
 import { confirm } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -31,6 +31,17 @@ function WhatsAppStageCell({ stage }: { stage?: string }) {
   );
 }
 
+// Number of follow-ups actually completed on a lead. Zero reads as a muted dash
+// so a column of untouched leads doesn't turn into a wall of "0".
+function FollowupCountCell({ count }: { count: number }) {
+  if (count === 0) return <span style={{ color: "var(--crm-text-3)" }}>—</span>;
+  return (
+    <span className="crm-badge" style={{ background: "var(--crm-primary-light)", color: "var(--crm-primary)" }}>
+      {count}
+    </span>
+  );
+}
+
 const SOURCES: LeadSource[] = ["Website", "WhatsApp", "Aria Chat", "Instagram", "Facebook", "Google Ads", "Referral", "Walk-in", "Hospital Partner", "Other"];
 
 function fmtDate(iso: string) {
@@ -52,6 +63,7 @@ const PAGE_SIZE = 50;
 
 export default function LeadsPage() {
   const leads = useLeads();
+  const followups = useFollowups();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
   const [showWAImport, setShowWAImport] = useState(false);
@@ -73,6 +85,18 @@ export default function LeadsPage() {
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "">("");
   const [filterSource, setFilterSource] = useState<LeadSource | "">("");
+
+  // Completed follow-ups per lead, built in one pass so rendering a row is a map
+  // lookup rather than a scan of every follow-up. Recomputes only when follow-ups
+  // change — not on every keystroke in the search box.
+  const doneFollowups = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const f of followups) {
+      if (!f.completed) continue;
+      counts.set(f.leadId, (counts.get(f.leadId) ?? 0) + 1);
+    }
+    return counts;
+  }, [followups]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -112,7 +136,7 @@ export default function LeadsPage() {
   };
 
   const exportCSV = (rows: Lead[]) => {
-    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "WhatsApp Stage", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Nearest Zone", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage"].join(",");
+    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "WhatsApp Stage", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Nearest Zone", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage", "Follow-ups"].join(",");
     const body = rows.map(l => [
       `"${l.name}"`,
       l.phone,
@@ -135,6 +159,7 @@ export default function LeadsPage() {
       fmtCareDate(l.careStartDate),
       l.serviceDays ?? "",
       l.stage,
+      doneFollowups.get(l.id) ?? 0,
     ].join(","));
     const csv = [headers, ...body].join("\n");
     const a = document.createElement("a");
@@ -258,6 +283,7 @@ export default function LeadsPage() {
                 <th>Care Start Date</th>
                 <th>Days</th>
                 <th>Stage</th>
+                <th>Follow-ups</th>
                 <th></th>
               </tr>
             </thead>
@@ -291,6 +317,7 @@ export default function LeadsPage() {
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{fmtCareDate(l.careStartDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{l.serviceDays ? `${l.serviceDays} days` : "—"}</td>
                   <td><StageBadge stage={l.stage} /></td>
+                  <td className="crm-tabular"><FollowupCountCell count={doneFollowups.get(l.id) ?? 0} /></td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <button
                       onClick={e => handleDelete(e, l.id, l.name)}
