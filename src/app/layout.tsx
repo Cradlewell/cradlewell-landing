@@ -10,7 +10,11 @@ const BASE_URL = 'https://www.cradlewell.com';
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "Nurse-led Newborn & Postnatal Home Care – Trusted Support for Mothers & Baby in Bangalore",
+    // Brand first: a browser tab only shows the first ~20 characters, so a title
+    // that opens with the service description renders as an unidentifiable
+    // "Nurse-led Newborn & Postnata…". Also brings the homepage title under the
+    // ~60 characters Google displays before truncating it in results.
+    default: "Cradlewell | Nurse-led Newborn & Postnatal Care in Bangalore",
     template: "%s | Cradlewell",
   },
   description:
