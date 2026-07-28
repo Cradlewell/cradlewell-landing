@@ -23,6 +23,7 @@ const STAGES: LeadStage[] = ["Nurse Required", "Due date soon", "Deferred Hot Le
 
 const MENU_W = 320;
 const MENU_MAX_H = 320;
+const PAGE_SIZE = 50;
 
 export default function NearbyStaffPage() {
   const [rows, setRows] = useState<NearbyRow[]>([]);
@@ -36,7 +37,7 @@ export default function NearbyStaffPage() {
   // captured at click time and the panel is fixed-positioned, so it floats above
   // the table instead of being clipped by its horizontal scroll container.
   const [menu, setMenu] = useState<{ id: string; x: number; y: number; above: boolean } | null>(null);
-  const tableScroll = useHScroll<HTMLDivElement>(rows.length);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,6 +97,16 @@ export default function NearbyStaffPage() {
     () => (stageFilter ? rows.filter(r => r.stage === stageFilter) : rows),
     [rows, stageFilter]
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const tableScroll = useHScroll<HTMLDivElement>(paginated.length);
+
+  // Filtering can shrink the list under the current page, and a popover anchored
+  // to a row that just scrolled away would hang over unrelated rows.
+  useEffect(() => { setPage(1); }, [stageFilter]);
+  useEffect(() => { setMenu(null); }, [safePage]);
 
   return (
     <>
@@ -169,7 +180,7 @@ export default function NearbyStaffPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(r => {
+              {paginated.map(r => {
                 const open = menu?.id === r.id;
                 const nearest = r.nurses[0];
                 return (
@@ -219,6 +230,49 @@ export default function NearbyStaffPage() {
       </div>
 
       <HScrollButtons ctrl={tableScroll} />
+
+      {totalPages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "16px 0" }}>
+          <button
+            className="crm-btn crm-btn-ghost crm-btn-sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={safePage === 1}
+          >
+            ← Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+            .reduce<(number | "…")[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) =>
+              p === "…" ? (
+                <span key={`ellipsis-${i}`} style={{ color: "var(--crm-text-muted)", padding: "0 4px" }}>…</span>
+              ) : (
+                <button
+                  key={p}
+                  className="crm-btn crm-btn-sm"
+                  style={p === safePage ? { background: "var(--crm-primary)", color: "#fff", borderColor: "var(--crm-primary)" } : { background: "none" }}
+                  onClick={() => setPage(p as number)}
+                >
+                  {p}
+                </button>
+              )
+            )}
+          <button
+            className="crm-btn crm-btn-ghost crm-btn-sm"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={safePage === totalPages}
+          >
+            Next →
+          </button>
+          <span style={{ color: "var(--crm-text-muted)", fontSize: "0.8rem", marginLeft: 8 }}>
+            Page {safePage} of {totalPages} · {filtered.length} total
+          </span>
+        </div>
+      )}
 
       {/* Ranking popover — floats above the table so a long roster scrolls inside
           the panel instead of stretching the row. */}
