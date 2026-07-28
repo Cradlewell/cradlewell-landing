@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { RefreshCw, MapPin } from "lucide-react";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
+import StaffLocationModal from "@/components/crm/StaffLocationModal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useHScroll, HScrollButtons } from "@/components/crm/HScrollControls";
 import { fmtKm } from "@/lib/geo-utils";
@@ -25,6 +26,7 @@ export default function NearbyStaffPage() {
   const [loading, setLoading] = useState(true);
   const [stageFilter, setStageFilter] = useState<LeadStage | "">("");
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
+  const [showStaffLocations, setShowStaffLocations] = useState(false);
   const tableScroll = useHScroll<HTMLDivElement>(rows.length);
 
   const load = useCallback(async () => {
@@ -48,6 +50,13 @@ export default function NearbyStaffPage() {
   return (
     <>
       <LeadDrawer leadId={selectedLead} onClose={() => setSelectedLead(null)} />
+      <StaffLocationModal
+        open={showStaffLocations}
+        onClose={() => setShowStaffLocations(false)}
+        // Distances are derived from staff coordinates, so any roster change
+        // has to re-run the server-side ranking rather than patch local rows.
+        onChanged={load}
+      />
 
       <div className="crm-page-header">
         <div>
@@ -56,9 +65,14 @@ export default function NearbyStaffPage() {
             {filtered.length} lead{filtered.length === 1 ? "" : "s"} in active stages · nearest care staff by distance
           </p>
         </div>
-        <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={load} title="Refresh">
-          <RefreshCw size={15} /> Refresh
-        </button>
+        <div className="d-flex gap-2">
+          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={load} title="Refresh">
+            <RefreshCw size={15} /> Refresh
+          </button>
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => setShowStaffLocations(true)}>
+            <MapPin size={15} /> Update the location of staff
+          </button>
+        </div>
       </div>
 
       {/* Stage filter */}
