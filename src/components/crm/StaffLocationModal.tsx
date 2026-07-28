@@ -8,8 +8,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 export interface StaffLocation {
   id: string;
   name: string;
-  role: string | null;
-  area: string | null;
   home_lat: number | null;
   home_lng: number | null;
 }
@@ -118,7 +116,7 @@ export default function StaffLocationModal({ open, onClose, onChanged }: Props) 
   const remove = async (s: StaffLocation) => {
     const ok = await confirm({
       title: `Remove "${s.name}"?`,
-      body: "They will no longer appear as nearby staff for any lead. This also removes them from the ops roster.",
+      body: "They will no longer appear as nearby staff for any lead. The operations roster is a separate list and is not affected.",
       confirmText: "Remove",
       variant: "danger",
     });
@@ -229,7 +227,6 @@ export default function StaffLocationModal({ open, onClose, onChanged }: Props) 
                     <thead>
                       <tr>
                         <th>Name</th>
-                        <th>Role</th>
                         <th>Latitude</th>
                         <th>Longitude</th>
                         <th></th>
@@ -239,7 +236,6 @@ export default function StaffLocationModal({ open, onClose, onChanged }: Props) 
                       {staff.map(s => (
                         <tr key={s.id} style={{ background: editingId === s.id ? "var(--crm-primary-light)" : undefined }}>
                           <td style={{ fontWeight: 600, fontSize: "0.85rem", whiteSpace: "nowrap" }}>{s.name}</td>
-                          <td style={{ fontSize: "0.8rem" }}>{s.role || "—"}</td>
                           <td className="crm-tabular" style={{ fontSize: "0.8rem" }}>
                             {s.home_lat != null ? s.home_lat : <span style={{ color: "var(--crm-text-3)" }}>—</span>}
                           </td>

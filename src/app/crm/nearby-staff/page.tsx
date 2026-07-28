@@ -9,7 +9,7 @@ import { useHScroll, HScrollButtons } from "@/components/crm/HScrollControls";
 import { fmtKm } from "@/lib/geo-utils";
 import type { LeadStage } from "@/lib/crm-types";
 
-interface Nurse { id: string; name: string; role: string | null; km: number; }
+interface Nurse { id: string; name: string; km: number; }
 interface NearbyRow {
   id: string;
   name: string;
@@ -123,7 +123,6 @@ export default function NearbyStaffPage() {
                           <span
                             key={n.id}
                             className="crm-badge"
-                            title={n.role ?? undefined}
                             style={{
                               background: i === 0 ? "#EEF9F2" : "var(--crm-bg)",
                               color: i === 0 ? "#128C7E" : "var(--crm-text)",

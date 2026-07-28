@@ -2,23 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/auth-guard";
 
-// Staff roster CRUD scoped to what the CRM "Update staff location" dialog owns:
-// name and home coordinates. Deliberately separate from /api/ops/staff, whose
-// PUT rewrites the whole row (phone, area, languages, notes) and would blank
-// those fields when called with the CRM form's narrower payload.
+// CRM staff roster, backed by its own crm_staff table (see
+// migrations/crm-staff.sql). Independent of ops_staff by design: staff a
+// salesperson adds here exist only to measure distance to a lead and must not
+// appear on the operations board or be schedulable onto customers.
 
-// Mirrors the avatar palette in OpsBoard so staff added here look the same on
-// the ops board as staff added there.
-const PALETTE = [
-  "#5F47FF", "#4A35E0", "#22c55e", "#f59e0b", "#a855f7",
-  "#ec4899", "#06b6d4", "#f43f5e", "#84cc16", "#eab308",
-];
-
-const SELECT = "id, name, role, area, home_lat, home_lng";
-
-function initialsOf(name: string): string {
-  return name.trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-}
+const SELECT = "id, name, home_lat, home_lng";
 
 // Coordinates arrive as form strings. Reject anything non-numeric or outside the
 // valid range rather than storing a value that would silently skew every
@@ -51,7 +40,7 @@ function readBody(body: Record<string, unknown>) {
 export async function GET(req: NextRequest) {
   const authErr = requireAuth(req);
   if (authErr) return authErr;
-  const { data, error } = await supabase.from("ops_staff").select(SELECT).order("name", { ascending: true });
+  const { data, error } = await supabase.from("crm_staff").select(SELECT).order("name", { ascending: true });
   if (error) {
     console.error("[crm/staff-locations GET]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -66,20 +55,9 @@ export async function POST(req: NextRequest) {
   const parsed = readBody(await req.json());
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  // Colour by current roster size so avatars stay spread across the palette.
-  const { count } = await supabase.from("ops_staff").select("id", { count: "exact", head: true });
-
   const { data, error } = await supabase
-    .from("ops_staff")
-    .insert({
-      id: crypto.randomUUID(),
-      name: parsed.name,
-      role: "Nurse",
-      initials: initialsOf(parsed.name),
-      color: PALETTE[(count ?? 0) % PALETTE.length],
-      home_lat: parsed.lat,
-      home_lng: parsed.lng,
-    })
+    .from("crm_staff")
+    .insert({ id: crypto.randomUUID(), name: parsed.name, home_lat: parsed.lat, home_lng: parsed.lng })
     .select(SELECT)
     .single();
 
@@ -100,11 +78,9 @@ export async function PUT(req: NextRequest) {
   const parsed = readBody(body);
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  // Only the three fields this dialog owns. Phone, area, languages, notes, role
-  // and colour belong to the ops roster and must survive an edit made here.
   const { data, error } = await supabase
-    .from("ops_staff")
-    .update({ name: parsed.name, initials: initialsOf(parsed.name), home_lat: parsed.lat, home_lng: parsed.lng })
+    .from("crm_staff")
+    .update({ name: parsed.name, home_lat: parsed.lat, home_lng: parsed.lng })
     .eq("id", body.id)
     .select(SELECT)
     .single();
@@ -123,7 +99,7 @@ export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const { error } = await supabase.from("ops_staff").delete().eq("id", id);
+  const { error } = await supabase.from("crm_staff").delete().eq("id", id);
   if (error) {
     console.error("[crm/staff-locations DELETE]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

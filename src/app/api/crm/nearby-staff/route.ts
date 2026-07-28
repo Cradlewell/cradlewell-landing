@@ -14,7 +14,9 @@ const TARGET_STAGES = [
 const MAX_NURSES = 5;
 
 interface LeadRow { id: string; name: string; address: string | null; stage: string; home_lat: number | null; home_lng: number | null; }
-interface StaffRow { id: string; name: string; role: string | null; area: string | null; home_lat: number | null; home_lng: number | null; }
+// crm_staff, not ops_staff — this board ranks the CRM's own roster, which is
+// maintained by sales and kept independent of the operations staff list.
+interface StaffRow { id: string; name: string; home_lat: number | null; home_lng: number | null; }
 
 export async function GET(req: NextRequest) {
   const authErr = requireAuth(req);
@@ -26,7 +28,7 @@ export async function GET(req: NextRequest) {
       .select("id, name, address, stage, home_lat, home_lng")
       .in("stage", TARGET_STAGES)
       .order("last_activity_at", { ascending: false }),
-    supabase.from("ops_staff").select("id, name, role, area, home_lat, home_lng"),
+    supabase.from("crm_staff").select("id, name, home_lat, home_lng"),
   ]);
 
   if (leadsRes.error) {
@@ -50,7 +52,6 @@ export async function GET(req: NextRequest) {
           .map((s) => ({
             id: s.id,
             name: s.name,
-            role: s.role ?? null,
             km: haversineKm(l.home_lat as number, l.home_lng as number, s.home_lat as number, s.home_lng as number),
           }))
           .sort((a, b) => a.km - b.km)
