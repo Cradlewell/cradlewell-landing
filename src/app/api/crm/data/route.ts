@@ -25,6 +25,9 @@ export async function GET(req: NextRequest) {
       closures: (closuresRes.data ?? []).map(dbToClosure),
       activity: (activityRes.data ?? []).map(dbToActivity),
     },
-    { headers: { "Cache-Control": "private, max-age=30" } }
+    // Must not be cached. Mutations (stage moves, follow-ups) write through
+    // separate endpoints that cannot invalidate this entry, so a cached copy
+    // would be replayed over newer local state and visibly undo the change.
+    { headers: { "Cache-Control": "no-store" } }
   );
 }

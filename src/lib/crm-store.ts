@@ -10,6 +10,9 @@ let _db: CRMDb = { leads: [], followups: [], quotations: [], closures: [], activ
 let _initialized = false;
 let _fetching = false;
 let _retryCount = 0;
+// Number of writes currently in flight. Guards syncAll from reading the server
+// mid-write and clobbering optimistic state with a stale row.
+let _pendingWrites = 0;
 const RETRY_DELAYS = [5_000, 15_000, 30_000];
 
 // ─── Per-slice listener system ────────────────────────────────────────────────
@@ -35,9 +38,15 @@ function notify(...slices: DBSlice[]) {
 
 async function syncAll() {
   if (_fetching) return;
+  // A sync replaces the whole store, so it must never run while a mutation is
+  // still in flight — the server could answer from before the write landed and
+  // the response would overwrite correct local state with the pre-write value.
+  // Skipping is safe: the optimistic state already matches what the write is
+  // about to persist, and a failed write rolls itself back.
+  if (_initialized && _pendingWrites > 0) return;
   _fetching = true;
   try {
-    const res = await fetch("/api/crm/data");
+    const res = await fetch("/api/crm/data", { cache: "no-store" });
     if (res.ok) {
       _db = await res.json();
       _initialized = true;
@@ -79,28 +88,43 @@ if (typeof document !== "undefined") {
 }
 
 async function apiPost(path: string, data: unknown) {
-  const res = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  _pendingWrites++;
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return await res.json();
+  } finally {
+    _pendingWrites--;
+  }
 }
 
 async function apiPut(path: string, data: unknown) {
-  const res = await fetch(path, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  _pendingWrites++;
+  try {
+    const res = await fetch(path, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return await res.json();
+  } finally {
+    _pendingWrites--;
+  }
 }
 
 async function apiDelete(path: string) {
-  const res = await fetch(path, { method: "DELETE" });
-  if (!res.ok) throw new Error(await res.text());
+  _pendingWrites++;
+  try {
+    const res = await fetch(path, { method: "DELETE" });
+    if (!res.ok) throw new Error(await res.text());
+  } finally {
+    _pendingWrites--;
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -181,17 +205,30 @@ export const api = {
       _db.followups.unshift(newFollowup);
     }
     notify("leads", "activity", "followups");
-    Promise.all([
-      apiPut(`/api/crm/leads/${id}`, { stage, lastActivityAt: now() }),
-      newFollowup ? apiPost("/api/crm/followups", newFollowup) : Promise.resolve(),
-    ]).then(() =>
-      apiPost("/api/crm/activity", { id: actId, leadId: id, type: "stage", message: actMsg, at: actAt }).catch(console.error)
-    ).catch(() => {
-      lead.stage = prevStage;
-      _db.activity = _db.activity.filter((a) => a.id !== actId);
-      if (newFollowup) _db.followups = _db.followups.filter((f) => f.id !== newFollowup!.id);
-      notify("leads", "activity", "followups");
-    });
+
+    // Only a failure of the stage write itself may revert the stage. Previously
+    // this was Promise.all'd with the auto follow-up insert, so a failed
+    // follow-up rolled the card back to its old column even though the stage had
+    // been saved — leaving the board disagreeing with the database.
+    apiPut(`/api/crm/leads/${id}`, { stage, lastActivityAt: lead.lastActivityAt })
+      .then(() =>
+        apiPost("/api/crm/activity", { id: actId, leadId: id, type: "stage", message: actMsg, at: actAt }).catch(console.error)
+      )
+      .catch(() => {
+        lead.stage = prevStage;
+        _db.activity = _db.activity.filter((a) => a.id !== actId);
+        notify("leads", "activity");
+      });
+
+    // The auto follow-up is a side effect of entering Negotiation. If it fails to
+    // save, drop just the follow-up — the stage move stands on its own.
+    if (newFollowup) {
+      const followupId = newFollowup.id;
+      apiPost("/api/crm/followups", newFollowup).catch(() => {
+        _db.followups = _db.followups.filter((f) => f.id !== followupId);
+        notify("followups");
+      });
+    }
   },
 
   addFollowup(input: Omit<Followup, "id" | "createdAt" | "completed">) {
