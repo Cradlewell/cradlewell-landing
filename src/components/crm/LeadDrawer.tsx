@@ -11,6 +11,17 @@ import { Avatar } from "@/components/ui/avatar";
 import { format } from "date-fns";
 
 const FOLLOWUP_TYPES: FollowupType[] = ["Callback + WhatsApp", "Quotation reminder", "Payment reminder", "Trial decision", "Closure follow-up"];
+
+// Exactly the fields rendered as editable inputs in the profile tab. Anything
+// outside this list is owned by another control (stage dropdown, notes thread,
+// quotations, closures) and must never be written back by the profile form.
+const EDITABLE_FIELDS: (keyof Lead)[] = [
+  "name", "phone", "whatsapp", "source", "owner",
+  "babyStatus", "hospitalName", "babyBirthStageStatus", "babyAge", "currentWeight",
+  "address", "zone", "budget",
+  "serviceRequired", "preferredShift", "shiftHoursCount", "shiftTime",
+  "careStartDate", "serviceDays",
+];
 const LOST_REASONS: LostReason[] = ["Competitor selected", "Budget issue", "No response", "Trust issue", "Service not available", "Other"];
 
 // ── Notes ───────────────────────────────────────────────────────────────────
@@ -425,9 +436,18 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const openQuotations = isLeadClosed ? [] : leadQuotations;
 
   const saveEdits = () => {
-    // callNotes is owned by the Notes thread, not the profile form. Exclude it
-    // so a stale draft snapshot can't overwrite notes added after the drawer opened.
-    const { callNotes: _ignore, ...patch } = draft;
+    // Send only what the profile form owns. `draft` is a whole-lead snapshot
+    // taken when the drawer opened, so anything changed elsewhere in the drawer
+    // afterwards — the stage dropdown, the notes thread, a quotation moving the
+    // lead to Negotiation — is stale inside it. Spreading the whole draft
+    // replayed those old values over the newer ones, which is why changing the
+    // stage and then saving the form sent the lead back to its previous stage.
+    const patch: Partial<Lead> = {};
+    for (const field of EDITABLE_FIELDS) {
+      if (draft[field] !== undefined) {
+        (patch as Record<string, unknown>)[field] = draft[field];
+      }
+    }
     api.updateLead(lead.id, patch);
     setEditing(false);
     toast.success("Lead updated");
@@ -602,7 +622,7 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                 </button>
               </>
             ) : (
-              <button onClick={() => setEditing(true)} className="crm-btn crm-btn-ghost crm-btn-sm">
+              <button onClick={() => { setDraft({ ...lead }); setEditing(true); }} className="crm-btn crm-btn-ghost crm-btn-sm">
                 <Edit2 size={13} /> Edit
               </button>
             )}
