@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
     // completed follow-up count from these rows, so a truncated result would
     // silently show older leads as having zero follow-ups.
     supabase.from("followups").select("*").order("created_at", { ascending: false }).limit(5000),
-    supabase.from("quotations").select("*").order("date", { ascending: false }).limit(200),
+    // Same reasoning as follow-ups: the Leads list derives each lead's quoted
+    // amount from these rows, so truncation would show older leads as unquoted.
+    supabase.from("quotations").select("*").order("date", { ascending: false }).limit(5000),
     supabase.from("closures").select("*").order("closure_date", { ascending: false }).limit(200),
     supabase.from("activity_logs").select("*").order("at", { ascending: false }).limit(200),
   ]);

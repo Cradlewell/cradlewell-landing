@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useLeads, useFollowups, api, refreshStore } from "@/lib/crm-store";
+import { useLeads, useFollowups, useQuotations, api, refreshStore } from "@/lib/crm-store";
 import { confirm } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -64,6 +64,7 @@ const PAGE_SIZE = 50;
 export default function LeadsPage() {
   const leads = useLeads();
   const followups = useFollowups();
+  const quotations = useQuotations();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
   const [showWAImport, setShowWAImport] = useState(false);
@@ -97,6 +98,23 @@ export default function LeadsPage() {
     }
     return counts;
   }, [followups]);
+
+  // Latest quotation per lead, by quotation date. A lead can be re-quoted after
+  // negotiation, and the current price is the last one given — not the first,
+  // and not the sum of every revision.
+  const latestQuote = useMemo(() => {
+    const price = new Map<string, number>();
+    const quotedAt = new Map<string, number>();
+    for (const q of quotations) {
+      const at = new Date(q.date).getTime();
+      const prev = quotedAt.get(q.leadId);
+      if (prev === undefined || at > prev) {
+        quotedAt.set(q.leadId, at);
+        price.set(q.leadId, q.finalPrice);
+      }
+    }
+    return price;
+  }, [quotations]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -136,7 +154,7 @@ export default function LeadsPage() {
   };
 
   const exportCSV = (rows: Lead[]) => {
-    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "WhatsApp Stage", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Nearest Zone", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage", "Follow-ups"].join(",");
+    const headers = ["Name", "Phone", "Date", "Time", "Day", "Source", "WhatsApp Stage", "Service", "Baby Born/Expecting", "Hospital Name", "Birth Stage Status", "Baby Age", "Current Weight", "Address", "Nearest Zone", "Shift Type", "Shift Hours", "Shift Time", "Care Start Date", "Service Days", "Stage", "Quoted Amount", "Follow-ups"].join(",");
     const body = rows.map(l => [
       `"${l.name}"`,
       l.phone,
@@ -159,6 +177,7 @@ export default function LeadsPage() {
       fmtCareDate(l.careStartDate),
       l.serviceDays ?? "",
       l.stage,
+      latestQuote.get(l.id) ?? "",
       doneFollowups.get(l.id) ?? 0,
     ].join(","));
     const csv = [headers, ...body].join("\n");
@@ -283,6 +302,7 @@ export default function LeadsPage() {
                 <th>Care Start Date</th>
                 <th>Days</th>
                 <th>Stage</th>
+                <th>Quoted Amount</th>
                 <th>Follow-ups</th>
                 <th></th>
               </tr>
@@ -317,6 +337,11 @@ export default function LeadsPage() {
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{fmtCareDate(l.careStartDate)}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }} className="crm-tabular">{l.serviceDays ? `${l.serviceDays} days` : "—"}</td>
                   <td><StageBadge stage={l.stage} /></td>
+                  <td className="crm-tabular" style={{ whiteSpace: "nowrap", fontSize: "0.8rem", fontWeight: 600 }}>
+                    {latestQuote.has(l.id)
+                      ? `₹${latestQuote.get(l.id)!.toLocaleString("en-IN")}`
+                      : <span style={{ color: "var(--crm-text-3)", fontWeight: 400 }}>—</span>}
+                  </td>
                   <td className="crm-tabular"><FollowupCountCell count={doneFollowups.get(l.id) ?? 0} /></td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <button
