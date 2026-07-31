@@ -1,6 +1,7 @@
 "use client";
 import type { Lead, Followup, Quotation, Closure, ActivityLog, CRMDb, LeadStage } from "./crm-types";
 import { useState, useEffect } from "react";
+import { toast } from "@/components/ui/toast";
 
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -364,6 +365,9 @@ export const api = {
         _db.closures = _db.closures.filter((cl) => cl.id !== closure.id);
         _db.activity = _db.activity.filter((a) => a.id !== act.id);
         notify("leads", "closures", "activity");
+        toast.error("Could not record the closure", {
+          description: "The lead was not closed. Check the connection and try again.",
+        });
       });
   },
 
@@ -379,6 +383,12 @@ export const api = {
       // Restore the pre-edit closure so a failed save doesn't leave a wrong value on screen
       _db.closures = _db.closures.map((c) => c.id === id ? snap : c);
       notify("leads", "closures");
+      // The caller has already shown "Closure updated" optimistically. Without
+      // this the amounts just snap back with no explanation, which reads as the
+      // save being ignored rather than having failed.
+      toast.error("Could not save the closure", {
+        description: "Your changes were reverted. Check the connection and try again.",
+      });
     });
   },
 

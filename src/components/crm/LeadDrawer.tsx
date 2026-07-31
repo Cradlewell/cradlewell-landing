@@ -15,6 +15,13 @@ const FOLLOWUP_TYPES: FollowupType[] = ["Callback + WhatsApp", "Quotation remind
 // Exactly the fields rendered as editable inputs in the profile tab. Anything
 // outside this list is owned by another control (stage dropdown, notes thread,
 // quotations, closures) and must never be written back by the profile form.
+// Blank box means "no value"; anything typed becomes a number, including 0.
+// Negative amounts are clamped — money fields here are never below zero.
+function money(v: string): number | undefined {
+  if (v.trim() === "") return undefined;
+  return Math.max(0, Number(v) || 0);
+}
+
 // Balance the two amounts imply. Blank final amount means there is nothing to
 // subtract from, so the box stays empty rather than showing a misleading zero.
 function autoBalance(finalAmount: string, received: string): string {
@@ -265,13 +272,16 @@ function ClosureCard({ closure }: { closure: Closure }) {
   const save = () => {
     const closureDate = dateStr ? dayToIso(dateStr) : closure.closureDate;
     if (closure.type === "Won") {
-      const finalAmount = Number(amount) || undefined;
-      const advanceReceived = Number(received) || undefined;
+      // `Number(x) || undefined` treats a typed 0 as "not provided", so clearing
+      // a received amount back to zero silently kept the old figure. Blank means
+      // absent; anything typed — including 0 — is stored.
+      const finalAmount = money(amount);
+      const advanceReceived = money(received) ?? 0;
       api.updateClosure(closure.id, {
         finalPackage: pkg,
         finalAmount,
         advanceReceived,
-        balance: balance === "" ? undefined : Math.max(0, Number(balance) || 0),
+        balance: money(balance) ?? Math.max(0, (finalAmount ?? 0) - advanceReceived),
         paymentStatus: derivePaymentStatus(finalAmount, advanceReceived),
         closureDate,
       });
@@ -550,13 +560,13 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const submitClosure = () => {
     const closureDate = cDate ? new Date(`${cDate}T12:00:00`).toISOString() : new Date().toISOString();
     if (closureType === "Won") {
-      const finalAmount = Number(cAmount) || undefined;
-      const advanceReceived = Number(cReceived) || undefined;
+      const finalAmount = money(cAmount);
+      const advanceReceived = money(cReceived) ?? 0;
       const status = derivePaymentStatus(finalAmount, advanceReceived);
       api.closeLead({
         leadId: lead.id, type: "Won", finalPackage: cPkg,
         finalAmount, advanceReceived,
-        balance: cBalance === "" ? undefined : Math.max(0, Number(cBalance) || 0),
+        balance: money(cBalance) ?? Math.max(0, (finalAmount ?? 0) - advanceReceived),
         paymentStatus: status, closureDate,
       });
       toast.success("Closed Won!", { description: cAmount ? `₹${Number(cAmount).toLocaleString("en-IN")} · ${status}` : undefined });
