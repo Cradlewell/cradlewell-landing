@@ -152,6 +152,7 @@ export function dbToClosure(r: Record<string, any>): Closure {
     finalPackage: r.final_package ?? undefined,
     finalAmount: r.final_amount ?? undefined,
     advanceReceived: r.advance_received ?? undefined,
+    balance: r.balance ?? undefined,
     paymentStatus: r.payment_status ?? undefined,
     closureDate: r.closure_date,
     salesOwner: r.sales_owner ?? undefined,
@@ -169,6 +170,7 @@ export function closureToDb(c: Partial<Closure>): Record<string, unknown> {
   if (c.finalPackage !== undefined) r.final_package = c.finalPackage;
   if (c.finalAmount !== undefined) r.final_amount = c.finalAmount;
   if (c.advanceReceived !== undefined) r.advance_received = c.advanceReceived;
+  if (c.balance !== undefined) r.balance = c.balance;
   if (c.paymentStatus !== undefined) r.payment_status = c.paymentStatus;
   if (c.closureDate !== undefined) r.closure_date = c.closureDate;
   if (c.salesOwner !== undefined) r.sales_owner = c.salesOwner;

@@ -85,7 +85,13 @@ export interface Closure {
   type: "Won" | "Lost";
   finalPackage?: string;
   finalAmount?: number;
+  // Money actually collected. Column is still advance_received for compatibility
+  // with the ops and quotations screens that read it.
   advanceReceived?: number;
+  // Outstanding amount. Defaults to finalAmount - advanceReceived but is
+  // editable, so null means "never overridden — use the subtraction".
+  balance?: number;
+  // Derived from the two amounts on save; never chosen by hand.
   paymentStatus?: "Pending" | "Partial" | "Paid";
   closureDate: string;
   salesOwner?: string;

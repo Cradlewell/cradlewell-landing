@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
-import { useLeads, useFollowups, useClosures, isOverdue, isToday, isStale, isUrgentNew } from "@/lib/crm-store";
+import { useLeads, useFollowups, useClosures, isOverdue, isToday, isStale, isUrgentNew, closureCollected, closureBalance } from "@/lib/crm-store";
 import StageBadge from "@/components/crm/StageBadge";
 import TempBadge from "@/components/crm/TempBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
@@ -20,11 +20,11 @@ const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "all", label: "All time" },
 ];
 const PRESET_LABEL: Record<PresetKey, string> = {
-  thisMonth: "This month's revenue",
-  lastMonth: "Last month's revenue",
-  thisYear: "This year's revenue",
-  all: "All-time revenue",
-  custom: "Revenue",
+  thisMonth: "This month's collected",
+  lastMonth: "Last month's collected",
+  thisYear: "This year's collected",
+  all: "All-time collected",
+  custom: "Collected",
 };
 const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const monthEnd = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
@@ -68,7 +68,12 @@ export default function DashboardPage() {
   const rangeLeads = useMemo(() => leads.filter(l => within(l.createdAt)), [leads, within]);
   const rangeWon = useMemo(() => closures.filter(c => c.type === "Won" && within(c.closureDate)), [closures, within]);
   const rangeLost = useMemo(() => closures.filter(c => c.type === "Lost" && within(c.closureDate)), [closures, within]);
-  const revenue = useMemo(() => rangeWon.reduce((s, c) => s + (c.finalAmount ?? 0), 0), [rangeWon]);
+  // Booked is what was sold; collected is what actually arrived. A partially paid
+  // deal used to report its full value as revenue, so these are kept separate and
+  // the hero figure now shows money in hand.
+  const booked = useMemo(() => rangeWon.reduce((s, c) => s + (c.finalAmount ?? 0), 0), [rangeWon]);
+  const collected = useMemo(() => rangeWon.reduce((s, c) => s + closureCollected(c), 0), [rangeWon]);
+  const outstanding = useMemo(() => rangeWon.reduce((s, c) => s + closureBalance(c), 0), [rangeWon]);
   const winRate = useMemo(() => {
     const closed = rangeWon.length + rangeLost.length;
     return closed > 0 ? Math.round((rangeWon.length / closed) * 100) : 0;
@@ -149,9 +154,17 @@ export default function DashboardPage() {
         </div>
         <div className="crm-hero-amount" style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <IndianRupee size={26} style={{ flexShrink: 0, marginTop: 2 }} />
-          {revenue.toLocaleString("en-IN")}
+          {collected.toLocaleString("en-IN")}
         </div>
         <div className="d-flex gap-4 mt-3 flex-wrap">
+          <div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Booked</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>₹{booked.toLocaleString("en-IN")}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Outstanding</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: outstanding > 0 ? "#DC2626" : "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>₹{outstanding.toLocaleString("en-IN")}</div>
+          </div>
           <div>
             <div style={{ fontSize: "0.7rem", fontWeight: 500, color: "var(--crm-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Conversions</div>
             <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--crm-text)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{rangeWon.length}</div>

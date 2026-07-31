@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { X, Phone, MessageCircle, Edit2, Save, Trash2, Plus, Check, Clock, ChevronDown } from "lucide-react";
-import { api, useDB, isOverdue, isToday } from "@/lib/crm-store";
+import { api, useDB, isOverdue, isToday, closureBalance, derivePaymentStatus } from "@/lib/crm-store";
 import type { Lead, LeadStage, FollowupType, LostReason, Closure, Quotation, Followup } from "@/lib/crm-types";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import StageBadge from "./StageBadge";
@@ -15,6 +15,13 @@ const FOLLOWUP_TYPES: FollowupType[] = ["Callback + WhatsApp", "Quotation remind
 // Exactly the fields rendered as editable inputs in the profile tab. Anything
 // outside this list is owned by another control (stage dropdown, notes thread,
 // quotations, closures) and must never be written back by the profile form.
+// Balance the two amounts imply. Blank final amount means there is nothing to
+// subtract from, so the box stays empty rather than showing a misleading zero.
+function autoBalance(finalAmount: string, received: string): string {
+  if (finalAmount.trim() === "") return "";
+  return String(Math.max(0, (Number(finalAmount) || 0) - (Number(received) || 0)));
+}
+
 const EDITABLE_FIELDS: (keyof Lead)[] = [
   "name", "phone", "whatsapp", "source", "owner",
   "babyStatus", "hospitalName", "babyBirthStageStatus", "babyAge", "currentWeight",
@@ -128,7 +135,11 @@ function QuotationCard({ quotation, onClosed }: { quotation: Quotation; onClosed
         type: "Won",
         finalPackage: quotation.package,
         finalAmount: quotation.finalPrice,
-        paymentStatus: "Paid",
+        // Nothing has been collected yet at this point — the closure form is
+        // where the received amount gets entered. Claiming "Paid" here made the
+        // dashboard count uncollected money as revenue.
+        paymentStatus: "Pending",
+        balance: quotation.finalPrice,
         closureDate: new Date().toISOString(),
       });
       toast.success("Closed Won", { description: `₹${quotation.finalPrice.toLocaleString("en-IN")} · ${quotation.package}` });
@@ -229,8 +240,8 @@ function ClosureCard({ closure }: { closure: Closure }) {
   const [editing, setEditing] = useState(false);
   const [pkg, setPkg] = useState("");
   const [amount, setAmount] = useState("");
-  const [advance, setAdvance] = useState("");
-  const [payStatus, setPayStatus] = useState<"Pending" | "Partial" | "Paid">("Pending");
+  const [received, setReceived] = useState("");
+  const [balance, setBalance] = useState("");
   const [lostReason, setLostReason] = useState<LostReason>("Competitor selected");
   const [notes, setNotes] = useState("");
   const [dateStr, setDateStr] = useState("");
@@ -238,22 +249,30 @@ function ClosureCard({ closure }: { closure: Closure }) {
   const startEdit = () => {
     setPkg(closure.finalPackage ?? "");
     setAmount(String(closure.finalAmount ?? ""));
-    setAdvance(String(closure.advanceReceived ?? ""));
-    setPayStatus((closure.paymentStatus as "Pending" | "Partial" | "Paid") ?? "Pending");
+    setReceived(String(closure.advanceReceived ?? ""));
+    setBalance(String(closure.balance ?? closureBalance(closure)));
     setLostReason((closure.lostReason as LostReason) ?? "Competitor selected");
     setNotes(closure.notes ?? "");
     setDateStr(isoToDay(closure.closureDate));
     setEditing(true);
   };
 
+  // Balance tracks the other two amounts as they are typed, but stays editable —
+  // whatever is left in the box is what gets saved.
+  const onAmountChange = (v: string) => { setAmount(v); setBalance(autoBalance(v, received)); };
+  const onReceivedChange = (v: string) => { setReceived(v); setBalance(autoBalance(amount, v)); };
+
   const save = () => {
     const closureDate = dateStr ? dayToIso(dateStr) : closure.closureDate;
     if (closure.type === "Won") {
+      const finalAmount = Number(amount) || undefined;
+      const advanceReceived = Number(received) || undefined;
       api.updateClosure(closure.id, {
         finalPackage: pkg,
-        finalAmount: Number(amount) || undefined,
-        advanceReceived: Number(advance) || undefined,
-        paymentStatus: payStatus,
+        finalAmount,
+        advanceReceived,
+        balance: balance === "" ? undefined : Math.max(0, Number(balance) || 0),
+        paymentStatus: derivePaymentStatus(finalAmount, advanceReceived),
         closureDate,
       });
     } else {
@@ -303,17 +322,15 @@ function ClosureCard({ closure }: { closure: Closure }) {
             </div>
             <div className="crm-form-group">
               <label className="crm-label">Final Amount (₹)</label>
-              <input className="crm-input" type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+              <input className="crm-input" type="number" value={amount} onChange={e => onAmountChange(e.target.value)} />
             </div>
             <div className="crm-form-group">
-              <label className="crm-label">Advance Received (₹)</label>
-              <input className="crm-input" type="number" value={advance} onChange={e => setAdvance(e.target.value)} />
+              <label className="crm-label">Received Amount (₹)</label>
+              <input className="crm-input" type="number" value={received} onChange={e => onReceivedChange(e.target.value)} />
             </div>
             <div className="crm-form-group">
-              <label className="crm-label">Payment Status</label>
-              <select className="crm-select" value={payStatus} onChange={e => setPayStatus(e.target.value as "Pending" | "Partial" | "Paid")}>
-                <option>Pending</option><option>Partial</option><option>Paid</option>
-              </select>
+              <label className="crm-label">Balance (₹)</label>
+              <input className="crm-input" type="number" value={balance} onChange={e => setBalance(e.target.value)} />
             </div>
             <div className="crm-form-group">
               <label className="crm-label">Closure Date</label>
@@ -354,11 +371,19 @@ function ClosureCard({ closure }: { closure: Closure }) {
             <div className="crm-grid-2">
               <div><div className="crm-section-title mb-1">Package</div><div style={{ fontSize: "0.875rem" }}>{closure.finalPackage || "—"}</div></div>
               <div><div className="crm-section-title mb-1">Final Amount</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--crm-primary)" }}>{closure.finalAmount ? `₹${closure.finalAmount.toLocaleString("en-IN")}` : "—"}</div></div>
-              <div><div className="crm-section-title mb-1">Advance</div><div style={{ fontSize: "0.875rem" }}>{closure.advanceReceived ? `₹${closure.advanceReceived.toLocaleString("en-IN")}` : "—"}</div></div>
+              <div><div className="crm-section-title mb-1">Received</div><div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#16A34A" }}>{closure.advanceReceived ? `₹${closure.advanceReceived.toLocaleString("en-IN")}` : "—"}</div></div>
+              <div><div className="crm-section-title mb-1">Balance</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: closureBalance(closure) > 0 ? "#DC2626" : "#16A34A" }}>
+                  ₹{closureBalance(closure).toLocaleString("en-IN")}
+                </div>
+              </div>
               <div><div className="crm-section-title mb-1">Payment</div>
-                <span className="crm-badge" style={PAYMENT_STYLE[closure.paymentStatus ?? "Pending"] ?? {}}>
-                  {closure.paymentStatus}
-                </span>
+                {(() => {
+                  // Recomputed from the amounts rather than trusting the stored
+                  // status, so rows saved before it was derived still read true.
+                  const status = derivePaymentStatus(closure.finalAmount, closure.advanceReceived);
+                  return <span className="crm-badge" style={PAYMENT_STYLE[status] ?? {}}>{status}</span>;
+                })()}
               </div>
             </div>
           )}
@@ -406,8 +431,8 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const [closureType, setClosureType] = useState<"Won" | "Lost">("Won");
   const [cPkg, setCPkg] = useState("");
   const [cAmount, setCAmount] = useState("");
-  const [cAdvance, setCAdvance] = useState("");
-  const [cPayStatus, setCPayStatus] = useState<"Pending"|"Partial"|"Paid">("Pending");
+  const [cReceived, setCReceived] = useState("");
+  const [cBalance, setCBalance] = useState("");
   const [cLostReason, setCLostReason] = useState<LostReason>("Competitor selected");
   const [cNotes, setCNotes] = useState("");
   const [cDate, setCDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
@@ -519,17 +544,28 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
     setQPrice(""); setQDiscount("0"); setQPaid(""); setQNotes("");
     toast.success("Quotation saved", { description: `₹${paid.toLocaleString("en-IN")} — ${qPkg}` });
   };
+  const onCAmountChange = (v: string) => { setCAmount(v); setCBalance(autoBalance(v, cReceived)); };
+  const onCReceivedChange = (v: string) => { setCReceived(v); setCBalance(autoBalance(cAmount, v)); };
+
   const submitClosure = () => {
     const closureDate = cDate ? new Date(`${cDate}T12:00:00`).toISOString() : new Date().toISOString();
     if (closureType === "Won") {
-      api.closeLead({ leadId: lead.id, type: "Won", finalPackage: cPkg, finalAmount: Number(cAmount) || undefined, advanceReceived: Number(cAdvance) || undefined, paymentStatus: cPayStatus, closureDate });
-      toast.success("Closed Won!", { description: cAmount ? `₹${Number(cAmount).toLocaleString("en-IN")} · ${cPayStatus}` : undefined });
+      const finalAmount = Number(cAmount) || undefined;
+      const advanceReceived = Number(cReceived) || undefined;
+      const status = derivePaymentStatus(finalAmount, advanceReceived);
+      api.closeLead({
+        leadId: lead.id, type: "Won", finalPackage: cPkg,
+        finalAmount, advanceReceived,
+        balance: cBalance === "" ? undefined : Math.max(0, Number(cBalance) || 0),
+        paymentStatus: status, closureDate,
+      });
+      toast.success("Closed Won!", { description: cAmount ? `₹${Number(cAmount).toLocaleString("en-IN")} · ${status}` : undefined });
     } else {
       api.closeLead({ leadId: lead.id, type: "Lost", lostReason: cLostReason, finalAmount: Number(cAmount) || undefined, notes: cNotes, closureDate });
       toast.warning("Marked as Lost", { description: cLostReason });
     }
     // Reset the add-closure form so the next entry starts blank, and collapse it.
-    setCPkg(""); setCAmount(""); setCAdvance(""); setCPayStatus("Pending");
+    setCPkg(""); setCAmount(""); setCReceived(""); setCBalance("");
     setCLostReason("Competitor selected"); setCNotes("");
     setCDate(format(new Date(), "yyyy-MM-dd"));
     setShowAddClosure(false);
@@ -952,17 +988,15 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
                         </div>
                         <div className="crm-form-group">
                           <label className="crm-label">Final Amount (₹)</label>
-                          <input className="crm-input" type="number" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="40000" />
+                          <input className="crm-input" type="number" value={cAmount} onChange={e => onCAmountChange(e.target.value)} placeholder="40000" />
                         </div>
                         <div className="crm-form-group">
-                          <label className="crm-label">Advance Received (₹)</label>
-                          <input className="crm-input" type="number" value={cAdvance} onChange={e => setCAdvance(e.target.value)} placeholder="10000" />
+                          <label className="crm-label">Received Amount (₹)</label>
+                          <input className="crm-input" type="number" value={cReceived} onChange={e => onCReceivedChange(e.target.value)} placeholder="10000" />
                         </div>
                         <div className="crm-form-group">
-                          <label className="crm-label">Payment Status</label>
-                          <select className="crm-select" value={cPayStatus} onChange={e => setCPayStatus(e.target.value as "Pending"|"Partial"|"Paid")}>
-                            <option>Pending</option><option>Partial</option><option>Paid</option>
-                          </select>
+                          <label className="crm-label">Balance (₹)</label>
+                          <input className="crm-input" type="number" value={cBalance} onChange={e => setCBalance(e.target.value)} placeholder="30000" />
                         </div>
                         <div className="crm-form-group">
                           <label className="crm-label">Closure Date</label>

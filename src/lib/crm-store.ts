@@ -545,6 +545,34 @@ export function isStale(lead: Lead) {
   return daysSince(lead.lastActivityAt) >= 3;
 }
 
+// ─── Closure money ────────────────────────────────────────────────────────────
+// One definition of each figure, shared by the lead drawer and the dashboard so
+// the two can never disagree about what a lead is worth or what is still owed.
+
+// Money in hand. Clamped to the deal value: an over-entered receipt would
+// otherwise inflate collected revenue and drive outstanding negative.
+export function closureCollected(c: Closure): number {
+  const paid = Math.max(0, c.advanceReceived ?? 0);
+  return c.finalAmount != null ? Math.min(paid, c.finalAmount) : paid;
+}
+
+// Money still owed. A stored balance is a deliberate override (write-off,
+// rounding) and wins; otherwise fall back to the subtraction.
+export function closureBalance(c: Closure): number {
+  if (c.balance != null) return Math.max(0, c.balance);
+  return Math.max(0, (c.finalAmount ?? 0) - (c.advanceReceived ?? 0));
+}
+
+// Payment state is a fact about the two amounts, not a free choice — deriving it
+// makes "Paid" with nothing received impossible to record.
+export function derivePaymentStatus(finalAmount?: number, received?: number): "Pending" | "Partial" | "Paid" {
+  const total = finalAmount ?? 0;
+  const paid = received ?? 0;
+  if (paid <= 0) return "Pending";
+  if (total > 0 && paid >= total) return "Paid";
+  return "Partial";
+}
+
 export function isUrgentNew(lead: Lead) {
   if (lead.stage !== "New Lead") return false;
   return (Date.now() - new Date(lead.createdAt).getTime()) > 15 * 60 * 1000;
