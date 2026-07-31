@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
-import { useLeads, useFollowups, useClosures, isOverdue, isToday, isStale, isUrgentNew, closureCollected, closureBalance } from "@/lib/crm-store";
+import { useLeads, useFollowups, useClosures, isOverdue, isToday, isStale, isUrgentNew, closureCollected, closureBalance, derivePaymentStatus } from "@/lib/crm-store";
 import StageBadge from "@/components/crm/StageBadge";
 import TempBadge from "@/components/crm/TempBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
@@ -26,6 +26,12 @@ const PRESET_LABEL: Record<PresetKey, string> = {
   all: "All-time collected",
   custom: "Collected",
 };
+const PAYMENT_BADGE: Record<"Pending" | "Partial" | "Paid", React.CSSProperties> = {
+  Paid:    { background: "#F0FDF4", color: "#16A34A" },
+  Partial: { background: "#FFFBEB", color: "#B45309" },
+  Pending: { background: "#FEF2F2", color: "#DC2626" },
+};
+
 const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const monthEnd = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 
@@ -35,6 +41,7 @@ export default function DashboardPage() {
   const closures = useClosures();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
+  const [showWonBreakdown, setShowWonBreakdown] = useState(false);
 
   // ── Date-range filter ───────────────────────────────────────────────────────
   // A flexible calendar range drives all time-based numbers. Presets set the two
@@ -89,11 +96,29 @@ export default function DashboardPage() {
 
   const heroLabel = PRESET_LABEL[preset] ?? "Revenue";
 
-  const periodStats = [
+  const periodStats: {
+    label: string; value: number; icon: React.ElementType;
+    bg: string; color: string; onClick?: () => void;
+  }[] = [
     { label: "New leads", value: rangeLeads.length, icon: UserPlus, bg: "rgba(95,71,255,0.07)", color: "#5F47FF" },
-    { label: "Closed won", value: rangeWon.length, icon: Trophy, bg: "rgba(48,164,108,0.08)", color: "#30A46C" },
+    { label: "Closed won", value: rangeWon.length, icon: Trophy, bg: "rgba(48,164,108,0.08)", color: "#30A46C", onClick: () => setShowWonBreakdown(true) },
     { label: "Closed lost", value: rangeLost.length, icon: XCircle, bg: "rgba(0,0,0,0.04)", color: "#6B6B6A" },
   ];
+
+  // Won closures with their lead name attached, biggest deal first — the order a
+  // revenue breakdown is usually read in.
+  const wonBreakdown = useMemo(() => {
+    const nameOf = new Map(leads.map(l => [l.id, l.name]));
+    return rangeWon
+      .map(c => ({
+        closure: c,
+        name: nameOf.get(c.leadId) ?? "Unknown lead",
+        booked: c.finalAmount ?? 0,
+        received: closureCollected(c),
+        balance: closureBalance(c),
+      }))
+      .sort((a, b) => b.booked - a.booked);
+  }, [rangeWon, leads]);
   const statusStats = [
     { label: "Total leads", value: leads.length, icon: Users, bg: "rgba(95,71,255,0.07)", color: "#5F47FF" },
     { label: "In pipeline", value: pipelineLeads.length, icon: TrendingUp, bg: "rgba(124,58,237,0.07)", color: "#7C3AED" },
@@ -108,6 +133,97 @@ export default function DashboardPage() {
     <>
       <LeadFormModal open={showNewLead} onClose={() => setShowNewLead(false)} />
       <LeadDrawer leadId={selectedLead} onClose={() => setSelectedLead(null)} />
+
+      {/* Closed-won breakdown — which leads closed in this period and what each brought in */}
+      {showWonBreakdown && (
+        <>
+          <div className="modal-backdrop fade show" style={{ zIndex: 1059 }} onClick={() => setShowWonBreakdown(false)} />
+          <div className="modal fade show d-block crm-modal" style={{ zIndex: 1060 }} role="dialog" aria-modal="true" aria-label="Closed won breakdown">
+            <div className="modal-dialog modal-lg modal-dialog-scrollable">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <div className="d-flex align-items-center gap-2">
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(48,164,108,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Trophy size={16} color="#30A46C" />
+                    </div>
+                    <div>
+                      <h5 className="modal-title">Closed won · {rangeWon.length}</h5>
+                      <div style={{ fontSize: "0.72rem", color: "var(--crm-text-muted)" }}>
+                        {format(fromDate, "dd MMM yyyy")} – {format(toDate, "dd MMM yyyy")}
+                      </div>
+                    </div>
+                  </div>
+                  <button type="button" className="crm-btn crm-btn-ghost crm-btn-icon" onClick={() => setShowWonBreakdown(false)} aria-label="Close">
+                    <XCircle size={18} />
+                  </button>
+                </div>
+
+                <div className="modal-body" style={{ padding: "1rem 1.25rem" }}>
+                  {wonBreakdown.length === 0 ? (
+                    <div className="crm-empty" style={{ padding: "1.5rem" }}>No leads closed won in this period.</div>
+                  ) : (
+                    <div className="crm-table-wrap">
+                      <table className="crm-table">
+                        <thead>
+                          <tr>
+                            <th>Lead</th>
+                            <th>Closed</th>
+                            <th style={{ textAlign: "right" }}>Booked</th>
+                            <th style={{ textAlign: "right" }}>Received</th>
+                            <th style={{ textAlign: "right" }}>Balance</th>
+                            <th>Payment</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {wonBreakdown.map(r => {
+                            const status = derivePaymentStatus(r.closure.finalAmount, r.closure.advanceReceived);
+                            return (
+                              <tr
+                                key={r.closure.id}
+                                style={{ cursor: "pointer" }}
+                                onClick={() => { setShowWonBreakdown(false); setSelectedLead(r.closure.leadId); }}
+                              >
+                                <td style={{ fontWeight: 600, fontSize: "0.85rem" }}>{r.name}</td>
+                                <td style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }} className="crm-tabular">
+                                  {format(new Date(r.closure.closureDate), "dd MMM yyyy")}
+                                </td>
+                                <td className="crm-tabular" style={{ textAlign: "right", fontSize: "0.82rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+                                  ₹{r.booked.toLocaleString("en-IN")}
+                                </td>
+                                <td className="crm-tabular" style={{ textAlign: "right", fontSize: "0.82rem", fontWeight: 600, color: "#16A34A", whiteSpace: "nowrap" }}>
+                                  ₹{r.received.toLocaleString("en-IN")}
+                                </td>
+                                <td className="crm-tabular" style={{ textAlign: "right", fontSize: "0.82rem", fontWeight: 600, color: r.balance > 0 ? "#DC2626" : "var(--crm-text-3)", whiteSpace: "nowrap" }}>
+                                  ₹{r.balance.toLocaleString("en-IN")}
+                                </td>
+                                <td>
+                                  <span className="crm-badge" style={PAYMENT_BADGE[status]}>{status}</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr style={{ borderTop: "2px solid var(--crm-border)", background: "var(--crm-bg)" }}>
+                            <td style={{ fontWeight: 700, fontSize: "0.82rem" }} colSpan={2}>Total</td>
+                            <td className="crm-tabular" style={{ textAlign: "right", fontWeight: 700, fontSize: "0.85rem", whiteSpace: "nowrap" }}>₹{booked.toLocaleString("en-IN")}</td>
+                            <td className="crm-tabular" style={{ textAlign: "right", fontWeight: 700, fontSize: "0.85rem", color: "#16A34A", whiteSpace: "nowrap" }}>₹{collected.toLocaleString("en-IN")}</td>
+                            <td className="crm-tabular" style={{ textAlign: "right", fontWeight: 700, fontSize: "0.85rem", color: outstanding > 0 ? "#DC2626" : "var(--crm-text-3)", whiteSpace: "nowrap" }}>₹{outstanding.toLocaleString("en-IN")}</td>
+                            <td />
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                  <p style={{ fontSize: "0.75rem", color: "var(--crm-text-muted)", marginTop: "0.75rem", marginBottom: 0 }}>
+                    Click any row to open that lead.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="crm-page-header">
         <div>
@@ -184,7 +300,16 @@ export default function DashboardPage() {
       <div className="crm-section-title mb-2">In selected period</div>
       <div className="crm-grid-4 mb-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
         {periodStats.map(s => (
-          <div key={s.label} className="crm-stat-card">
+          <div
+            key={s.label}
+            className="crm-stat-card"
+            onClick={s.onClick}
+            role={s.onClick ? "button" : undefined}
+            tabIndex={s.onClick ? 0 : undefined}
+            onKeyDown={s.onClick ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); s.onClick!(); } }) : undefined}
+            style={s.onClick ? { cursor: "pointer" } : undefined}
+            title={s.onClick ? "View the breakdown" : undefined}
+          >
             <div className="crm-stat-icon" style={{ background: s.bg }}>
               <s.icon size={18} color={s.color} />
             </div>
