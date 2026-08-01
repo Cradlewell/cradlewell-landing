@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Modal } from 'react-bootstrap';
+import { newEventId, readFbc } from '@/lib/meta-tracking';
 
 const defaultForm = {
   name: '', phone: '', service: '', babyStatus: '', hospitalName: '',
@@ -63,6 +64,8 @@ const ModalController = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Shared with the Pixel calls below so Meta counts one conversion, not two.
+      const eventId = newEventId();
       const res = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,14 +78,16 @@ const ModalController = () => {
           shiftTime: form.shiftTime, careStartDate: form.careStartDate,
           serviceDays: form.serviceDays,
           pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
+          eventId,
+          fbc: readFbc(),
         }),
       });
       if (res.ok) {
         setSubmitted(true);
         if (typeof window !== 'undefined') {
           if ((window as any).fbq) {
-            (window as any).fbq('track', 'Schedule');
-            (window as any).fbq('track', 'Lead');
+            (window as any).fbq('track', 'Schedule', {}, { eventID: eventId });
+            (window as any).fbq('track', 'Lead', {}, { eventID: eventId });
           }
           if ((window as any).gtag) {
             (window as any).gtag('event', 'schedule', { event_category: 'form', service: form.service });

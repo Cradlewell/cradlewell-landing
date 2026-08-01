@@ -7,18 +7,44 @@ function sha256(value: string): string {
     return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
 }
 
+// Indian mobile in the digits-with-country-code form Meta expects. Take the last
+// ten digits first: the raw input may already carry 91 or +91, and prefixing
+// again produced 91919741759254, whose hash matched nobody.
+function normalizePhoneForMeta(raw: string): string {
+    return `91${raw.replace(/\D/g, "").slice(-10)}`;
+}
+
 async function sendFacebookCAPIEvent(events: object[]) {
     const pixelId = process.env.FACEBOOK_PIXEL_ID;
     const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
-    if (!pixelId || !accessToken) return;
+    if (!pixelId || !accessToken) {
+        // Silence here means every server-side conversion is lost with no trace,
+        // which is indistinguishable from the integration working.
+        console.warn("[CAPI] FACEBOOK_PIXEL_ID or FACEBOOK_ACCESS_TOKEN missing — server events not sent");
+        return;
+    }
     try {
-        await fetch(`https://graph.facebook.com/v19.0/${pixelId}/events`, {
+        const res = await fetch(`https://graph.facebook.com/v21.0/${pixelId}/events`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ data: events, access_token: accessToken }),
+            body: JSON.stringify({
+                data: events,
+                access_token: accessToken,
+                // Set FACEBOOK_TEST_EVENT_CODE to watch events land in the Events
+                // Manager test tool; unset in normal operation.
+                ...(process.env.FACEBOOK_TEST_EVENT_CODE ? { test_event_code: process.env.FACEBOOK_TEST_EVENT_CODE } : {}),
+            }),
         });
+        // A rejected payload returns 200-with-error or 4xx and was previously
+        // discarded, so an expired token looked exactly like success.
+        if (!res.ok) {
+            console.error("[CAPI] Meta rejected the events:", res.status, await res.text().catch(() => ""));
+            return;
+        }
+        const json = await res.json().catch(() => null);
+        if (json?.error) console.error("[CAPI] Meta returned an error:", json.error);
     } catch (err) {
-        console.error("Facebook CAPI error:", err);
+        console.error("[CAPI] request failed:", err);
     }
 }
 
@@ -39,6 +65,11 @@ const LeadSchema = z.object({
     serviceDays: z.string().optional().default(""),
     pagePath: z.string().optional().default(""),
     source: z.string().optional().default("Website"),
+    // Shared with the browser Pixel so Meta collapses the two reports of the
+    // same conversion into one instead of counting it twice.
+    eventId: z.string().optional().default(""),
+    // Click id read from the fbclid query param when the cookie is not yet set.
+    fbc: z.string().optional().default(""),
     // legacy compat fields
     email: z.string().optional().default(""),
     summary: z.string().optional().default(""),
@@ -111,17 +142,42 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Facebook Conversions API (server-side) ────────────────────────────
-        const phone = `91${lead.phone.replace(/\D/g, "")}`;
         const eventTime = Math.floor(now.getTime() / 1000);
+        const nameParts = lead.name.trim().split(/\s+/);
+        const lastName = nameParts.slice(1).join(" ");
+
+        // The browser cookies Meta matches on. _fbp identifies the browser and
+        // _fbc carries the ad click — together they are the strongest signals
+        // available, and sending neither was capping match quality.
+        const fbp = req.cookies.get("_fbp")?.value;
+        const fbc = req.cookies.get("_fbc")?.value || lead.fbc || undefined;
+        const forwardedFor = req.headers.get("x-forwarded-for");
+        const clientIp = forwardedFor?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || undefined;
+
         const userData = {
-            ph: [sha256(phone)],
-            fn: [sha256(lead.name.split(" ")[0])],
-            ln: [sha256(lead.name.split(" ").slice(1).join(" ") || lead.name)],
+            ph: [sha256(normalizePhoneForMeta(lead.phone))],
+            fn: [sha256(nameParts[0] ?? "")],
+            // Omit rather than repeating the first name when there is no surname —
+            // a wrong hash is worse than an absent one.
+            ...(lastName ? { ln: [sha256(lastName)] } : {}),
+            ...(lead.email ? { em: [sha256(lead.email)] } : {}),
+            ...(fbp ? { fbp } : {}),
+            ...(fbc ? { fbc } : {}),
+            ...(clientIp ? { client_ip_address: clientIp } : {}),
+            ...(req.headers.get("user-agent") ? { client_user_agent: req.headers.get("user-agent") } : {}),
         };
-        const eventSourceUrl = "https://cradlewell.com/";
+
+        // Real converting page rather than a hardcoded home page, so attribution
+        // can tell which landing page produced the lead.
+        const origin = req.headers.get("origin") || "https://www.cradlewell.com";
+        const eventSourceUrl = lead.pagePath ? `${origin}${lead.pagePath}` : origin;
+
+        // Same event_id on both names is safe — Meta deduplicates on the
+        // (event_name, event_id) pair, and each name is reported once per side.
+        const dedupe = lead.eventId ? { event_id: lead.eventId } : {};
         await sendFacebookCAPIEvent([
-            { event_name: "Schedule", event_time: eventTime, action_source: "website", event_source_url: eventSourceUrl, user_data: userData },
-            { event_name: "Lead",     event_time: eventTime, action_source: "website", event_source_url: eventSourceUrl, user_data: userData },
+            { event_name: "Schedule", event_time: eventTime, action_source: "website", event_source_url: eventSourceUrl, user_data: userData, ...dedupe },
+            { event_name: "Lead",     event_time: eventTime, action_source: "website", event_source_url: eventSourceUrl, user_data: userData, ...dedupe },
         ]);
 
         // ── Write to Supabase CRM (secondary — never fail the form) ───────────

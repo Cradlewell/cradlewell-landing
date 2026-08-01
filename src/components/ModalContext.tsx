@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { Modal } from 'react-bootstrap';
 import { Check, ArrowRight, ArrowLeft } from 'lucide-react';
+import { newEventId, readFbc } from '@/lib/meta-tracking';
 
 type ModalContextType = {
   openModal: (shiftType?: string) => void;
@@ -128,6 +129,9 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     if (!isStepValid(3)) return;
     setSubmitting(true);
     try {
+      // One id shared by the Pixel call below and the server's CAPI call, so
+      // Meta treats the two reports as a single conversion.
+      const eventId = newEventId();
       const res = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,14 +153,16 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
             : '',
           serviceDays: form.serviceDays,
           pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
+          eventId,
+          fbc: readFbc(),
         }),
       });
       if (res.ok) {
         setSubmitted(true);
         if (typeof window !== 'undefined') {
           if ((window as any).fbq) {
-            (window as any).fbq('track', 'Schedule');
-            (window as any).fbq('track', 'Lead');
+            (window as any).fbq('track', 'Schedule', {}, { eventID: eventId });
+            (window as any).fbq('track', 'Lead', {}, { eventID: eventId });
           }
           if ((window as any).gtag) {
             (window as any).gtag('event', 'schedule', { event_category: 'form', service: form.service });
