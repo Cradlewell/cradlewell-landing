@@ -15,7 +15,9 @@ export async function GET(req: NextRequest) {
     // Same reasoning as follow-ups: the Leads list derives each lead's quoted
     // amount from these rows, so truncation would show older leads as unquoted.
     supabase.from("quotations").select("*").order("date", { ascending: false }).limit(5000),
-    supabase.from("closures").select("*").order("closure_date", { ascending: false }).limit(200),
+    // Feeds the Leads list's Lost Reason column as well as the dashboard totals,
+    // so truncation would blank the reason on older lost leads.
+    supabase.from("closures").select("*").order("closure_date", { ascending: false }).limit(5000),
     supabase.from("activity_logs").select("*").order("at", { ascending: false }).limit(200),
   ]);
 
