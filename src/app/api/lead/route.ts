@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase-server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 function sha256(value: string): string {
     return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
@@ -48,35 +49,42 @@ async function sendFacebookCAPIEvent(events: object[]) {
     }
 }
 
+// Every string is length-bounded so a crafted payload cannot be used to spray
+// oversized values into the sheet/CRM or as a cheap memory-pressure vector.
+const short = (max: number) => z.string().max(max).optional().default("");
 const LeadSchema = z.object({
-    name: z.string().min(1),
-    phone: z.string().min(6),
-    service: z.string().optional().default(""),
-    babyStatus: z.string().optional().default(""),
-    hospitalName: z.string().optional().default(""),
-    birthStageStatus: z.string().optional().default(""),
-    babyAge: z.string().optional().default(""),
-    currentWeight: z.string().optional().default(""),
-    address: z.string().optional().default(""),
-    shiftType: z.string().optional().default(""),
-    shiftHours: z.string().optional().default(""),
-    shiftTime: z.string().optional().default(""),
-    careStartDate: z.string().optional().default(""),
-    serviceDays: z.string().optional().default(""),
-    pagePath: z.string().optional().default(""),
-    source: z.string().optional().default("Website"),
+    name: z.string().min(1).max(120),
+    phone: z.string().min(6).max(20),
+    service: short(80),
+    babyStatus: short(60),
+    hospitalName: short(120),
+    birthStageStatus: short(80),
+    babyAge: short(60),
+    currentWeight: short(40),
+    address: short(500),
+    shiftType: short(40),
+    shiftHours: short(40),
+    shiftTime: short(60),
+    careStartDate: short(40),
+    serviceDays: short(20),
+    pagePath: short(300),
+    source: z.string().max(60).optional().default("Website"),
     // Shared with the browser Pixel so Meta collapses the two reports of the
     // same conversion into one instead of counting it twice.
-    eventId: z.string().optional().default(""),
+    eventId: short(100),
     // Click id read from the fbclid query param when the cookie is not yet set.
-    fbc: z.string().optional().default(""),
+    fbc: short(255),
     // legacy compat fields
-    email: z.string().optional().default(""),
-    summary: z.string().optional().default(""),
+    email: short(200),
+    summary: short(2000),
 });
 
 export async function POST(req: NextRequest) {
     try {
+        // Throttle form spam per IP before doing any downstream work.
+        const limited = rateLimit(`lead:${clientIp(req)}`, 20, 10 * 60_000);
+        if (limited) return limited;
+
         const body = await req.json();
         const lead = LeadSchema.parse(body);
 
@@ -152,7 +160,7 @@ export async function POST(req: NextRequest) {
         const fbp = req.cookies.get("_fbp")?.value;
         const fbc = req.cookies.get("_fbc")?.value || lead.fbc || undefined;
         const forwardedFor = req.headers.get("x-forwarded-for");
-        const clientIp = forwardedFor?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || undefined;
+        const clientIpAddr = forwardedFor?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || undefined;
 
         const userData = {
             ph: [sha256(normalizePhoneForMeta(lead.phone))],
@@ -163,7 +171,7 @@ export async function POST(req: NextRequest) {
             ...(lead.email ? { em: [sha256(lead.email)] } : {}),
             ...(fbp ? { fbp } : {}),
             ...(fbc ? { fbc } : {}),
-            ...(clientIp ? { client_ip_address: clientIp } : {}),
+            ...(clientIpAddr ? { client_ip_address: clientIpAddr } : {}),
             ...(req.headers.get("user-agent") ? { client_user_agent: req.headers.get("user-agent") } : {}),
         };
 

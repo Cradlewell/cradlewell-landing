@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
+// Bound the conversation so a single request cannot carry an unbounded number of
+// messages or an oversized message body.
 const RequestSchema = z.object({
-    messages: z.array(
-        z.object({
-            role: z.enum(["user", "assistant"]),
-            content: z.string().min(1),
-        })
-    ),
-    pagePath: z.string().optional().default("/"),
-    pageTitle: z.string().optional().default("Unknown Page"),
+    messages: z
+        .array(
+            z.object({
+                role: z.enum(["user", "assistant"]),
+                content: z.string().min(1).max(4000),
+            })
+        )
+        .max(50),
+    pagePath: z.string().max(300).optional().default("/"),
+    pageTitle: z.string().max(300).optional().default("Unknown Page"),
 });
 
 type CareType = "day" | "night" | null;
@@ -149,6 +154,9 @@ function getGreetingReply(lastUserMsg: string): string {
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = rateLimit(`chat:${clientIp(req)}`, 40, 5 * 60_000);
+        if (limited) return limited;
+
         const json = await req.json();
         const { messages } = RequestSchema.parse(json);
 

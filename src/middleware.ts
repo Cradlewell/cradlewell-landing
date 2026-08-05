@@ -2,14 +2,87 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL)!;
 const SUPABASE_ANON_KEY = (process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!;
+// Optional: when set, the JWT signature is verified locally (HS256) with no
+// network round-trip. When absent, verification falls back to a Supabase call,
+// so auth is correct out of the box — just slower. It is NEVER skipped.
+const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+
+// base64url → bytes. atob only handles standard base64, and JWT segments are
+// base64url, so the two alphabets must be reconciled before decoding.
+function b64urlToBytes(seg: string): Uint8Array {
+  const b64 = seg.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(seg.length / 4) * 4, "=");
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const seg = token.split(".")[1];
+    return JSON.parse(new TextDecoder().decode(b64urlToBytes(seg)));
+  } catch {
+    return null;
+  }
+}
 
 function tokenExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") return true;
+  return payload.exp * 1000 < Date.now();
+}
+
+// Verify an HS256 JWT locally against the Supabase JWT secret. Returns false for
+// any other algorithm so asymmetric tokens fall back to the network check rather
+// than being wrongly rejected — or wrongly trusted.
+async function verifyHs256(token: string, secret: string): Promise<boolean> {
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  let header: { alg?: string };
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.exp * 1000 < Date.now();
+    header = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0])));
   } catch {
-    return true;
+    return false;
   }
+  if (header.alg !== "HS256") return false;
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    return await crypto.subtle.verify(
+      "HMAC",
+      key,
+      b64urlToBytes(parts[2]),
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+// A token is valid only if it is unexpired AND its signature verifies. The old
+// code checked expiry alone, so any self-made string with a future `exp` was
+// accepted — a full authentication bypass. Signature is now mandatory.
+async function tokenValid(token: string): Promise<boolean> {
+  if (tokenExpired(token)) return false;
+  if (SUPABASE_JWT_SECRET && (await verifyHs256(token, SUPABASE_JWT_SECRET))) return true;
+  // No local secret, or a non-HS256 (asymmetric) token: verify with Supabase.
+  return verifyToken(token);
+}
+
+// portal_role rides in the access token's user_metadata / app_metadata. Reading
+// it here lets the middleware keep a CRM token off Ops routes and vice versa,
+// which login-time checks alone cannot enforce on every request.
+function portalRoleOf(token: string): string | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+  const um = payload.user_metadata as { portal_role?: string } | undefined;
+  const am = payload.app_metadata as { portal_role?: string } | undefined;
+  return um?.portal_role ?? am?.portal_role ?? null;
 }
 
 const cookieOpts = {
@@ -63,28 +136,33 @@ async function checkAuth(
   accessKey: string,
   refreshKey: string,
   loginPath: string,
-  isApiRoute: boolean
+  isApiRoute: boolean,
+  expectedPortal: "crm" | "ops"
 ): Promise<NextResponse> {
   const requestHeaders = new Headers(request.headers);
+  // Strip any client-supplied auth header so it can only ever be set by us below.
   requestHeaders.delete("x-cw-auth");
+
+  const deny = () =>
+    isApiRoute
+      ? NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      : NextResponse.redirect(new URL(loginPath, request.url));
 
   const accessToken = request.cookies.get(accessKey)?.value;
   const refreshToken = request.cookies.get(refreshKey)?.value;
 
-  if (!accessToken && !refreshToken) {
-    if (isApiRoute) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    return NextResponse.redirect(new URL(loginPath, request.url));
-  }
+  if (!accessToken && !refreshToken) return deny();
 
   let validToken: string | null = null;
   let newSession: RefreshedSession | null = null;
 
-  // Trust the Supabase-signed JWT when it hasn't expired — no network round-trip.
-  // Only call Supabase for token refresh, where we need the new tokens anyway.
-  if (accessToken && !tokenExpired(accessToken)) {
+  // Signature-verified, unexpired access token is trusted directly.
+  if (accessToken && (await tokenValid(accessToken))) {
     validToken = accessToken;
   }
 
+  // Otherwise try to refresh. Supabase issues the new access token, so it is
+  // authentic by construction; still confirm it is not already expired.
   if (!validToken && refreshToken) {
     newSession = await refreshSession(refreshToken);
     if (newSession && !tokenExpired(newSession.access_token)) {
@@ -92,9 +170,16 @@ async function checkAuth(
     }
   }
 
-  if (!validToken) {
-    if (isApiRoute) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    return NextResponse.redirect(new URL(loginPath, request.url));
+  if (!validToken) return deny();
+
+  // Keep a token minted for one portal out of the other. A token with no role
+  // is allowed through for backward compatibility with users provisioned before
+  // portal_role existed; assign portal_role to every user to make this strict.
+  const role = portalRoleOf(validToken);
+  if (role && role !== expectedPortal) {
+    return isApiRoute
+      ? NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      : NextResponse.redirect(new URL(loginPath, request.url));
   }
 
   requestHeaders.set("x-cw-auth", "1");
@@ -114,13 +199,13 @@ export async function middleware(request: NextRequest) {
   const isCrmPage = pathname.startsWith("/crm") && !pathname.startsWith("/crm/login");
   const isCrmApi = pathname.startsWith("/api/crm") && !pathname.startsWith("/api/crm/auth");
   if (isCrmPage || isCrmApi) {
-    return checkAuth(request, "crm_auth", "crm_refresh", "/crm/login", isCrmApi);
+    return checkAuth(request, "crm_auth", "crm_refresh", "/crm/login", isCrmApi, "crm");
   }
 
   const isOpsPage = pathname.startsWith("/operations") && !pathname.startsWith("/operations/login");
   const isOpsApi = pathname.startsWith("/api/ops") && !pathname.startsWith("/api/ops/auth");
   if (isOpsPage || isOpsApi) {
-    return checkAuth(request, "ops_auth", "ops_refresh", "/operations/login", isOpsApi);
+    return checkAuth(request, "ops_auth", "ops_refresh", "/operations/login", isOpsApi, "ops");
   }
 
   return NextResponse.next();

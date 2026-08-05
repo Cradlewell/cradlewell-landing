@@ -16,10 +16,12 @@ export async function generateMetadata(
 
   const { slug } = await params;
 
-  const wpUrl = `https://blog.cradlewell.com/${slug}`;
+  // Encode the slug before putting it in the upstream URL. Raw interpolation let
+  // a crafted slug inject extra query parameters into the WordPress request.
+  const wpUrl = `https://blog.cradlewell.com/${encodeURIComponent(slug)}`;
 
   const res = await fetch(
-    `https://blog.cradlewell.com/wp-json/rankmath/v1/getHead?url=${wpUrl}`,
+    `https://blog.cradlewell.com/wp-json/rankmath/v1/getHead?url=${encodeURIComponent(wpUrl)}`,
     { next: { revalidate: 60 } }
   );
 
@@ -73,7 +75,7 @@ export default async function BlogPost({ params }: Props) {
   const { slug } = await params;
 
   const res = await fetch(
-    `https://blog.cradlewell.com/wp-json/wp/v2/posts?slug=${slug}&_embed`,
+    `https://blog.cradlewell.com/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`,
     { cache: "no-store" }
   );
 

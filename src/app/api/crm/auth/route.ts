@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const cookieOpts = {
   httpOnly: true,
@@ -16,6 +17,10 @@ const authClient = createClient(
 );
 
 export async function POST(req: NextRequest) {
+  // Cap password attempts per IP to blunt credential brute-force.
+  const limited = rateLimit(`crm-login:${clientIp(req)}`, 10, 15 * 60_000);
+  if (limited) return limited;
+
   const { email, password } = await req.json();
 
   const { data, error } = await authClient.auth.signInWithPassword({ email, password });
