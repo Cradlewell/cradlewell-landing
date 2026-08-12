@@ -195,22 +195,12 @@ export const api = {
     const actId = uid();
     const actMsg = `Stage changed to "${stage}"`;
     _db.activity.unshift({ id: actId, leadId: id, type: "stage", message: actMsg, at: actAt });
-    let newFollowup: Followup | null = null;
-    if (stage === "Negotiation") {
-      newFollowup = {
-        id: uid(), leadId: id, type: "Quotation reminder",
-        dueAt: new Date(Date.now() + 86400 * 1000).toISOString(),
-        note: "Auto: follow up on quotation",
-        completed: false, createdAt: now(),
-      };
-      _db.followups.unshift(newFollowup);
-    }
-    notify("leads", "activity", "followups");
+    // Follow-ups are created by hand only. Entering Negotiation used to spawn an
+    // automatic "Quotation reminder", which read as a quotation appearing in the
+    // follow-ups list; removed at the user's request.
+    notify("leads", "activity");
 
-    // Only a failure of the stage write itself may revert the stage. Previously
-    // this was Promise.all'd with the auto follow-up insert, so a failed
-    // follow-up rolled the card back to its old column even though the stage had
-    // been saved — leaving the board disagreeing with the database.
+    // A failed stage write reverts the stage; nothing else rides on it now.
     apiPut(`/api/crm/leads/${id}`, { stage, lastActivityAt: lead.lastActivityAt })
       .then(() =>
         apiPost("/api/crm/activity", { id: actId, leadId: id, type: "stage", message: actMsg, at: actAt }).catch(console.error)
@@ -220,16 +210,6 @@ export const api = {
         _db.activity = _db.activity.filter((a) => a.id !== actId);
         notify("leads", "activity");
       });
-
-    // The auto follow-up is a side effect of entering Negotiation. If it fails to
-    // save, drop just the follow-up — the stage move stands on its own.
-    if (newFollowup) {
-      const followupId = newFollowup.id;
-      apiPost("/api/crm/followups", newFollowup).catch(() => {
-        _db.followups = _db.followups.filter((f) => f.id !== followupId);
-        notify("followups");
-      });
-    }
   },
 
   addFollowup(input: Omit<Followup, "id" | "createdAt" | "completed">) {
