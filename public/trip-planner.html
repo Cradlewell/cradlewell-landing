@@ -108,6 +108,10 @@ input,select{font:inherit;color:inherit}
 }
 .icon-btn:hover{background:var(--surface-3);border-color:var(--border-strong)}
 .icon-btn svg{width:16px;height:16px;stroke:var(--text-2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* Settings gear stays hidden until you hover the header, then fades in. Its
+   layout space is kept so the header doesn't shift when it appears. */
+#settingsBtn{opacity:0;pointer-events:none;transition:opacity .15s}
+.hd:hover #settingsBtn{opacity:1;pointer-events:auto}
 
 /* ============================================================
    Search form
