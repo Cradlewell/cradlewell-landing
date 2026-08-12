@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { RefreshCw, MapPin, ChevronRight, ChevronDown } from "lucide-react";
+import { RefreshCw, MapPin, ChevronRight, ChevronDown, Navigation, X } from "lucide-react";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import StaffLocationModal from "@/components/crm/StaffLocationModal";
@@ -32,6 +32,7 @@ export default function NearbyStaffPage() {
   const [stageFilter, setStageFilter] = useState<LeadStage | "">("");
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showStaffLocations, setShowStaffLocations] = useState(false);
+  const [showPlanner, setShowPlanner] = useState(false);
   const [staffUnavailable, setStaffUnavailable] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // Open ranking popover, anchored to the button that opened it. Position is
@@ -179,6 +180,7 @@ export default function NearbyStaffPage() {
                 <th>Nearest Zone</th>
                 <th>Pipeline Stage</th>
                 <th>Nearby Staff (distance)</th>
+                <th>Trip Planner</th>
               </tr>
             </thead>
             <tbody>
@@ -226,6 +228,18 @@ export default function NearbyStaffPage() {
                           </button>
                         )}
                       </td>
+                      {/* Own the click so opening the planner doesn't also open the drawer. */}
+                      <td style={{ whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-ghost crm-btn-sm"
+                          onClick={() => setShowPlanner(true)}
+                          title="Open the trip planner"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                        >
+                          <Navigation size={14} /> Trip details
+                        </button>
+                      </td>
                     </tr>
                 );
               })}
@@ -235,6 +249,44 @@ export default function NearbyStaffPage() {
       </div>
 
       <HScrollButtons ctrl={tableScroll} />
+
+      {/* Trip planner — the standalone Namma Route app embedded in a large modal.
+          It runs self-contained: the iframe asks for the Google Maps key on first
+          use and remembers it in the browser thereafter. */}
+      {showPlanner && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1080, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+          <div onClick={() => setShowPlanner(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
+          <div
+            style={{
+              position: "relative",
+              width: "min(1200px, 96vw)",
+              height: "90vh",
+              background: "var(--crm-surface)",
+              borderRadius: "var(--crm-radius)",
+              boxShadow: "0 24px 64px rgba(17,17,16,0.28)",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.6rem 0.9rem", borderBottom: "1px solid var(--crm-border)", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "0.9rem" }}>
+                <Navigation size={16} color="var(--crm-primary)" /> Trip Planner
+              </div>
+              <button className="crm-btn crm-btn-ghost crm-btn-icon" onClick={() => setShowPlanner(false)} aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+            <iframe
+              src="/trip-planner.html"
+              title="Trip Planner"
+              // The planner needs to draw the user's location and open map links.
+              allow="geolocation"
+              style={{ flex: 1, width: "100%", border: "none" }}
+            />
+          </div>
+        </div>
+      )}
 
       {totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "16px 0" }}>

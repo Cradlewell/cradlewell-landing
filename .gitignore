@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .gstack/
+
+# Local copy of the pasted trip planner — the served copy lives at public/trip-planner.html
+/index.html

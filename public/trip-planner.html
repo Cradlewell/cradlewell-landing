@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<title>Namma Route — Bengaluru Trip Planner</title>
+<meta name="description" content="Public-transport-first trip planner for Bengaluru. Compares Namma Metro, BMTC buses, walking and two-wheeler routes." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================
+   Design tokens
+   ============================================================ */
+/* Pale-white theme, applied in both OS light and dark mode.
+   Deliberately single-theme: no prefers-color-scheme override. */
+:root{
+  color-scheme: light;
+  --bg:            #f8fafc;   /* pale, very slightly cool */
+  --surface:       #ffffff;
+  --surface-2:     #f9fbfc;
+  --surface-3:     #eff3f7;
+  --border:        #e7ecf2;
+  --border-strong: #d2dae4;
+  --text:          #17202e;
+  --text-2:        #525d70;
+  --text-3:        #8e99a8;
+  --accent:        #d4380d;   /* Bengaluru terracotta */
+  --accent-soft:   #fff4f0;
+  --metro:         #6d28d9;
+  --bus:           #047857;
+  --walk:          #64748b;
+  --twowheel:      #b45309;
+  --good:          #067647;
+  --shadow-sm:     0 1px 2px rgba(23,32,46,.05), 0 1px 3px rgba(23,32,46,.04);
+  --shadow-md:     0 4px 10px -2px rgba(23,32,46,.07), 0 2px 4px -2px rgba(23,32,46,.03);
+  --shadow-lg:     0 14px 30px -8px rgba(23,32,46,.11), 0 4px 10px -4px rgba(23,32,46,.05);
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px;
+  --panel-w: 470px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:15px/1.55 "Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+input,select{font:inherit;color:inherit}
+
+/* Times, distances and fares line up in columns instead of jittering. */
+.dur,.fm-w,.cr-fare,.tab span,.alt,.trip-hl p,.cr-s{font-variant-numeric:tabular-nums}
+
+/* Keyboard users get a clear, consistent ring; mouse users never see it. */
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px;border-radius:8px}
+.tab:focus-visible,.alt:focus-visible,.go:focus-visible{outline-offset:3px}
+
+/* Motion is meaningful here, never decorative — but honour the OS setting. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important}
+}
+
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--text-3);background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ============================================================
+   App shell
+   ============================================================ */
+#app{display:grid;grid-template-columns:var(--panel-w) 1fr;height:100dvh}
+#panel{
+  background:var(--surface); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; min-height:0; position:relative; z-index:2;
+}
+#map{width:100%;height:100%;background:var(--surface-3)}
+
+/* Below 1040px the map can no longer hold a useful width beside the panel,
+   so stack them: map on top, full-width panel underneath. */
+@media (max-width: 1040px){
+  #app{grid-template-columns:1fr;grid-template-rows:34dvh 1fr}
+  #panel{border-right:none;border-top:1px solid var(--border);order:2;border-radius:var(--r-xl) var(--r-xl) 0 0;margin-top:-18px;box-shadow:var(--shadow-lg)}
+  #map{order:1}
+  #panel::before{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);width:38px;height:4px;border-radius:99px;background:var(--border-strong)}
+}
+
+/* ============================================================
+   Header
+   ============================================================ */
+.hd{
+  display:flex;align-items:center;gap:11px;padding:16px 18px 13px;flex:none;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 4%,var(--surface)),var(--surface));
+}
+@media (max-width:900px){.hd{padding-top:20px}}
+.logo{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 88%,#fff),var(--accent));
+  box-shadow:0 2px 6px -1px color-mix(in srgb,var(--accent) 45%,transparent)
+}
+.logo svg{width:19px;height:19px;fill:#fff}
+.hd h1{margin:0;font-size:15.5px;font-weight:700;letter-spacing:-.25px}
+.hd p{margin:2px 0 0;font-size:10.5px;font-weight:600;color:var(--text-3);letter-spacing:.07em}
+.icon-btn{
+  margin-left:auto;width:34px;height:34px;border-radius:9px;border:1px solid var(--border);
+  background:var(--surface-2);display:grid;place-items:center;transition:.15s
+}
+.icon-btn:hover{background:var(--surface-3);border-color:var(--border-strong)}
+.icon-btn svg{width:16px;height:16px;stroke:var(--text-2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============================================================
+   Search form
+   ============================================================ */
+.form{padding:15px 18px 4px;flex:none}
+.io{position:relative;display:flex;flex-direction:column;gap:9px}
+/* the dotted spine linking origin to destination, as on a transit diagram */
+.io::before{
+  content:"";position:absolute;left:18px;top:26px;bottom:26px;width:2px;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,var(--border-strong) 0 3px,transparent 3px 7px)
+}
+.field{position:relative;z-index:2}
+.field .dot{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:11px;height:11px;pointer-events:none;z-index:3}
+.field.from .dot{background:var(--surface);border:3px solid var(--good);border-radius:50%;box-shadow:0 0 0 3px var(--surface-2)}
+.field.to .dot{background:var(--accent);border:3px solid var(--accent);border-radius:3px;box-shadow:0 0 0 3px var(--surface-2)}
+.field input{
+  width:100%;padding:13px 40px 13px 36px;border-radius:var(--r-md);font-size:14.5px;
+  border:1px solid var(--border);background:var(--surface-2);outline:none;
+  transition:border-color .16s ease-out,background .16s ease-out,box-shadow .16s ease-out;
+}
+.field input::placeholder{color:var(--text-3)}
+.field input:hover{border-color:var(--border-strong)}
+.field input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3.5px color-mix(in srgb,var(--accent) 14%,transparent)}
+.field input:focus-visible{outline:none}
+.field .mini{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;
+  border:none;background:transparent;border-radius:7px;display:grid;place-items:center
+}
+.field .mini:hover{background:var(--surface-3)}
+.field .mini svg{width:15px;height:15px;stroke:var(--text-3);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.swap{
+  position:absolute;right:-2px;top:50%;transform:translate(0,-50%);z-index:3;
+  width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--surface);
+  display:grid;place-items:center;box-shadow:var(--shadow-sm);transition:.2s
+}
+.swap:hover{transform:translate(0,-50%) rotate(180deg);border-color:var(--accent)}
+.swap svg{width:14px;height:14px;stroke:var(--text-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* autocomplete dropdown */
+.ac{
+  position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:40;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);
+  box-shadow:var(--shadow-lg);overflow:hidden;max-height:288px;overflow-y:auto
+}
+.ac[hidden]{display:none}
+.ac div{padding:10px 13px;min-height:44px;cursor:pointer;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);transition:background .12s ease-out}
+.ac div:last-child{border-bottom:none}
+.ac div:hover,.ac div.on{background:var(--accent-soft)}
+.ac div:hover .pin,.ac div.on .pin{stroke:var(--accent)}
+.ac .pin{width:15px;height:15px;flex:none;stroke:var(--text-3);fill:none;stroke-width:1.7}
+.ac b{font-weight:600;font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac s{font-size:11.5px;color:var(--text-3);text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* options row */
+.opts{display:flex;gap:8px;align-items:center;padding:13px 18px 0;flex:none}
+.opts select,.opts input[type=datetime-local]{
+  padding:9px 30px 9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);
+  font-size:12.5px;font-weight:600;color:var(--text-2);outline:none;min-width:0;min-height:38px;
+  appearance:none;transition:border-color .16s ease-out,background .16s ease-out;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e99a8' stroke-width='2.2' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 9px center;background-size:14px
+}
+.opts input[type=datetime-local]{padding-right:12px;background-image:none}
+.opts select:hover,.opts input:hover{border-color:var(--border-strong);background-color:var(--surface-3)}
+.opts select:focus,.opts input:focus{border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 13%,transparent)}
+.go{
+  margin:13px 18px 15px;padding:13px;border-radius:var(--r-md);border:none;flex:none;min-height:46px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 92%,#fff),var(--accent));
+  color:#fff;font-weight:700;font-size:14.5px;letter-spacing:.01em;
+  box-shadow:0 2px 5px -1px color-mix(in srgb,var(--accent) 40%,transparent),
+             0 6px 16px -6px color-mix(in srgb,var(--accent) 50%,transparent);
+  transition:transform .16s ease-out,box-shadow .16s ease-out,filter .16s ease-out;
+  display:flex;align-items:center;justify-content:center;gap:8px
+}
+.go:hover:not(:disabled){filter:brightness(1.05);transform:translateY(-1px);
+  box-shadow:0 3px 7px -1px color-mix(in srgb,var(--accent) 45%,transparent),
+             0 10px 22px -8px color-mix(in srgb,var(--accent) 55%,transparent)}
+.go:active:not(:disabled){transform:translateY(0) scale(.988)}
+.go:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;filter:saturate(.6)}
+.go svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============================================================
+   Results
+   ============================================================ */
+/* one scroll region holds the journey box and the result list together */
+.scroller{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.results{padding:0 14px 26px}
+/* shared note style (used by the Places-unavailable message) */
+.note{
+  margin:10px 4px 0;padding:9px 11px;border-radius:var(--r-md);background:var(--surface-2);
+  border:1px solid var(--border);font-size:11.5px;color:var(--text-2);line-height:1.55
+}
+.note b{color:var(--text)}
+
+/* states */
+.state{padding:46px 28px;text-align:center;color:var(--text-3)}
+.state svg{width:46px;height:46px;stroke:var(--border-strong);fill:none;stroke-width:1.3;margin-bottom:14px}
+.state h3{margin:0 0 6px;font-size:15px;color:var(--text-2);font-weight:700;letter-spacing:-.2px}
+.state p{margin:0 auto;font-size:12.5px;line-height:1.65;max-width:34ch}
+.spinner{
+  width:28px;height:28px;border:3px solid var(--surface-3);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .68s cubic-bezier(.5,.15,.5,.85) infinite;margin:0 auto 16px
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{margin:12px 4px;padding:11px 13px;border-radius:var(--r-md);background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);color:var(--accent);font-size:12.5px;line-height:1.55}
+
+/* ============================================================
+   Key gate / modal
+   ============================================================ */
+.veil{position:fixed;inset:0;background:rgba(23,32,46,.34);backdrop-filter:blur(7px);display:grid;place-items:center;z-index:200;padding:20px}
+.veil[hidden]{display:none}
+.modal{
+  width:min(520px,100%);background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);
+  padding:28px;border:1px solid var(--border);max-height:88dvh;overflow-y:auto
+}
+.modal .logo{width:42px;height:42px;border-radius:12px;margin-bottom:14px}
+.modal .logo svg{width:24px;height:24px}
+.modal h2{margin:0 0 6px;font-size:20px;letter-spacing:-.3px}
+.modal>p{margin:0 0 18px;color:var(--text-2);font-size:13.5px;line-height:1.6}
+.modal label{display:block;font-size:12px;font-weight:650;color:var(--text-2);margin-bottom:6px}
+.modal input{
+  width:100%;padding:11px 13px;border-radius:var(--r-md);border:1px solid var(--border);
+  background:var(--surface-2);outline:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px
+}
+.modal input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 15%,transparent)}
+.modal .go{margin:16px 0 0;width:100%}
+.steps-list{margin:14px 0 0;padding:14px;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border)}
+.steps-list h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3)}
+.steps-list ol{margin:0;padding-left:18px;font-size:12.5px;color:var(--text-2);line-height:1.75}
+.steps-list code{background:var(--surface-3);padding:1px 5px;border-radius:4px;font-size:11.5px}
+.steps-list a{color:var(--accent)}
+.modal .cancel{background:none;border:none;color:var(--text-3);font-size:12.5px;margin-top:12px;width:100%;text-decoration:underline}
+
+/* ============================================================
+   Journey box — inline, directly under the search button
+   ============================================================ */
+.trip{
+  margin:4px 14px 8px;border:1px solid var(--border);border-radius:var(--r-lg);
+  background:var(--surface);overflow:hidden;
+  box-shadow:0 1px 2px rgba(23,32,46,.05), 0 8px 24px -12px rgba(23,32,46,.18);
+  animation:tripIn .26s cubic-bezier(.22,.9,.32,1) both
+}
+@keyframes tripIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.trip[hidden]{display:none}
+.trip-h{
+  display:flex;align-items:flex-start;gap:10px;padding:14px 16px 13px;border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,var(--surface-2),var(--surface))
+}
+.trip-hl{flex:1;min-width:0}
+.trip-hl h3{margin:0 0 3px;font-size:15.5px;font-weight:700;letter-spacing:-.25px}
+.trip-hl p{margin:0;font-size:12.5px;color:var(--text-2);line-height:1.45}
+.trip-acts{display:flex;gap:6px;flex:none}
+.trip-acts .alt{min-height:34px;padding:7px 12px}
+.alt.pdf{display:inline-flex;align-items:center;gap:5px}
+.alt.pdf svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.alt.pdf:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+/* mode tabs: metro / bus / rapido / best */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:13px 16px 0;flex:none}
+.tab{
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 8px;min-height:62px;
+  border:1px solid var(--border);border-radius:12px;background:var(--surface-2);
+  transition:transform .16s ease-out,border-color .16s ease-out,background .16s ease-out,box-shadow .16s ease-out;
+  min-width:0;text-align:center;justify-content:center
+}
+.tab i{width:22px;height:22px;display:grid;place-items:center;color:var(--m,var(--text-3));transition:color .16s ease-out}
+.tab i svg{width:17px;height:17px}
+.tab b{font-size:11.5px;font-weight:650;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tab span{font-size:10.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tab:hover:not(:disabled){border-color:var(--border-strong);background:var(--surface-3);transform:translateY(-1px)}
+.tab:active:not(:disabled){transform:translateY(0) scale(.985)}
+.tab.on{
+  background:var(--accent);border-color:var(--accent);
+  box-shadow:0 2px 6px -1px color-mix(in srgb,var(--accent) 40%,transparent)
+}
+.tab.on i,.tab.on b{color:#fff}
+.tab.on span{color:#fff;opacity:.86}
+.tab:disabled{opacity:.4;cursor:not-allowed}
+@media (max-width:420px){ .tab b{font-size:10.5px} .tab span{font-size:9.5px} .tab{min-height:58px} }
+
+/* alternatives within the chosen mode — buttons, no dropdown */
+.alts{display:flex;flex-wrap:wrap;gap:6px;padding:11px 16px 0;flex:none}
+.alts[hidden]{display:none}
+.alt{
+  padding:8px 12px;min-height:34px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);
+  font-size:11.5px;font-weight:600;color:var(--text-2);max-width:100%;
+  transition:transform .14s ease-out,border-color .14s ease-out,background .14s ease-out,color .14s ease-out;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.alt:hover{border-color:var(--border-strong);background:var(--surface-3);color:var(--text)}
+.alt:active{transform:scale(.97)}
+.alt.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);
+        box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent)}
+.alts-h{
+  width:100%;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-3);margin-bottom:-1px
+}
+@media (max-width:900px){ .alts{padding:12px 20px 0} }
+.chain-empty{padding:34px 8px;text-align:center;color:var(--text-3);font-size:13px;line-height:1.6}
+.chain-empty b{display:block;color:var(--text-2);font-size:14px;margin-bottom:5px}
+.chain{padding:15px 16px 4px}
+
+.cr{display:flex;gap:14px}
+.cr-rail{width:34px;flex:none;display:flex;flex-direction:column;align-items:center}
+.cr-ico{
+  width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;
+  background:var(--surface-3);color:var(--text-2);
+  box-shadow:0 1px 2px rgba(23,32,46,.08), inset 0 0 0 1px rgba(255,255,255,.35)
+}
+.cr-ico svg{width:17px;height:17px}
+.cr-ico.tinted{color:#fff}
+/* The connector carries the colour of the leg it belongs to, so the chain
+   reads like a line diagram: solid for a ride, dashed for walking. */
+.cr-rail u{
+  flex:1;width:4px;min-height:26px;margin:5px 0;border-radius:4px;
+  background:repeating-linear-gradient(to bottom,var(--border-strong) 0 5px,transparent 5px 10px)
+}
+.cr-rail u[style*="--rail"]{background:var(--rail)}
+.cr:last-child .cr-rail u{display:none}
+.cr-b{flex:1;min-width:0;padding:6px 0 20px}
+.cr:last-child .cr-b{padding-bottom:8px}
+.cr-t{font-size:14px;font-weight:600;line-height:1.45;letter-spacing:-.05px}
+.cr-s{font-size:12px;color:var(--text-3);margin-top:3px;line-height:1.5}
+.cr.start .cr-t,.cr.end .cr-t{font-weight:700}
+.cr.end .cr-ico{background:var(--accent);color:#fff;
+  box-shadow:0 2px 6px -1px color-mix(in srgb,var(--accent) 45%,transparent)}
+.cr.start .cr-ico{background:var(--good);color:#fff;
+  box-shadow:0 2px 6px -1px color-mix(in srgb,var(--good) 45%,transparent)}
+.cr-fare{
+  display:inline-block;margin-top:6px;padding:3px 9px;border-radius:7px;
+  background:var(--surface-3);font-size:11.5px;font-weight:650;color:var(--text-2);
+  box-shadow:inset 0 0 0 1px var(--border)
+}
+
+/* station name labels on the map — white halo keeps them readable over roads */
+.stn-label{
+  text-shadow:
+     0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff,
+     1px 1px 2px #fff, -1px -1px 2px #fff, 1px -1px 2px #fff, -1px 1px 2px #fff;
+  color:#17202e !important;
+  paint-order:stroke fill;
+  white-space:nowrap;
+}
+/* boarding / alighting stops read louder than the stations passed through */
+.stn-label.stn-major{
+  color:#0d1420 !important;letter-spacing:-.1px;
+  text-shadow:
+     0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff,
+     1px 1px 2px #fff, -1px -1px 2px #fff, 1px -1px 2px #fff, -1px 1px 2px #fff;
+}
+
+/* map overlay legend */
+.legend{
+  position:absolute;left:12px;bottom:26px;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border:1px solid var(--border);border-radius:var(--r-md);padding:8px 12px;
+  box-shadow:0 2px 6px -1px rgba(23,32,46,.10), 0 10px 24px -12px rgba(23,32,46,.20);
+  font-size:11px;font-weight:600;color:var(--text-2);
+  display:flex;gap:13px;flex-wrap:wrap;max-width:calc(100% - 24px);z-index:3
+}
+.legend[hidden]{display:none}
+.legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.legend i{width:16px;height:3px;border-radius:2px;display:block}
+.map-wrap{position:relative;min-height:0}
+@media (max-width:900px){.legend{bottom:12px;font-size:10px;padding:6px 9px}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ API key gate ═══════════ -->
+<div class="veil" id="gate">
+  <div class="modal">
+    <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1112 6.5a2.5 2.5 0 010 5z"/></svg></div>
+    <h2>Namma Route</h2>
+    <p>A public-transport-first trip planner for Bengaluru. Keys are already built in — change them here only if you need to. Overrides are stored in this browser's <code>localStorage</code> and sent nowhere except Google.</p>
+    <label for="keyMaps">Maps JavaScript API key <span style="color:var(--text-3);font-weight:400">· draws the map</span></label>
+    <input id="keyMaps" type="text" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+    <label for="keyRoutes" style="margin-top:12px">Routes API key <span style="color:var(--text-3);font-weight:400">· all trip planning</span></label>
+    <input id="keyRoutes" type="text" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+    <label for="keyPlaces" style="margin-top:12px">Places API (New) key <span style="color:var(--text-3);font-weight:400">· optional, suggestions</span></label>
+    <input id="keyPlaces" type="text" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+    <div id="keyErr" class="err" hidden style="margin-top:12px"></div>
+    <button class="go" id="keyGo">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      Start planning
+    </button>
+    <button class="cancel" id="keyCancel" hidden>Cancel</button>
+    <div class="steps-list">
+      <h4>APIs this app needs</h4>
+      <ol>
+        <li><b>Maps JavaScript API</b> — required, draws the map.</li>
+        <li><b>Routes API</b> — required, does all the routing. (The old <code>Directions API</code> is Legacy and can no longer be enabled on new projects.)</li>
+        <li><b>Places API (New)</b> — optional, powers the search dropdown. Without it you can still type full place names.</li>
+      </ol>
+      <p style="margin:10px 0 0;font-size:12px;color:var(--text-3);line-height:1.6">Enable them in <a href="https://console.cloud.google.com/apis/library?filter=category:maps" target="_blank" rel="noopener">Cloud Console → APIs &amp; Services → Library</a>. Billing must be on, though a monthly free allowance covers personal use.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ App ═══════════ -->
+<div id="app">
+  <aside id="panel">
+    <div class="hd">
+      <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1112 6.5a2.5 2.5 0 010 5z"/></svg></div>
+      <div>
+        <h1>Namma Route</h1>
+        <p>BENGALURU · PUBLIC TRANSPORT FIRST</p>
+      </div>
+      <button class="icon-btn" id="settingsBtn" title="Change API key" aria-label="Settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 110-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 3.6 1.65 1.65 0 0010 2.09V2a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 8v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <div class="form">
+      <div class="io">
+        <div class="field from">
+          <span class="dot"></span>
+          <input id="fromIn" type="text" placeholder="Starting point in Bengaluru" autocomplete="off" spellcheck="false" />
+          <button class="mini" id="geoBtn" title="Use my location" aria-label="Use my location">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="8"/><path d="M12 1.5v2.6M12 19.9v2.6M22.5 12h-2.6M4.1 12H1.5"/></svg>
+          </button>
+          <div class="ac" id="fromAc" hidden></div>
+        </div>
+        <div class="field to">
+          <span class="dot"></span>
+          <input id="toIn" type="text" placeholder="Where to?" autocomplete="off" spellcheck="false" />
+          <div class="ac" id="toAc" hidden></div>
+        </div>
+        <button class="swap" id="swapBtn" title="Swap" aria-label="Swap origin and destination">
+          <svg viewBox="0 0 24 24"><path d="M7 16V4M7 4L4 7M7 4l3 3M17 8v12M17 20l3-3M17 20l-3-3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="opts">
+      <select id="whenMode" aria-label="Time mode">
+        <option value="now">Leave now</option>
+        <option value="depart">Depart at</option>
+        <option value="arrive">Arrive by</option>
+      </select>
+      <input type="datetime-local" id="whenTime" hidden />
+    </div>
+
+    <button class="go" id="goBtn">
+      <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+      Find best routes
+    </button>
+
+    <div class="scroller">
+      <!-- Journey box: sits directly under the search button, always visible -->
+      <section class="trip" id="tripBox" hidden>
+        <div class="trip-h">
+          <div class="trip-hl">
+            <h3>How to get there</h3>
+            <p id="tripMeta"></p>
+          </div>
+          <div class="trip-acts">
+            <button class="alt" id="tripCopy" title="Copy these directions as text">Copy</button>
+            <button class="alt pdf" id="tripPdf" title="Download this route as a PDF">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>PDF
+            </button>
+          </div>
+        </div>
+        <div class="tabs" id="tripTabs" role="tablist"></div>
+        <div class="alts" id="tripAlts"></div>
+        <div class="chain" id="tripChain"></div>
+      </section>
+
+      <div class="results" id="results">
+        <div class="state">
+          <svg viewBox="0 0 24 24"><path d="M9 20l-5.4 2.7A1 1 0 012 21.8V6.6a1 1 0 01.6-.9L9 2.6m0 17.4l6-3m-6 3V2.6m6 14.4l5.4 2.7a1 1 0 001.6-.9V3.6a1 1 0 00-.6-.9L15 0m0 17V0m0 0L9 2.6"/></svg>
+          <h3>Plan a trip across Bengaluru</h3>
+          <p>Enter two places and we'll compare Namma Metro, BMTC buses, walking, cycling and a two-wheeler — public transport ranked first.</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="legend" id="legend" hidden>
+      <span><i style="background:var(--metro)"></i>Metro</span>
+      <span><i style="background:var(--bus)"></i>Bus</span>
+      <span><i style="background:var(--walk)"></i>Walk</span>
+      <span><i style="background:var(--twowheel)"></i>Road</span>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================================================================
+   Namma Route — Bengaluru public-transport-first trip planner
+   Single-file app. Google Maps Platform: Maps JS, Directions,
+   Places (New, with legacy fallback), Geocoding.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   Google Maps Platform keys, baked in so the app starts immediately.
+   One key per API, each used only where it belongs:
+     maps   -> Maps JavaScript API  (script tag, map rendering)
+     routes -> Routes API           (all trip planning)
+     places -> Places API (New)     (search suggestions, optional)
+   Keep this file private: anyone who can read it can spend against
+   these keys. Restrict each one by API + HTTP referrer in the Cloud
+   Console. Keys entered via the settings button override these.
+   ---------------------------------------------------------------- */
+const KEYS = {
+  maps:   "AIzaSyDitPpbBDq2Bjz5Z_O6MgAVRtqKYv8VztU",
+  routes: "AIzaSyBbWVZ0cr593tULGipJuRJid2RJOJ6cfH4",
+  places: "AIzaSyDJABSqaKiuyqrgqpiqtq9M6y3l9Ua9QUg"
+};
+
+const KEY_STORE = "nammaRoute.keys";
+/* Bump whenever the built-in keys above change. A saved override from an
+   older set is discarded, so editing this file always takes effect rather
+   than being silently shadowed by localStorage. */
+const KEYS_VERSION = 2;
+try {
+  const saved = JSON.parse(localStorage.getItem(KEY_STORE) || "{}");
+  if (saved.v === KEYS_VERSION) Object.assign(KEYS, saved.keys || {});
+  else localStorage.removeItem(KEY_STORE);
+} catch { localStorage.removeItem(KEY_STORE); }
+const BLR = { lat: 12.9716, lng: 77.5946 };
+
+/* ---------- Built-in Bengaluru gazetteer ----------
+   Used for suggestions whenever the Places API is unavailable, so the
+   search box is never dead. Routes API resolves these names as plain
+   address strings, which is exactly how every route in testing worked. */
+const LOCAL_PLACES = `
+Kempegowda Bus Station (Majestic)|Bus terminal · City centre
+KSR Bengaluru City Railway Station|Railway station · Majestic
+SMVT Bengaluru (Baiyappanahalli)|Railway station · East
+Yeshwantpur Junction|Railway station · Northwest
+Kempegowda International Airport|Airport · Devanahalli
+Shivajinagar Bus Station|Bus terminal · Central
+Shantinagar Bus Station|Bus terminal · Central
+Silk Board Junction|Junction · South-east
+Banashankari TTMC|Bus terminal · South
+Jayanagar Bus Station|Bus terminal · South
+KR Market|Market · Old city
+Majestic Metro Station|Metro · Purple + Green interchange
+MG Road Metro Station|Metro · Purple Line
+Indiranagar Metro Station|Metro · Purple Line
+Trinity Metro Station|Metro · Purple Line
+Halasuru Metro Station|Metro · Purple Line
+Baiyappanahalli Metro Station|Metro · Purple Line
+Krishnarajapura (KR Puram) Metro Station|Metro · Purple Line
+Hoodi Metro Station|Metro · Purple Line
+Kundalahalli Metro Station|Metro · Purple Line
+Whitefield (Kadugodi) Metro Station|Metro · Purple Line terminus
+Cubbon Park Metro Station|Metro · Purple Line
+Vidhana Soudha Metro Station|Metro · Purple Line
+Vijayanagar Metro Station|Metro · Purple Line
+Mysuru Road Metro Station|Metro · Purple Line
+Rajarajeshwari Nagar Metro Station|Metro · Purple Line
+Kengeri Metro Station|Metro · Purple Line
+Challaghatta Metro Station|Metro · Purple Line terminus
+Nagasandra Metro Station|Metro · Green Line
+Madavara Metro Station|Metro · Green Line terminus
+Peenya Industry Metro Station|Metro · Green Line
+Yeshwanthpur Metro Station|Metro · Green Line
+Rajajinagar Metro Station|Metro · Green Line
+Mantri Square Sampige Road Metro Station|Metro · Green Line
+Chickpete Metro Station|Metro · Green Line
+National College Metro Station|Metro · Green Line
+Lalbagh Metro Station|Metro · Green Line
+South End Circle Metro Station|Metro · Green Line
+Jayanagar Metro Station|Metro · Green Line
+Rashtreeya Vidyalaya Road Metro Station|Metro · Green + Yellow interchange
+Banashankari Metro Station|Metro · Green Line
+Jayaprakash Nagar Metro Station|Metro · Green Line
+Yelachenahalli Metro Station|Metro · Green Line
+Silk Institute Metro Station|Metro · Green Line terminus
+Ragigudda Metro Station|Metro · Yellow Line
+Jayadeva Hospital Metro Station|Metro · Yellow Line interchange
+BTM Layout Metro Station|Metro · Yellow Line
+Central Silk Board Metro Station|Metro · Yellow Line
+Bommanahalli Metro Station|Metro · Yellow Line
+Kudlu Gate Metro Station|Metro · Yellow Line
+Hosa Road Metro Station|Metro · Yellow Line
+Electronic City Metro Station|Metro · Yellow Line
+Konappana Agrahara Metro Station|Metro · Yellow Line
+Hebbagodi Metro Station|Metro · Yellow Line
+Bommasandra Metro Station|Metro · Yellow Line terminus
+Indiranagar|Locality · East
+Koramangala|Locality · South-east
+Jayanagar|Locality · South
+JP Nagar|Locality · South
+BTM Layout|Locality · South-east
+HSR Layout|Locality · South-east
+Whitefield|Locality · East
+Marathahalli|Locality · East
+Bellandur|Locality · South-east
+Sarjapur Road|Locality · South-east
+Electronic City|Locality · South
+Banashankari|Locality · South
+Basavanagudi|Locality · South
+Malleshwaram|Locality · North-west
+Rajajinagar|Locality · West
+Vijayanagar|Locality · West
+Yeshwanthpur|Locality · North-west
+Hebbal|Locality · North
+Yelahanka|Locality · North
+RT Nagar|Locality · North
+Frazer Town|Locality · Central
+Cooke Town|Locality · Central
+Ulsoor|Locality · Central
+Domlur|Locality · East
+CV Raman Nagar|Locality · East
+KR Puram|Locality · East
+Mahadevapura|Locality · East
+Hoodi|Locality · East
+Brookefield|Locality · East
+Kundalahalli|Locality · East
+Varthur|Locality · East
+Kadugodi|Locality · East
+Hennur|Locality · North-east
+Kammanahalli|Locality · North-east
+Banaswadi|Locality · North-east
+Horamavu|Locality · North-east
+Thanisandra|Locality · North
+Jakkur|Locality · North
+Sahakar Nagar|Locality · North
+Vidyaranyapura|Locality · North
+Nagarbhavi|Locality · West
+Kengeri|Locality · South-west
+Rajarajeshwari Nagar|Locality · West
+Uttarahalli|Locality · South
+Kanakapura Road|Corridor · South
+Bannerghatta Road|Corridor · South
+Hulimavu|Locality · South
+Arekere|Locality · South
+Jigani|Locality · Far south
+Attibele|Locality · Far south-east
+Peenya|Industrial area · North-west
+Nelamangala|Town · North-west
+Devanahalli|Town · North
+Outer Ring Road|Corridor · Ring road
+Old Airport Road|Corridor · East
+Hosur Road|Corridor · South
+Tumkur Road|Corridor · North-west
+Lalbagh Botanical Garden|Park · Basavanagudi
+Cubbon Park|Park · Central
+Bangalore Palace|Landmark · Vasanth Nagar
+Vidhana Soudha|Landmark · Central
+ISKCON Temple Bangalore|Temple · Rajajinagar
+Bull Temple|Temple · Basavanagudi
+Tipu Sultan's Summer Palace|Landmark · Old city
+Nandi Hills|Hill station · North
+Bannerghatta National Park|Park · South
+Wonderla Amusement Park|Attraction · Mysuru Road
+Innovative Film City|Attraction · Bidadi
+Jawaharlal Nehru Planetarium|Museum · Central
+HAL Aerospace Museum|Museum · East
+Commercial Street|Shopping · Central
+Brigade Road|Shopping · Central
+Church Street|Shopping · Central
+Chickpet|Market · Old city
+Russell Market|Market · Shivajinagar
+UB City|Mall · Central
+Orion Mall|Mall · Rajajinagar
+Phoenix Mall of Asia|Mall · Hebbal
+Forum Mall Koramangala|Mall · Koramangala
+Mantri Square Mall|Mall · Malleshwaram
+Lulu Mall Bengaluru|Mall · Rajajinagar
+Nexus Shantiniketan Mall|Mall · Whitefield
+Manyata Tech Park|Tech park · North
+ITPL Whitefield|Tech park · East
+Bagmane Tech Park|Tech park · CV Raman Nagar
+Embassy Golf Links|Tech park · Domlur
+Embassy Tech Village|Tech park · Outer Ring Road
+Prestige Tech Park|Tech park · Marathahalli
+RMZ Ecospace|Tech park · Bellandur
+Cessna Business Park|Tech park · Bellandur
+Global Village Tech Park|Tech park · Mysuru Road
+Electronic City Phase 1|Tech park · South
+Electronic City Phase 2|Tech park · South
+Infosys Campus Electronic City|Campus · South
+Indian Institute of Science|Campus · Malleshwaram
+Bangalore University Jnanabharathi|Campus · West
+Christ University|Campus · Hosur Road
+Manipal Hospital Old Airport Road|Hospital · East
+Narayana Health City|Hospital · Bommasandra
+Victoria Hospital|Hospital · Old city
+Jayadeva Hospital|Hospital · South
+Chinnaswamy Stadium|Stadium · Central
+Kanteerava Stadium|Stadium · Central
+`.trim().split("\n");
+
+/* ---------- Fare tables (estimates, ₹) ---------- */
+// Namma Metro — distance slabs after the Feb 2025 revision.
+const METRO_SLABS = [[2,10],[4,20],[6,30],[8,40],[10,50],[15,60],[20,70],[25,80],[Infinity,90]];
+// BMTC ordinary/city service — distance slabs.
+const BUS_SLABS   = [[2,6],[4,11],[8,16],[12,21],[18,26],[25,31],[Infinity,36]];
+// AC / Vajra / Vayu Vajra premium services run roughly 2.5× ordinary.
+const AC_MULT = 2.5;
+const slabFare = (km, slabs) => { for (const [max, f] of slabs) if (km <= max) return f; return slabs.at(-1)[1]; };
+const bikeTaxiFare = km => Math.round(25 + 8 * km);          // Rapido-style bike taxi
+
+/* ---------- Mode definitions ---------- */
+const MODES = {
+  metro:    { label:"Metro",       hex:"#6d28d9", icon:"metro" },
+  bus:      { label:"Bus",         hex:"#047857", icon:"bus"   },
+  transit:  { label:"Metro + Bus", hex:"#6d28d9", icon:"metro" },
+  walk:     { label:"Walk",        hex:"#64748b", icon:"walk"  },
+  twowheel: { label:"Two-wheeler", hex:"#b45309", icon:"bike"  }
+};
+
+/* ---------- SVG icon set ---------- */
+const ICON = {
+  metro: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7.6 2 4 2.5 4 6v9.5A3.5 3.5 0 007.5 19L6 20.5v.5h12v-.5L16.5 19a3.5 3.5 0 003.5-3.5V6c0-3.5-3.6-4-8-4zM7.5 17A1.5 1.5 0 119 15.5 1.5 1.5 0 017.5 17zm3.5-7H6V6h5zm2 0V6h5v4zm3.5 7a1.5 1.5 0 111.5-1.5 1.5 1.5 0 01-1.5 1.5z"/></svg>',
+  bus:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 16c0 .9.4 1.7 1 2.2V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.8c.6-.5 1-1.3 1-2.2V6c0-3.5-3.6-4-8-4S4 2.5 4 6v10zm3.5 1A1.5 1.5 0 119 15.5 1.5 1.5 0 017.5 17zm9 0a1.5 1.5 0 111.5-1.5 1.5 1.5 0 01-1.5 1.5zm1.5-6H6V6h12z"/></svg>',
+  walk:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 5.5a2 2 0 102-2 2 2 0 00-2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A6.9 6.9 0 0019 13v-2a4.9 4.9 0 01-4.1-2.4l-1-1.6A2 2 0 0012.2 6a2 2 0 00-.5.1L6.5 8.3V13h2V9.6z"/></svg>',
+  bike:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 12a4 4 0 00-1.3.2l-1-1.8h2.1V8.6h-3.3L14 6.4h2.4V4.8h-3.9L11.3 3H7.6v1.7h2.8l1 1.8H6.2A4.2 4.2 0 002 10.6v1.8A4.3 4.3 0 105 20.6h9.5l1.2-2.1a4 4 0 103.3-6.5zM5 18.9A2.6 2.6 0 117.6 16 2.6 2.6 0 015 18.9zm14 0A2.4 2.4 0 1121.4 16 2.4 2.4 0 0119 18.9z"/></svg>',
+  pin:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 00-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 00-7-7zm0 9.5A2.5 2.5 0 1114.5 9 2.5 2.5 0 0112 11.5z"/></svg>',
+  flag:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a1 1 0 011 1v1.2l2.4-.6a5 5 0 013.4.3 5 5 0 003.4.3l2-.5a1 1 0 011.2 1v9.3a1 1 0 01-.8 1l-2.4.6a5 5 0 01-3.4-.3 5 5 0 00-3.4-.3L7 15.4V22a1 1 0 01-2 0V3a1 1 0 011-1z"/></svg>',
+  star:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6l2.2 5.3 5.7.5-4.3 3.8 1.3 5.6L12 14.8 7.1 17.8l1.3-5.6L4.1 8.4l5.7-.5L12 2.6zM19 15.4l.8 1.9 2 .2-1.5 1.3.5 2-1.8-1.1-1.8 1.1.5-2L16.2 17.5l2-.2.8-1.9z"/></svg>'
+};
+
+/* ================================================================
+   Google Maps bootstrap
+   ================================================================ */
+let map, geometry;
+let overlays = [], markers = [];
+
+/* Routes API — the supported replacement for the (now legacy, un-enableable) Directions API. */
+const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
+const PLACES_URL = "https://places.googleapis.com/v1/places:autocomplete";
+const FIELD_MASK = [
+  "routes.duration", "routes.distanceMeters", "routes.polyline.encodedPolyline",
+  "routes.legs.startLocation", "routes.legs.endLocation",
+  "routes.legs.steps.travelMode", "routes.legs.steps.distanceMeters",
+  "routes.legs.steps.staticDuration", "routes.legs.steps.polyline.encodedPolyline",
+  "routes.legs.steps.navigationInstruction", "routes.legs.steps.transitDetails"
+].join(",");
+let lastApiError = null;
+
+const $ = id => document.getElementById(id);
+const gate = $("gate");
+
+function loadMaps(key){
+  return new Promise((resolve, reject) => {
+    window.__nrInit = () => resolve();
+    window.gm_authFailure = () => reject(new Error("AUTH"));
+    const s = document.createElement("script");
+    s.async = true;
+    // Only the geometry library is needed — Places now goes over REST with its own key.
+    s.src = "https://maps.googleapis.com/maps/api/js"
+          + "?key=" + encodeURIComponent(key)
+          + "&libraries=geometry&v=weekly&loading=async&callback=__nrInit";
+    s.onerror = () => reject(new Error("NETWORK"));
+    document.head.appendChild(s);
+    setTimeout(() => reject(new Error("TIMEOUT")), 15000);
+  });
+}
+
+async function boot(){
+  await loadMaps(KEYS.maps);
+
+  map = new google.maps.Map($("map"), {
+    center: BLR, zoom: 12,
+    mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+    zoomControl: true, clickableIcons: false,
+    gestureHandling: "greedy",
+    styles: LIGHT_MAP
+  });
+  map.addListener("zoom_changed", applyStationLabels);
+
+  geometry = google.maps.geometry;   // used only to decode Routes API polylines
+
+  gate.hidden = true;
+  wireUp();
+}
+
+/* Pale map styling: light, low-contrast base so the coloured route
+   polylines stay the loudest thing on screen. */
+const LIGHT_MAP = [
+  {elementType:"geometry", stylers:[{color:"#f8fafc"}]},
+  {elementType:"labels.text.fill", stylers:[{color:"#6b7688"}]},
+  {elementType:"labels.text.stroke", stylers:[{color:"#ffffff"},{weight:2.5}]},
+  {featureType:"poi", elementType:"labels", stylers:[{visibility:"off"}]},
+  {featureType:"poi.park", elementType:"geometry", stylers:[{color:"#e9f2e7"}]},
+  {featureType:"landscape", elementType:"geometry", stylers:[{color:"#f8fafc"}]},
+  {featureType:"road", elementType:"geometry", stylers:[{color:"#ffffff"}]},
+  {featureType:"road", elementType:"geometry.stroke", stylers:[{color:"#e9eef4"}]},
+  {featureType:"road.arterial", elementType:"geometry", stylers:[{color:"#ffffff"}]},
+  {featureType:"road.highway", elementType:"geometry", stylers:[{color:"#fdf6f2"}]},
+  {featureType:"road.highway", elementType:"geometry.stroke", stylers:[{color:"#f0ddd3"}]},
+  {featureType:"road", elementType:"labels.icon", stylers:[{visibility:"off"}]},
+  {featureType:"transit", elementType:"geometry", stylers:[{color:"#eceff4"}]},
+  {featureType:"transit.station", elementType:"labels.icon", stylers:[{visibility:"on"}]},
+  {featureType:"water", elementType:"geometry", stylers:[{color:"#dbeaf4"}]},
+  {featureType:"administrative", elementType:"geometry.stroke", stylers:[{color:"#e2e8f0"}]}
+];
+
+/* ================================================================
+   Key gate
+   ================================================================ */
+function showGate(cancellable){
+  gate.hidden = false;
+  $("keyCancel").hidden = !cancellable;
+  $("keyMaps").value   = KEYS.maps   || "";
+  $("keyRoutes").value = KEYS.routes || "";
+  $("keyPlaces").value = KEYS.places || "";
+  $("keyMaps").focus();
+}
+$("keyGo").onclick = async () => {
+  const next = {
+    maps:   $("keyMaps").value.trim(),
+    routes: $("keyRoutes").value.trim(),
+    places: $("keyPlaces").value.trim()
+  };
+  const err = $("keyErr");
+  if (!next.maps || !next.routes){
+    err.hidden = false;
+    err.innerHTML = "The <b>Maps JavaScript</b> and <b>Routes</b> keys are both required. Places is optional.";
+    return;
+  }
+  err.hidden = true;
+  $("keyGo").disabled = true;
+  $("keyGo").textContent = "Connecting…";
+  localStorage.setItem(KEY_STORE, JSON.stringify({ v: KEYS_VERSION, keys: next }));
+  Object.assign(KEYS, next);
+  try {
+    if (window.google && window.google.maps) { location.reload(); return; }
+    await boot();
+  } catch (e) {
+    localStorage.removeItem(KEY_STORE);
+    err.hidden = false;
+    err.innerHTML = e.message === "AUTH"
+      ? "Google rejected the Maps key. Check that billing is on, that <b>Maps JavaScript API</b> is enabled, and that referrer restrictions allow this page."
+      : "Could not load Google Maps (" + e.message.toLowerCase() + "). Check your connection and the keys, then try again.";
+    $("keyGo").disabled = false;
+    $("keyGo").innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg> Start planning';
+  }
+};
+["keyMaps", "keyRoutes", "keyPlaces"].forEach(id =>
+  $(id).addEventListener("keydown", e => { if (e.key === "Enter") $("keyGo").click(); }));
+$("keyCancel").onclick = () => { gate.hidden = true; };
+$("settingsBtn").onclick = () => showGate(true);
+
+/* ================================================================
+   Autocomplete (New Places API, legacy fallback, free text always)
+   ================================================================ */
+function makeAutocomplete(input, dropdown, onPick){
+  let items = [], cursor = -1, token = null, timer = null, chosen = null, inflight = null;
+
+  const close = () => { dropdown.hidden = true; cursor = -1; };
+  const render = () => {
+    if (!items.length) return close();
+    dropdown.innerHTML = items.map((it, i) => `
+      <div data-i="${i}" class="${i === cursor ? "on" : ""}">
+        <svg class="pin" viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+        <span style="min-width:0"><b>${esc(it.main)}</b><s>${esc(it.sub)}</s></span>
+      </div>`).join("");
+    dropdown.hidden = false;
+    dropdown.querySelectorAll("div").forEach(d => d.onclick = () => choose(+d.dataset.i));
+  };
+  const choose = i => {
+    const it = items[i]; if (!it) return;
+    // Local entries carry a descriptive subtitle ("Metro · Purple Line") that must
+    // never leak into the address string sent to the Routes API.
+    input.value = it.local ? it.main + ", Bengaluru"
+                           : it.main + (it.sub ? ", " + it.sub : "");
+    chosen = it;
+    close(); token = null;
+    onPick && onPick(it);
+  };
+
+  /* Places API (New) over REST, authenticated with the dedicated Places key.
+     Only predictions are needed — Routes API accepts a raw placeId, so there
+     is no follow-up Place Details call (and no extra billing for one). */
+  /* Try Google first; fall back to the built-in gazetteer so the box always works. */
+  async function query(q){
+    if (KEYS.places){
+      try {
+        const hits = await queryGoogle(q);
+        if (hits.length) return hits;
+      } catch (err){
+        if (err && err.name === "AbortError") throw err;   // let the caller ignore it
+        notePlacesOff(err);
+      }
+    }
+    return localSuggest(q);
+  }
+
+  async function queryGoogle(q){
+    token = token || (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+    // Abort the previous lookup: without this, a slow early response can land
+    // after a newer one and repopulate the list with stale suggestions.
+    if (inflight) inflight.abort();
+    inflight = new AbortController();
+    const r = await fetch(PLACES_URL, {
+      method: "POST",
+      signal: inflight.signal,
+      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": KEYS.places },
+      body: JSON.stringify({
+        input: q,
+        sessionToken: token,
+        includedRegionCodes: ["in"],
+        locationBias: { circle: { center: { latitude: BLR.lat, longitude: BLR.lng }, radius: 45000 } }
+      })
+    });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.message || j.error.status || "Places request failed");
+    return (j.suggestions || [])
+      .filter(s => s.placePrediction)
+      .slice(0, 6)
+      .map(s => {
+        const p = s.placePrediction, sf = p.structuredFormat || {};
+        return {
+          main: (sf.mainText && sf.mainText.text) || (p.text && p.text.text) || "",
+          sub:  (sf.secondaryText && sf.secondaryText.text) || "",
+          placeId: p.placeId
+        };
+      });
+  }
+
+  input.addEventListener("input", () => {
+    chosen = null;
+    delete pinned[input.id];        // typing invalidates a pinned coordinate
+    const q = input.value.trim();
+    clearTimeout(timer);
+    if (q.length < 3) return close();
+    timer = setTimeout(async () => {
+      try { items = await query(q); render(); }
+      catch (err){
+        if (err && err.name === "AbortError") return;   // superseded by a newer keystroke
+        close(); notePlacesOff(err);
+      }
+    }, 180);
+  });
+
+  input.addEventListener("keydown", e => {
+    if (dropdown.hidden) return;
+    if (e.key === "ArrowDown"){ e.preventDefault(); cursor = Math.min(cursor + 1, items.length - 1); render(); }
+    else if (e.key === "ArrowUp"){ e.preventDefault(); cursor = Math.max(cursor - 1, 0); render(); }
+    else if (e.key === "Enter" && cursor >= 0){ e.preventDefault(); choose(cursor); }
+    else if (e.key === "Escape") close();
+  });
+  input.addEventListener("blur", () => setTimeout(close, 160));
+
+  return {
+    /** Directions accepts a placeId object or a plain string — both work. */
+    value(){
+      // A pinned GPS coordinate is the most precise signal, so it wins over a place ID.
+      if (pinned[input.id]) return pinned[input.id];
+      if (chosen && chosen.placeId) return { placeId: chosen.placeId };
+      const raw = input.value.trim();
+      if (!raw) return null;
+      return /bengaluru|bangalore/i.test(raw) ? raw : raw + ", Bengaluru, Karnataka, India";
+    },
+    text(){ return input.value.trim(); },
+    clearPin(){ chosen = null; delete pinned[input.id]; },
+    getPin(){ return chosen; },
+    setPin(c){ chosen = c || null; }
+  };
+}
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+/* Transit line colours come from Google's feed and are written straight into
+   a style attribute and into Maps polyline options. Anything that is not a
+   plain hex colour is rejected in favour of our own fallback, so a malformed
+   or hostile value cannot break out of the attribute. */
+const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+const safeColor = (c, fallback) => (typeof c === "string" && HEX_RE.test(c.trim())) ? c.trim() : fallback;
+
+/* Offline suggestions over the built-in gazetteer: exact prefix beats
+   word-start beats substring, shorter names first as a tiebreak. */
+function localSuggest(q){
+  const s = q.toLowerCase().trim();
+  if (s.length < 2) return [];
+  const safe = s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const wordStart = new RegExp("\\b" + safe);
+  const out = [];
+  for (const row of LOCAL_PLACES){
+    const i = row.indexOf("|");
+    const main = row.slice(0, i), sub = row.slice(i + 1);
+    const l = main.toLowerCase();
+    let score = -1;
+    if (l.startsWith(s)) score = 0;
+    else if (wordStart.test(l)) score = 1;
+    else if (l.includes(s)) score = 2;
+    else if (sub.toLowerCase().includes(s)) score = 3;
+    if (score >= 0) out.push({ score, main, sub, placeId: null, local: true });
+  }
+  return out.sort((a, b) => a.score - b.score || a.main.length - b.main.length).slice(0, 6);
+}
+
+/* Places API is optional. Note once that suggestions came from the built-in
+   list rather than Google, so the difference is never silent. */
+let placesWarned = false;
+function notePlacesOff(err){
+  if (placesWarned) return;
+  const msg = String((err && err.message) || err || "");
+  if (!/denied|disabled|not been used|403|ApiNotActivated|ApiTargetBlocked/i.test(msg)) return;
+  placesWarned = true;
+  const box = $("results");
+  if (box.querySelector(".state"))
+    box.insertAdjacentHTML("afterbegin",
+      `<div class="note" style="margin:12px 4px 0"><b>Using the built-in Bengaluru place list.</b> Places API (New) is not enabled on this project, so suggestions come from ${LOCAL_PLACES.length} bundled localities, metro stations and landmarks. Routing is unaffected, and you can always type any address in full.</div>`);
+}
+
+/* ================================================================
+   Route search
+   ================================================================ */
+let fromAC, toAC, lastRoutes = [];
+/* GPS pins, keyed by input id. Module-scoped rather than on window
+   so nothing outside this script can read or tamper with them. */
+const pinned = {};
+
+function wireUp(){
+  fromAC = makeAutocomplete($("fromIn"), $("fromAc"), () => $("fromIn").dataset.pinned = "");
+  toAC   = makeAutocomplete($("toIn"),   $("toAc"),   () => $("toIn").dataset.pinned = "");
+
+  $("swapBtn").onclick = () => {
+    // Swap the visible text, the resolved place IDs and any pinned coordinates together,
+    // otherwise the fields would still resolve to their pre-swap locations.
+    const a = $("fromIn").value, b = $("toIn").value;
+    $("fromIn").value = b; $("toIn").value = a;
+
+    const pa = fromAC.getPin(), pb = toAC.getPin();
+    fromAC.setPin(pb); toAC.setPin(pa);
+
+    const la = pinned.fromIn, lb = pinned.toIn;
+    delete pinned.fromIn; delete pinned.toIn;
+    if (lb) pinned.fromIn = lb;
+    if (la) pinned.toIn = la;
+  };
+
+  $("whenMode").onchange = e => {
+    const t = $("whenTime");
+    t.hidden = e.target.value === "now";
+    if (!t.hidden && !t.value){
+      const d = new Date(Date.now() + 30 * 60000 - new Date().getTimezoneOffset() * 60000);
+      t.value = d.toISOString().slice(0, 16);
+    }
+  };
+
+  $("geoBtn").onclick = () => {
+    if (!navigator.geolocation) return;
+    $("fromIn").value = "Locating…";
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        // Routes API accepts raw coordinates, so no Geocoding API call is needed here.
+        const ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        pinned.fromIn = ll;
+        $("fromIn").value = "My location (" + ll.lat.toFixed(4) + ", " + ll.lng.toFixed(4) + ")";
+        map.setCenter(ll); map.setZoom(15);
+      },
+      () => { $("fromIn").value = ""; alert("Could not get your location. Allow location access or type a starting point."); },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  $("goBtn").onclick = search;
+  $("toIn").addEventListener("keydown", e => { if (e.key === "Enter" && $("toAc").hidden) search(); });
+}
+
+/** Routes API waypoint from an autocomplete value (place ID, coords, or free text). */
+function waypoint(v){
+  if (!v) return null;
+  if (typeof v === "string") return { address: v };
+  if (v.placeId) return { placeId: v.placeId };
+  if (v.lat != null) return { location: { latLng: { latitude: v.lat, longitude: v.lng } } };
+  return null;
+}
+
+/** Routes API rejects past departure times, so "now" simply omits the field. */
+function whenFields(){
+  const mode = $("whenMode").value;
+  if (mode === "now") return {};
+  const v = $("whenTime").value;
+  if (!v) return {};
+  const t = new Date(v);
+  if (mode === "depart" && t.getTime() < Date.now() + 30000) return {};
+  return mode === "arrive" ? { arrivalTime: t.toISOString() } : { departureTime: t.toISOString() };
+}
+
+async function computeRoutes(body){
+  try {
+    const r = await fetch(ROUTES_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": KEYS.routes,
+        "X-Goog-FieldMask": FIELD_MASK
+      },
+      body: JSON.stringify({ languageCode: "en-IN", regionCode: "IN", units: "METRIC", ...body })
+    });
+    const j = await r.json();
+    if (j.error){ lastApiError = j.error; return []; }
+    return j.routes || [];
+  } catch (e){
+    lastApiError = { message: "Network error reaching the Routes API: " + e.message };
+    return [];
+  }
+}
+
+async function search(){
+  const origin = waypoint(fromAC.value()), destination = waypoint(toAC.value());
+  const box = $("results");
+
+  if (!origin || !destination){
+    box.innerHTML = `<div class="err">Enter both a starting point and a destination.</div>`;
+    return;
+  }
+
+  clearMap();
+  lastApiError = null;
+  $("tripBox").hidden = true;
+  $("goBtn").disabled = true;
+  box.innerHTML = `<div class="state"><div class="spinner"></div><h3>Finding the best way there</h3><p>Checking Namma Metro, BMTC buses, walking and road options…</p></div>`;
+
+  const when = whenFields();
+  const base = { origin, destination };
+  const transit = extra => ({
+    ...base, travelMode: "TRANSIT", computeAlternativeRoutes: true, ...when,
+    transitPreferences: { ...extra }
+  });
+  const road = mode => ({
+    ...base, travelMode: mode, routingPreference: "TRAFFIC_AWARE",
+    computeAlternativeRoutes: false, ...(when.departureTime ? { departureTime: when.departureTime } : {})
+  });
+
+  // BICYCLE is deliberately not requested: Routes API has no cycle network for
+  // Bengaluru and returns an empty result every time, so it was a wasted call.
+  const [mixed, lessWalk, rail, bus, walk, twoWheel] = await Promise.all([
+    computeRoutes(transit({})),
+    computeRoutes(transit({ routingPreference: "LESS_WALKING" })),
+    computeRoutes(transit({ allowedTravelModes: ["SUBWAY", "TRAIN", "RAIL", "LIGHT_RAIL"] })),
+    computeRoutes(transit({ allowedTravelModes: ["BUS"] })),
+    computeRoutes({ ...base, travelMode: "WALK" }),
+    computeRoutes(road("TWO_WHEELER"))
+  ]);
+
+  let out = [];
+  for (const list of [mixed, lessWalk, rail, bus])
+    list.forEach(r => out.push(buildTransit(r)));
+
+  if (walk.length)     out.push(buildWalk(walk[0]));
+  if (twoWheel.length) out.push(buildTwoWheeler(twoWheel[0]));
+
+  out = dedupe(out).filter(Boolean);
+
+  // Second pass: price bike taxis for long first/last miles on the transit spines.
+  const transitOnly = out.filter(r => r.isTransit).sort((a, b) => a.seconds - b.seconds);
+  if (transitOnly.length){
+    const combos = await buildCombos(transitOnly, origin, destination);
+    out = dedupe(out.concat(combos)).filter(Boolean);
+  }
+
+  lastRoutes = rank(out);
+
+  $("goBtn").disabled = false;
+  render();
+}
+
+/* ---------- Route model builders (Routes API shape) ---------- */
+const secs = d => d ? parseFloat(String(d).replace("s", "")) || 0 : 0;
+
+/* Polylines are decoded lazily and memoised. A search returns ~24 routes but
+   only the selected one is ever drawn, so eager decoding threw away the vast
+   majority of the work. Keyed by the encoded string itself, which also
+   de-duplicates legs shared between alternatives. */
+const pathCache = new Map();
+function decode(enc){
+  if (!enc || !geometry) return [];
+  let p = pathCache.get(enc);
+  if (!p){
+    p = geometry.encoding.decodePath(enc);
+    if (pathCache.size > 600) pathCache.clear();   // bound it across many searches
+    pathCache.set(enc, p);
+  }
+  return p;
+}
+const RAIL_RE = /SUBWAY|METRO|HEAVY_RAIL|LIGHT_RAIL|RAIL|TRAM|MONORAIL|TRAIN|COMMUTER/;
+
+function allSteps(route){
+  return (route.legs || []).flatMap(l => l.steps || []);
+}
+
+function buildTransit(route){
+  const steps = allSteps(route);
+  if (!steps.some(s => s.transitDetails)) return null;
+
+  let metroKm = 0, busKm = 0, walkM = 0, hasAC = false;
+  let preWalk = 0, board = null;          // first-mile: walk to the first boarding point
+  const hops = [], norm = [];
+
+  for (const s of steps){
+    const dist = s.distanceMeters || 0;
+    const enc  = s.polyline && s.polyline.encodedPolyline;   // decoded only when drawn
+
+    if (!s.transitDetails){
+      if (s.travelMode === "WALK") walkM += dist;
+      if (!board) preWalk += dist;
+      if (dist >= 60) norm.push({
+        mode: "walk", meters: dist,
+        seconds: secs(s.staticDuration), enc
+      });
+      continue;
+    }
+
+    const t    = s.transitDetails;
+    const line = t.transitLine || {};
+    const veh  = ((line.vehicle && line.vehicle.type) || "").toUpperCase();
+    const name = (line.nameShort || line.name || "").toString();
+    const isRail = RAIL_RE.test(veh) || /metro|line$/i.test(name);
+    const km = dist / 1000;
+
+    if (isRail) metroKm += km;
+    else { busKm += km; if (/vajra|vayu|\bac\b/i.test(name + " " + (line.name || ""))) hasAC = true; }
+
+    const sd  = t.stopDetails || {};
+    const lv  = t.localizedValues || {};
+    const dep = lv.departureTime && lv.departureTime.time ? lv.departureTime.time.text : fmtClock(sd.departureTime);
+    const arr = lv.arrivalTime   && lv.arrivalTime.time   ? lv.arrivalTime.time.text   : fmtClock(sd.arrivalTime);
+    const color = line.color || (isRail ? MODES.metro.hex : MODES.bus.hex);
+
+    const hop = {
+      kind: isRail ? "metro" : "bus",
+      name: name || (isRail ? "Metro" : "Bus"),
+      color: safeColor(color, isRail ? MODES.metro.hex : MODES.bus.hex),
+      from: (sd.departureStop || {}).name || "",
+      to:   (sd.arrivalStop   || {}).name || "",
+      stops: t.stopCount || null, dep,
+      headway: t.headway ? secs(t.headway) : null
+    };
+    hops.push(hop);
+    norm.push({ mode: "transit", ...hop, seconds: secs(s.staticDuration), enc });
+
+    if (!board){
+      const loc = (sd.departureStop || {}).location;
+      const ll  = loc && loc.latLng;
+      board = {
+        stop: hop.from, kind: hop.kind, walk: preWalk,
+        lat: ll ? ll.latitude : null, lng: ll ? ll.longitude : null
+      };
+    }
+  }
+
+  const metroFare = metroKm > 0 ? slabFare(metroKm, METRO_SLABS) : 0;
+  let   busFare   = busKm   > 0 ? slabFare(busKm,   BUS_SLABS)   : 0;
+  if (hasAC) busFare = Math.round(busFare * AC_MULT);
+
+  const kind = metroKm > 0 && busKm > 0 ? "transit" : (metroKm > 0 ? "metro" : "bus");
+  const last = hops.at(-1);
+
+  /* First/last mile measured on the raw steps, so short sub-steps that the
+     display list drops are still counted. These drive the bike-combo search. */
+  const rawT = steps.map(s => !!s.transitDetails);
+  const firstT = rawT.indexOf(true), lastT = rawT.lastIndexOf(true);
+  // preWalk (metres) is already accumulated above while locating the boarding stop.
+  let preWalkSec = 0, tailWalk = 0, tailWalkSec = 0;
+  steps.forEach((s, k) => {
+    if (s.transitDetails) return;
+    if (k < firstT) preWalkSec += secs(s.staticDuration);
+    if (k > lastT){ tailWalk += s.distanceMeters || 0; tailWalkSec += secs(s.staticDuration); }
+  });
+
+  const alightSd = steps[lastT] && steps[lastT].transitDetails
+                   ? (steps[lastT].transitDetails.stopDetails || {}) : {};
+  const aLoc = (alightSd.arrivalStop || {}).location;
+  const aLL  = aLoc && aLoc.latLng;
+  const alight = last ? {
+    stop: last.to, kind: last.kind,
+    lat: aLL ? aLL.latitude : null, lng: aLL ? aLL.longitude : null
+  } : null;
+
+  return {
+    kind, route,
+    seconds: secs(route.duration),
+    meters: route.distanceMeters || 0,
+    fare: metroFare + busFare,
+    walkMeters: walkM,
+    transfers: Math.max(0, hops.length - 1),
+    hops, steps: norm, board, alight,
+    metroKm, busKm,
+    preWalk, preWalkSec, tailWalk, tailWalkSec,
+    enc: route.polyline && route.polyline.encodedPolyline,
+    isTransit: true
+  };
+}
+
+const fmtClock = iso => {
+  if (!iso) return null;
+  try { return new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }); }
+  catch { return null; }
+};
+
+/* Walking is only ever the answer for very short trips, but it is the
+   fallback when no transit exists at all, so it stays. */
+function buildWalk(route){
+  if (!route) return null;
+  const meters = route.distanceMeters || 0;
+  return {
+    kind: "walk",
+    seconds: secs(route.duration), meters, fare: 0,
+    walkMeters: meters, transfers: 0, hops: [], steps: [],
+    metroKm: 0, busKm: 0,
+    enc: route.polyline && route.polyline.encodedPolyline,
+    isTransit: false
+  };
+}
+
+function buildTwoWheeler(route){
+  const meters = route.distanceMeters || 0;
+  return {
+    kind: "twowheel",
+    seconds: secs(route.duration),        // real TWO_WHEELER routing, traffic-aware
+    meters,
+    fare: bikeTaxiFare(meters / 1000),
+    walkMeters: 0, transfers: 0, hops: [], steps: [],
+    metroKm: 0, busKm: 0,
+    enc: route.polyline && route.polyline.encodedPolyline,
+    isTransit: false
+  };
+}
+
+/* ---------- Mixed-mode combinations ----------
+   A metro or bus trunk is often the right spine, but the walk at either
+   end can dominate the trip. Where that walk is long, price a real
+   two-wheeler leg for it and offer the combination as its own option. */
+const COMBO_WALK_MIN = 600;    // metres of walking before a bike is worth pricing
+const BIKE_WAIT_SEC  = 180;    // hailing + waiting for a bike taxi
+
+const latLngWp = p => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
+
+async function buildCombos(transitRoutes, origin, destination){
+  const seen = new Set();
+  const candidates = [];
+  for (const r of transitRoutes){
+    if (!r.hops.length) continue;
+    const needFirst = r.preWalk  > COMBO_WALK_MIN && r.board  && r.board.lat  != null;
+    const needLast  = r.tailWalk > COMBO_WALK_MIN && r.alight && r.alight.lat != null;
+    if (!needFirst && !needLast) continue;
+    const sig = r.hops.map(h => h.name).join(">");
+    if (seen.has(sig)) continue;
+    seen.add(sig);
+    candidates.push({ r, needFirst, needLast });
+    if (candidates.length >= 4) break;      // keep the request count sane
+  }
+  if (!candidates.length) return [];
+
+  const jobs = candidates.flatMap(({ r, needFirst, needLast }) => {
+    const out = [];
+    if (needFirst) out.push(
+      computeRoutes({ origin, destination: latLngWp(r.board), travelMode: "TWO_WHEELER",
+                      routingPreference: "TRAFFIC_AWARE" })
+        .then(x => ({ r, slot: "first", routes: x })));
+    if (needLast) out.push(
+      computeRoutes({ origin: latLngWp(r.alight), destination, travelMode: "TWO_WHEELER",
+                      routingPreference: "TRAFFIC_AWARE" })
+        .then(x => ({ r, slot: "last", routes: x })));
+    return out;
+  });
+
+  const legs = await Promise.all(jobs);
+  const byRoute = new Map();
+  for (const { r, slot, routes } of legs){
+    if (!routes || !routes.length) continue;
+    const leg = routes[0];
+    const meters = leg.distanceMeters || 0, seconds = secs(leg.duration) + BIKE_WAIT_SEC;
+    if (!byRoute.has(r)) byRoute.set(r, {});
+    byRoute.get(r)[slot] = {
+      meters, seconds,
+      fare: bikeTaxiFare(meters / 1000),
+      enc: leg.polyline && leg.polyline.encodedPolyline
+    };
+  }
+
+  const combos = [];
+  for (const [r, parts] of byRoute){
+    const combo = makeCombo(r, parts.first, parts.last);
+    if (combo) combos.push(combo);
+  }
+  return combos;
+}
+
+function makeCombo(r, firstBike, lastBike){
+  if (!firstBike && !lastBike) return null;
+
+  // Swap the replaced walking time for the bike time.
+  let seconds = r.seconds, walkMeters = r.walkMeters, fare = r.fare;
+  if (firstBike){ seconds += firstBike.seconds - r.preWalkSec;  walkMeters -= r.preWalk;  fare += firstBike.fare; }
+  if (lastBike) { seconds += lastBike.seconds  - r.tailWalkSec; walkMeters -= r.tailWalk; fare += lastBike.fare;  }
+  if (seconds >= r.seconds) return null;          // no time saved, not worth offering
+
+  const modes = r.steps.map(s => s.mode);
+  const firstT = modes.indexOf("transit"), lastT = modes.lastIndexOf("transit");
+  const steps = [];
+  if (firstBike) steps.push({ mode: "bike", meters: firstBike.meters, seconds: firstBike.seconds,
+                              fare: firstBike.fare, to: r.board.stop, toKind: r.board.kind,
+                              enc: firstBike.enc });
+  else steps.push(...r.steps.slice(0, firstT));
+  steps.push(...r.steps.slice(firstT, lastT + 1));
+  if (lastBike) steps.push({ mode: "bike", meters: lastBike.meters, seconds: lastBike.seconds,
+                             fare: lastBike.fare, from: r.alight.stop, fromKind: r.alight.kind,
+                             enc: lastBike.enc });
+  else steps.push(...r.steps.slice(lastT + 1));
+
+  return {
+    ...r,
+    seconds, fare, walkMeters: Math.max(0, walkMeters),
+    steps, firstBike: firstBike || null, lastBike: lastBike || null,
+    isCombo: true
+  };
+}
+
+function dedupe(list){
+  const seen = new Set();
+  return list.filter(r => {
+    if (!r) return false;
+    const sig = r.kind + "|" + r.hops.map(h => h.name).join(">") + "|" + Math.round(r.seconds / 60)
+              + "|" + (r.firstBike ? "b" : "") + (r.lastBike ? "B" : "");
+    if (seen.has(sig)) return false;
+    seen.add(sig); return true;
+  });
+}
+
+/* ---------- Ranking: metro first, then bus, then bike ----------
+   Preference is applied as a multiplier on journey time, so a mode is
+   only overtaken when the alternative is faster by more than its
+   handicap. Metro wins ties; bike has to be clearly quicker to place. */
+const MODE_WEIGHT = {
+  metro:    0.68,   // rail spine: predictable, unaffected by traffic
+  transit:  0.74,   // metro + bus combination
+  bus:      0.86,   // bus-only
+  walk:     1.00,
+  twowheel: 1.25    // private/hired two-wheeler, ranked last of the motorised options
+};
+
+function rank(list){
+  const scored = list.map(r => {
+    let s = r.seconds;
+
+    // Public transport preference is always on — it is the point of the app.
+    // A combo keeps its trunk's weight: a bike feeder does not demote a metro spine.
+    s *= MODE_WEIGHT[r.kind] ?? 1;
+    // Metro-dominant journeys edge ahead of bus-dominant ones of the same class.
+    if (r.isTransit && r.metroKm > 0 && r.metroKm >= r.busKm) s *= 0.95;
+    // A bike feeder costs a little preference, but far less than riding the whole way.
+    if (r.isCombo) s *= 1.06;
+
+    if (r.kind === "walk"  && r.meters > 3500)  s *= 3;   // long walks are theoretical
+    s += r.transfers * 240;                               // each interchange costs patience
+    s += Math.max(0, r.walkMeters - 800) * 0.9;           // penalise heavy last-mile walking
+    return { ...r, score: s };
+  }).sort((a, b) => a.score - b.score);
+
+  return scored;
+}
+
+/* ================================================================
+   Rendering
+   ================================================================ */
+const fmtDur = s => {
+  const m = Math.round(s / 60);
+  if (m < 60) return m + " min";
+  return Math.floor(m / 60) + " hr" + (m % 60 ? " " + (m % 60) + " min" : "");
+};
+const fmtDist = m => m < 1000 ? Math.round(m) + " m" : (m / 1000).toFixed(m < 10000 ? 1 : 0) + " km";
+
+function render(){
+  const box = $("results");
+  if (!lastRoutes.length){
+    $("tripBox").hidden = true;
+    if (lastApiError){
+      const msg = lastApiError.message || "Unknown error";
+      const notEnabled = /has not been used in project|is disabled|SERVICE_DISABLED/i.test(msg);
+      const badKey     = /API key not valid|API_KEY_INVALID|referer|referrer/i.test(msg);
+      box.innerHTML = `<div class="err"><b>${notEnabled ? "Routes API is not enabled yet" : badKey ? "API key rejected" : "Routes API error"}</b><br><br>${
+        notEnabled ? 'Enable <b>Routes API</b> in your Google Cloud project, wait ~1 minute, then search again.'
+        : badKey    ? 'Check the key\'s API restrictions and, if you set an HTTP referrer restriction, add <code>http://localhost:5173/*</code>.'
+        : esc(msg.slice(0, 300))}</div>`;
+      return;
+    }
+    box.innerHTML = `<div class="state">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <h3>No routes found</h3>
+      <p>Google returned nothing for that pair. Try a nearby landmark or metro station, and check both places are in the Bengaluru region.</p></div>`;
+    return;
+  }
+
+  // The journey box is the whole result view — nothing is listed beneath it.
+  box.innerHTML = "";
+  tripMode = "best";    // every new search opens on the best mixed route
+  openTrip();
+}
+
+/* ================================================================
+   Journey sheet: plain-language, shareable directions
+   ================================================================ */
+const LAST_MILE_WALK = 700;   // beyond this, suggest a bike taxi instead of walking
+
+/* Google reports Bengaluru metro stops without the word "Metro"
+   ("Hopefarm Channasandra"), which reads as a locality rather than a
+   station. Append it, unless the name already carries it. */
+const stationName = (name, kind) =>
+  kind === "metro" && name && !/\bmetro\b/i.test(name) ? name + " Metro" : (name || "");
+
+function narrative(r){
+  const origin = (fromAC && fromAC.text()) || "Current location";
+  const dest   = (toAC   && toAC.text())   || "Destination";
+  const rows = [{ cls: "start", icon: "pin", t: origin, s: "Your starting point" }];
+
+  if (!r.isTransit){
+    const m = MODES[r.kind];
+    rows.push({
+      cls: r.kind, icon: m.icon, color: m.hex,
+      t: r.kind === "walk" ? `Walk ${fmtDist(r.meters)} to your destination`
+                           : `Take a ${m.label.toLowerCase()} for ${fmtDist(r.meters)}`,
+      s: `About ${fmtDur(r.seconds)}`,
+      fare: r.fare > 0 ? `≈ ₹${r.fare}` : null
+    });
+    rows.push({ cls: "end", icon: "flag", t: `Reach ${dest}`, s: null });
+    return rows;
+  }
+
+  const steps = r.steps;
+  const lastTransit = steps.map(s => s.mode).lastIndexOf("transit");
+  let tailWalk = 0;
+  let i = 0;
+
+  while (i < steps.length){
+    if (steps[i].mode === "bike"){
+      const b = steps[i];
+      rows.push({
+        cls: "twowheel", icon: "bike", color: MODES.twowheel.hex,
+        t: b.to ? `Take a Rapido bike to ${stationName(b.to, b.toKind)}`
+                : `After reaching ${stationName(b.from, b.fromKind)}, take a Rapido bike`,
+        s: `${fmtDist(b.meters)} · about ${fmtDur(b.seconds)} including the wait`,
+        fare: `Rapido bike ≈ ₹${b.fare}`
+      });
+      i++;
+      continue;
+    }
+
+    // Google splits walking into turn-by-turn sub-steps; collapse each run
+    // into one instruction so the chain reads as a person would say it.
+    if (steps[i].mode === "walk"){
+      let meters = 0, seconds = 0;
+      while (i < steps.length && steps[i].mode === "walk"){
+        meters  += steps[i].meters  || 0;
+        seconds += steps[i].seconds || 0;
+        i++;
+      }
+      if (i > lastTransit){ tailWalk += meters; continue; }   // trailing walk = last mile
+      const next = steps[i];                                  // always a transit step here
+      if (meters >= 80) rows.push({
+        cls: "walk", icon: "walk",
+        t: `Walk ${fmtDist(meters)} to ${stationName(next.from, next.kind)}`,
+        s: `About ${fmtDur(seconds)} on foot${next.kind === "metro" ? " · metro station" : " · bus stop"}`
+      });
+      continue;
+    }
+
+    const s = steps[i];
+    if (s.kind === "bus"){
+      rows.push({
+        cls: "bus", icon: "bus", color: s.color,
+        t: `Take bus ${s.name} to reach ${s.to}`,
+        s: [s.from ? `Board at ${s.from}` : null,
+            s.stops ? `${s.stops} stops` : null,
+            s.dep ? `departs ${s.dep}` : null,
+            s.headway ? `every ~${Math.round(s.headway / 60)} min` : null].filter(Boolean).join(" · ")
+      });
+    } else {
+      rows.push({
+        cls: "metro", icon: "metro", color: s.color,
+        t: `After reaching ${stationName(s.from, "metro")}, buy a ticket to ${stationName(s.to, "metro")}`,
+        s: [s.name, s.stops ? `${s.stops} stops` : null, s.dep ? `departs ${s.dep}` : null]
+             .filter(Boolean).join(" · ")
+      });
+    }
+    i++;
+  }
+
+  const lastLeg  = lastTransit >= 0 ? steps[lastTransit] : null;
+  const lastStop = lastLeg ? stationName(lastLeg.to, lastLeg.kind) : null;
+  if (tailWalk > LAST_MILE_WALK){
+    rows.push({
+      cls: "twowheel", icon: "bike", color: MODES.twowheel.hex,
+      t: `After reaching ${lastStop || "the last stop"}, take a Rapido bike`,
+      s: `${fmtDist(tailWalk)} left — too far to walk comfortably`,
+      fare: `Rapido bike ≈ ₹${bikeTaxiFare(tailWalk / 1000)}`
+    });
+  } else if (tailWalk > 0){
+    rows.push({
+      cls: "walk", icon: "walk",
+      t: `Walk ${fmtDist(tailWalk)} to your destination`,
+      s: lastStop ? `From ${lastStop}` : null
+    });
+  }
+
+  rows.push({ cls: "end", icon: "flag", t: `Reach ${dest}`, s: null });
+  return rows;
+}
+
+let tripIdx = 0, tripMode = "best";
+
+/* Each tab is a single travel mode, in the order asked for:
+   metro-only, bus-only, Rapido bike end-to-end, then the best mix. */
+const TABS = [
+  ["metro", "Metro",  "metro", MODES.metro.hex,    "No metro-only route",  "Google found no journey to here using metro alone. Try the Best route tab — it may still use metro for part of the trip."],
+  ["bus",   "Bus",    "bus",   MODES.bus.hex,      "No bus-only route",    "No BMTC service covers this trip end to end. The Best route tab may still include a bus leg."],
+  ["bike",  "Rapido", "bike",  MODES.twowheel.hex, "No bike route",        "No road route was returned for a two-wheeler on this trip."],
+  ["best",  "Best",   "star",  "#d4380d",          "Nothing found",        "No routes were returned for this trip."]
+];
+
+function tripBuckets(){
+  const plain = r => r.isTransit && !r.isCombo;
+  return {
+    // lastRoutes is already ranked, so index 0 of each list is that mode's best.
+    metro: lastRoutes.filter(r => plain(r) && r.metroKm > 0 && r.busKm === 0),
+    bus:   lastRoutes.filter(r => plain(r) && r.busKm   > 0 && r.metroKm === 0),
+    bike:  lastRoutes.filter(r => r.kind === "twowheel"),
+    best:  lastRoutes.length ? [lastRoutes[0]] : []
+  };
+}
+
+function renderTabs(buckets){
+  $("tripTabs").innerHTML = TABS.map(([key, label, icon, tint]) => {
+    const r = buckets[key][0];
+    const sub = r ? `${fmtDur(r.seconds)}${r.fare > 0 ? ` · ₹${r.fare}` : " · free"}` : "—";
+    const on = key === tripMode;
+    return `<button class="tab${on ? " on" : ""}" data-mode="${key}" role="tab"
+      aria-selected="${on}" aria-label="${esc(label)}${r ? ", " + esc(sub) : ", unavailable"}"
+      style="--m:${tint}"${r ? "" : " disabled"}>
+      <i>${ICON[icon]}</i><b>${esc(label)}</b><span>${esc(sub)}</span></button>`;
+  }).join("");
+}
+
+function chainHtml(r){
+  return narrative(r).map(row => {
+    // Sanitised again at render time: colours originate in Google's transit feed.
+    const tint = row.color ? safeColor(row.color, MODES.metro.hex) : null;
+    // Walking legs keep the neutral dashed rail; rides colour it solid.
+    const rail = tint && row.cls !== "walk" ? ` style="--rail:${tint}"` : "";
+    return `
+    <div class="cr ${row.cls}">
+      <div class="cr-rail">
+        <i class="cr-ico${tint ? " tinted" : ""}"${tint ? ` style="background:${tint}"` : ""}>${ICON[row.icon]}</i>
+        <u${rail}></u>
+      </div>
+      <div class="cr-b">
+        <div class="cr-t">${esc(row.t)}</div>
+        ${row.s ? `<div class="cr-s">${esc(row.s)}</div>` : ""}
+        ${row.fare ? `<span class="cr-fare">${esc(row.fare)}</span>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/** Render whichever mode tab is active, listing only that mode's routes. */
+function showTripMode(mode){
+  tripMode = mode;
+  const buckets = tripBuckets();
+  const list = buckets[mode] || [];
+  renderTabs(buckets);
+
+  if (!list.length){
+    const meta = TABS.find(t => t[0] === mode);
+    $("tripMeta").textContent = "";
+    $("tripAlts").hidden = true;
+    $("tripChain").innerHTML =
+      `<div class="chain-empty"><b>${esc(meta[2])}</b>${esc(meta[3])}</div>`;
+    return;
+  }
+
+  fillAlts(list);
+  showTrip(lastRoutes.indexOf(list[0]));
+}
+
+/** Alternatives inside the chosen mode, as buttons. */
+function fillAlts(list){
+  const box = $("tripAlts");
+  box.hidden = list.length < 2;
+  if (box.hidden){ box.innerHTML = ""; return; }
+  box.innerHTML = `<div class="alts-h">${list.length} ways to do this</div>` +
+    list.map(x => {
+      const n = lastRoutes.indexOf(x);
+      const via = x.hops.length ? " · " + x.hops.map(h => h.name).join(" + ") : "";
+      return `<button class="alt" data-alt="${n}">${esc(fmtDur(x.seconds) + (x.fare > 0 ? ` · ₹${x.fare}` : "") + via)}</button>`;
+    }).join("");
+}
+
+/** Render one specific route into the chain. */
+function showTrip(i){
+  const r = lastRoutes[i]; if (!r) return;
+  tripIdx = i;
+  $("tripAlts").querySelectorAll(".alt")
+    .forEach(b => b.classList.toggle("on", +b.dataset.alt === i));
+
+  const mix = [];
+  if (r.metroKm > 0) mix.push("metro");
+  if (r.busKm   > 0) mix.push("bus");
+  if (r.firstBike || r.lastBike) mix.push("bike");
+
+  $("tripMeta").textContent =
+    `${fmtDur(r.seconds)} · ${fmtDist(r.meters)}` +
+    (r.fare > 0 ? ` · ≈ ₹${r.fare}` : " · free") +
+    (r.isTransit ? ` · ${r.transfers === 0 ? "direct" : r.transfers + " change" + (r.transfers > 1 ? "s" : "")}` : "") +
+    (mix.length > 1 ? ` · ${mix.join(" + ")}` : "");
+
+  $("tripChain").innerHTML = chainHtml(r);
+  $("tripChain").scrollTop = 0;
+  select(i);                       // keep the map in sync with the dialog
+}
+
+function openTrip(i){
+  if (!lastRoutes.length) return;
+  $("tripBox").hidden = false;
+  if (typeof i === "number"){
+    // Opened from a specific result card: activate the tab that route belongs to.
+    const b = tripBuckets();
+    tripMode = (i === 0 && b.best.length) ? "best"
+             : ["metro", "bus", "bike"].find(k => b[k].includes(lastRoutes[i])) || "best";
+    renderTabs(b);
+    fillAlts(b[tripMode] || []);
+    showTrip(i);
+    $("tripBox").scrollIntoView({ block: "start", behavior: "smooth" });
+  } else {
+    showTripMode(tripMode);
+  }
+}
+
+function tripAsText(){
+  const r = lastRoutes[tripIdx]; if (!r) return "";
+  return narrative(r).map(x => x.t).join("\n|\n");
+}
+
+$("tripTabs").onclick = e => {
+  const t = e.target.closest(".tab");
+  if (t && !t.disabled) showTripMode(t.dataset.mode);
+};
+$("tripPdf").onclick = () => {
+  const btn = $("tripPdf");
+  try { downloadPdf(); }
+  catch (e){ btn.textContent = "Failed"; setTimeout(() => location.reload(), 1200); return; }
+  const html = btn.innerHTML;
+  btn.textContent = "Saved";
+  setTimeout(() => { btn.innerHTML = html; }, 1600);
+};
+$("tripAlts").onclick = e => {
+  const a = e.target.closest(".alt");
+  if (a) showTrip(+a.dataset.alt);
+};
+$("tripCopy").onclick = async () => {
+  const btn = $("tripCopy"), text = tripAsText();
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch {}
+    ta.remove();
+  }
+  btn.textContent = "Copied";
+  setTimeout(() => { btn.textContent = "Copy"; }, 1600);
+};
+
+/* ================================================================
+   PDF export
+
+   Written by hand rather than pulling in a PDF library: the whole app
+   is one file with no build step, and the itinerary only needs text,
+   rules and filled rectangles. Uses the base-14 Helvetica faces, so
+   nothing has to be embedded.
+   ================================================================ */
+const PT = { w: 595, h: 842 };            // A4 in points
+const PDF_MARGIN = 54;
+
+/* Base-14 fonts are byte-encoded, so the document is kept to ASCII.
+   That also keeps xref offsets equal to string indices. */
+function toAscii(s){
+  return String(s ?? "")
+    // Decompose accents and drop the marks, so "café" becomes "cafe" not "caf".
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/₹/g, "Rs ")
+    .replace(/[·•]/g, "-")
+    .replace(/[–—]/g, "-")
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/…/g, "...")
+    .replace(/ /g, " ")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+const pdfEsc = s => s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+
+const hexRgb = hex => {
+  const h = String(hex || "#000").replace("#", "");
+  const f = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const n = parseInt(f, 16) || 0;
+  return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]
+    .map(v => v.toFixed(3)).join(" ");
+};
+
+/* Helvetica advance widths are close enough to these averages for
+   wrapping; the factor is deliberately generous so lines never overrun. */
+const textW = (s, size, bold) => s.length * size * (bold ? 0.54 : 0.505);
+
+function wrapText(s, size, maxW, bold){
+  const words = s.split(" ");
+  const lines = [];
+  let line = "";
+  for (const w of words){
+    const next = line ? line + " " + w : w;
+    if (textW(next, size, bold) > maxW && line){ lines.push(line); line = w; }
+    else line = next;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function routePdf(r){
+  const M = PDF_MARGIN, RIGHT = PT.w - M;
+  const pages = [];
+  let ops = [], y = 0;
+
+  const out = s => ops.push(s);
+  const text = (str, x, yy, size, bold, rgb) => {
+    const t = pdfEsc(toAscii(str));
+    if (!t) return;
+    out(`BT ${rgb || "0.09 0.13 0.18"} rg /${bold ? "F2" : "F1"} ${size} Tf 1 0 0 1 ${x.toFixed(1)} ${yy.toFixed(1)} Tm (${t}) Tj ET`);
+  };
+  const rect = (x, yy, w, h, rgb) => out(`${rgb} rg ${x.toFixed(1)} ${yy.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)} re f`);
+  const line = (x1, y1, x2, y2, rgb, w) =>
+    out(`${rgb} RG ${w} w ${x1.toFixed(1)} ${y1.toFixed(1)} m ${x2.toFixed(1)} ${y2.toFixed(1)} l S`);
+
+  const newPage = () => { if (ops.length) pages.push(ops.join("\n")); ops = []; y = PT.h - M; };
+  const room = need => { if (y - need < M + 34) newPage(); };
+
+  const ACCENT = hexRgb("#d4380d"), INK = "0.09 0.13 0.18",
+        GREY = "0.42 0.47 0.55", RULE = "0.88 0.91 0.95";
+
+  newPage();
+
+  // ---- masthead ----
+  rect(M, y - 20, 22, 22, ACCENT);
+  text("NR", M + 4.5, y - 13.5, 11, true, "1 1 1");
+  text("Namma Route", M + 31, y - 8, 15, true, INK);
+  text("Bengaluru transit plan", M + 31, y - 20, 9, false, GREY);
+  y -= 36;
+  line(M, y, RIGHT, y, ACCENT, 1.6);
+  y -= 26;
+
+  // ---- endpoints ----
+  const from = fromAC.text() || "Current location";
+  const to   = toAC.text()   || "Destination";
+  for (const [lab, val, col] of [["FROM", from, "0.02 0.46 0.28"], ["TO", to, "0.83 0.22 0.05"]]){
+    room(30);
+    rect(M, y - 7, 7, 7, col);
+    text(lab, M + 14, y - 6, 8, true, GREY);
+    const lines = wrapText(toAscii(val), 11.5, RIGHT - M - 52, true);
+    lines.forEach((l, i) => text(l, M + 46, y - 6 - i * 14, 11.5, true, INK));
+    y -= 14 + (lines.length - 1) * 14 + 6;
+  }
+
+  // ---- summary ----
+  y -= 6;
+  const mix = [];
+  if (r.metroKm > 0) mix.push("metro");
+  if (r.busKm   > 0) mix.push("bus");
+  if (r.firstBike || r.lastBike) mix.push("bike");
+  const summary = [
+    fmtDur(r.seconds), fmtDist(r.meters),
+    r.fare > 0 ? "approx Rs " + r.fare : "free",
+    r.isTransit ? (r.transfers === 0 ? "direct" : r.transfers + " change" + (r.transfers > 1 ? "s" : "")) : null,
+    mix.length > 1 ? mix.join(" + ") : null
+  ].filter(Boolean).join("   -   ");
+  rect(M, y - 20, RIGHT - M, 26, "0.96 0.97 0.98");
+  text(summary, M + 12, y - 12, 10.5, true, INK);
+  y -= 40;
+
+  // ---- the chain ----
+  const BUL = 10, TX = M + BUL + 16;
+  const rows = narrative(r);
+  rows.forEach((row, i) => {
+    const titleLines = wrapText(toAscii(row.t), 11, RIGHT - TX, true);
+    const subLines   = row.s ? wrapText(toAscii(row.s), 9, RIGHT - TX, false) : [];
+    const need = titleLines.length * 14 + subLines.length * 11 + (row.fare ? 15 : 0) + 16;
+    room(need);
+
+    const col = row.color ? hexRgb(safeColor(row.color, "#64748b"))
+              : row.cls === "start" ? "0.02 0.46 0.28"
+              : row.cls === "end"   ? ACCENT : "0.39 0.45 0.55";
+    const top = y;
+    rect(M, y - BUL + 1, BUL, BUL, col);
+
+    titleLines.forEach((l, n) => text(l, TX, y - 8 - n * 14, 11, true, INK));
+    y -= titleLines.length * 14;
+    subLines.forEach((l, n) => text(l, TX, y - 3 - n * 11, 9, false, GREY));
+    y -= subLines.length * 11;
+
+    if (row.fare){
+      const f = toAscii(row.fare);
+      const w = textW(f, 8.5, true) + 14;
+      rect(TX, y - 12, w, 13, "0.94 0.96 0.97");
+      text(f, TX + 7, y - 3.5, 8.5, true, GREY);
+      y -= 17;
+    }
+
+    // connector down to the next bullet
+    if (i < rows.length - 1){
+      const dashed = row.cls === "walk" || row.cls === "start";
+      if (dashed) out("[1.6 2.4] 0 d");
+      line(M + BUL / 2, top - BUL, M + BUL / 2, y - 8, col, dashed ? 1.2 : 2.4);
+      if (dashed) out("[] 0 d");
+    }
+    y -= 16;
+  });
+
+  // ---- footnote on every page ----
+  const stamp = "Generated " + new Date().toLocaleString("en-IN", {
+    day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+  pages.push(ops.join("\n"));
+  const foot = pages.map((_, i) => {
+    const f = [];
+    f.push(`${RULE} RG 0.8 w ${M} ${M + 22} m ${RIGHT} ${M + 22} l S`);
+    f.push(`BT ${GREY} rg /F1 7.5 Tf 1 0 0 1 ${M} ${M + 11} Tm (${pdfEsc(stamp)}  -  Fares are estimates: Namma Metro and BMTC distance slabs, Rapido-style bike pricing.) Tj ET`);
+    f.push(`BT ${GREY} rg /F1 7.5 Tf 1 0 0 1 ${RIGHT - 46} ${M + 11} Tm (Page ${i + 1} of ${pages.length}) Tj ET`);
+    return f.join("\n");
+  });
+
+  // ---- assemble ----
+  const objs = [];
+  const add = s => { objs.push(s); return objs.length; };          // 1-based ids
+  const kidIds = pages.map(() => 0);
+  const pagesId = 1;
+  objs.push("");                                                    // reserve id 1
+  const fontR = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+  const fontB = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+
+  pages.forEach((content, i) => {
+    const body = content + "\n" + foot[i];
+    const streamId = add(`<< /Length ${body.length} >>\nstream\n${body}\nendstream`);
+    kidIds[i] = add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PT.w} ${PT.h}] ` +
+      `/Resources << /Font << /F1 ${fontR} 0 R /F2 ${fontB} 0 R >> >> /Contents ${streamId} 0 R >>`);
+  });
+  objs[0] = `<< /Type /Pages /Count ${kidIds.length} /Kids [${kidIds.map(k => k + " 0 R").join(" ")}] >>`;
+  const catalogId = add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [];
+  objs.forEach((o, i) => { offsets.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` +
+    offsets.map(o => String(o).padStart(10, "0") + " 00000 n \n").join("");
+  pdf += `trailer\n<< /Size ${objs.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return pdf;
+}
+
+function downloadPdf(){
+  const r = lastRoutes[tripIdx];
+  if (!r) return;
+  const s = routePdf(r);
+  const bytes = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i) & 0xff;
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const a = document.createElement("a");
+  const slug = t => toAscii(t).split(",")[0].replace(/[^A-Za-z0-9]+/g, "-").slice(0, 28) || "trip";
+  a.href = url;
+  a.download = `namma-route-${slug(fromAC.text())}-to-${slug(toAC.text())}.pdf`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/* ================================================================
+   Metro stations along a ride
+
+   Routes API reports only the boarding and alighting stops (plus a
+   stopCount), never the stations in between. Places API can list them
+   along the ride's polyline, so we ask for those, then keep only the
+   ones that genuinely sit on the line and put them in travel order.
+   ================================================================ */
+const PLACES_TEXT_URL = "https://places.googleapis.com/v1/places:searchText";
+const STATION_ON_LINE_M = 220;   // max distance from the polyline to count as on-route
+const STATION_SAME_M    = 180;   // closer than this to a kept station = same station
+const stationCache = new Map();  // encoded polyline -> resolved station list
+
+/* "Kadugodi Tree Park Metro towards ITPL" -> "Kadugodi Tree Park" */
+function cleanStationName(n){
+  return String(n || "")
+    .replace(/\s+towards\s+.*$/i, "")
+    .replace(/\s*[-–]\s*(platform|plat)\b.*$/i, "")
+    .replace(/\s*metro(\s*(station|stn\.?))?\s*$/i, "")   // also a bare trailing "Metro"
+    .trim();
+}
+
+const metresBetween = (a, b) => geometry.spherical.computeDistanceBetween(
+  new google.maps.LatLng(a.lat, a.lng), new google.maps.LatLng(b.lat, b.lng));
+
+/** Nearest vertex on `path` — gives both distance and position along the ride. */
+function nearestOnPath(path, pt){
+  let best = Infinity, at = 0;
+  for (let i = 0; i < path.length; i++){
+    const v = path[i];
+    const d = metresBetween({ lat: v.lat(), lng: v.lng() }, pt);
+    if (d < best){ best = d; at = i; }
+  }
+  return { dist: best, at };
+}
+
+async function placesAlong(encodedPolyline){
+  const r = await fetch(PLACES_TEXT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": KEYS.places,
+      "X-Goog-FieldMask": "places.displayName,places.location"
+    },
+    body: JSON.stringify({
+      textQuery: "metro station",
+      includedType: "subway_station",
+      maxResultCount: 20,
+      languageCode: "en",
+      searchAlongRouteParameters: { polyline: { encodedPolyline } }
+    })
+  });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message || j.error.status);
+  return (j.places || []).filter(p => p.location);
+}
+
+async function stationsFor(enc, stopCount){
+  if (!enc || !KEYS.places) return [];
+  if (stationCache.has(enc)) return stationCache.get(enc);
+
+  const path = decode(enc);
+  if (path.length < 2) return [];
+
+  // searchText caps at 20 results, so split long rides and query each part.
+  const parts = Math.min(4, Math.max(1, Math.ceil((stopCount || 1) / 15)));
+  const chunks = [];
+  for (let i = 0; i < parts; i++){
+    const a = Math.floor(i * path.length / parts);
+    const b = Math.min(path.length, Math.ceil((i + 1) * path.length / parts) + 1);
+    chunks.push(geometry.encoding.encodePath(path.slice(a, b)));
+  }
+
+  let raw;
+  try {
+    raw = (await Promise.all(chunks.map(c => placesAlong(c).catch(() => [])))).flat();
+  } catch { return []; }
+
+  const kept = [];
+  for (const p of raw){
+    const pt = { lat: p.location.latitude, lng: p.location.longitude };
+    const { dist, at } = nearestOnPath(path, pt);
+    if (dist > STATION_ON_LINE_M) continue;                       // not on this line
+    const name = cleanStationName(p.displayName && p.displayName.text);
+    if (!name) continue;
+    // Merge the separate platform entries Google returns per station.
+    const dup = kept.find(k => metresBetween(k, pt) < STATION_SAME_M ||
+                               k.name.toLowerCase() === name.toLowerCase());
+    if (dup){ if (name.length < dup.name.length) dup.name = name; continue; }
+    kept.push({ name, lat: pt.lat, lng: pt.lng, at });
+  }
+
+  kept.sort((a, b) => a.at - b.at);                               // travel order
+  stationCache.set(enc, kept);
+  return kept;
+}
+
+/* ================================================================
+   Map drawing
+   ================================================================ */
+let drawSeq = 0;           // guards against a slow station fetch landing after a redraw
+let stationMarkers = [];
+
+function clearMap(){
+  overlays.forEach(o => o.setMap(null));
+  markers.forEach(m => m.setMap(null));
+  stationMarkers.forEach(m => m.setMap(null));
+  overlays = []; markers = []; stationMarkers = [];
+  $("legend").hidden = true;
+}
+
+function select(i){
+  const r = lastRoutes[i];
+  if (r) draw(r);   // switching mode buttons redraws the map through here
+}
+
+function draw(r){
+  clearMap();
+  const seq = ++drawSeq;
+  const bounds = new google.maps.LatLngBounds();
+
+  const push = (path, color, dashed, weight) => {
+    const opts = {
+      map, path, geodesic: true,
+      strokeColor: color,
+      strokeOpacity: dashed ? 0 : 0.9,
+      strokeWeight: weight,
+      zIndex: dashed ? 1 : 2
+    };
+    if (dashed) opts.icons = [{
+      icon: { path: "M 0,-1 0,1", strokeOpacity: 0.85, strokeColor: color, strokeWeight: weight, scale: 3 },
+      offset: "0", repeat: "12px"
+    }];
+    overlays.push(new google.maps.Polyline(opts));
+  };
+
+  if (!r.isTransit || !r.steps.length){
+    const m = MODES[r.kind];
+    const path = decode(r.enc);
+    push(path, m.hex, r.kind === "walk", r.kind === "walk" ? 4 : 6);
+    path.forEach(p => bounds.extend(p));
+  } else {
+    for (const s of r.steps){
+      const path = decode(s.enc);      // decoded here, not at build time
+      if (!path.length) continue;
+      path.forEach(p => bounds.extend(p));
+      if (s.mode === "walk"){
+        push(path, MODES.walk.hex, true, 4);
+      } else if (s.mode === "bike"){
+        push(path, MODES.twowheel.hex, false, 5.5);
+      } else {
+        push(path, s.color, false, 6.5);
+        addStop(path[0], s.color, s.from);
+        addStop(path.at(-1), s.color, s.to);
+        // Name every station this metro ride passes through (async).
+        if (s.kind === "metro") addStations(s, seq);
+      }
+    }
+  }
+
+  const overview = decode(r.enc);
+  const full = overview.length ? overview : r.steps.flatMap(s => decode(s.enc));
+  if (full.length){
+    addPin(full[0], "#067647", "Start · " + fromAC.text());
+    addPin(full.at(-1), "#d4380d", "End · " + toAC.text());
+    bounds.extend(full[0]); bounds.extend(full.at(-1));
+  }
+
+  if (!bounds.isEmpty()) map.fitBounds(bounds, { top: 60, right: 50, bottom: 60, left: 50 });
+  $("legend").hidden = false;
+}
+
+/** Drop a named marker on every station the ride passes through. */
+async function addStations(step, seq){
+  let list;
+  try { list = await stationsFor(step.enc, step.stops); }
+  catch { return; }
+  if (seq !== drawSeq || !list.length) return;   // a newer draw superseded this one
+
+  // Skip the boarding and alighting stops — they already carry bold markers.
+  // Matched by position as well as name, because Places and the transit feed
+  // sometimes spell the same station differently ("K.R. Pura" vs "Krishnarajapura").
+  const ends = [step.from, step.to].map(n => cleanStationName(n).toLowerCase());
+  const path = decode(step.enc);
+  const endPts = path.length
+    ? [path[0], path.at(-1)].map(p => ({ lat: p.lat(), lng: p.lng() }))
+    : [];
+
+  for (const st of list){
+    if (ends.includes(st.name.toLowerCase())) continue;
+    if (endPts.some(e => metresBetween(e, st) < 200)) continue;
+    stationMarkers.push(new google.maps.Marker({
+      map, position: { lat: st.lat, lng: st.lng },
+      title: st.name,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE, scale: 4,
+        fillColor: "#ffffff", fillOpacity: 1,
+        strokeColor: step.color, strokeWeight: 2.2,
+        labelOrigin: new google.maps.Point(0, -2.9)
+      },
+      label: { text: st.name, className: "stn-label", fontSize: "11px", fontWeight: "600" },
+      zIndex: 4
+    }));
+  }
+  applyStationLabels();
+}
+
+/* Names would overlap into mush when zoomed out, so show dots only until
+   the map is close enough for the labels to be readable. */
+const STATION_LABEL_ZOOM = 13;
+function applyStationLabels(){
+  const show = (map.getZoom() || 0) >= STATION_LABEL_ZOOM;
+  for (const m of stationMarkers){
+    const t = m.getTitle();
+    m.setLabel(show ? { text: t, className: "stn-label", fontSize: "11px", fontWeight: "600" } : null);
+  }
+}
+
+/* Where you board and where you get off — the two stops that matter most.
+   Larger ring than the intermediate stations and always labelled, since
+   there are only a couple per leg and they anchor the whole journey. */
+function addStop(pos, color, name){
+  if (!pos) return;
+  const label = cleanStationName(name);
+  markers.push(new google.maps.Marker({
+    map, position: pos, title: label,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6.5,
+            fillColor: "#fff", fillOpacity: 1, strokeColor: color, strokeWeight: 3.4,
+            labelOrigin: new google.maps.Point(0, -2.5) },
+    label: label ? { text: label, className: "stn-label stn-major",
+                     fontSize: "12px", fontWeight: "700" } : null,
+    zIndex: 7
+  }));
+}
+function addPin(pos, color, title){
+  markers.push(new google.maps.Marker({
+    map, position: pos, title,
+    icon: { path: "M 0,0 C -2.5,-6 -9,-8 -9,-14 a 9,9 0 1,1 18,0 c 0,6 -6.5,8 -9,14 z",
+            fillColor: color, fillOpacity: 1, strokeColor: "#fff", strokeWeight: 2,
+            scale: 1.15, anchor: new google.maps.Point(0, 0) },
+    zIndex: 9
+  }));
+}
+
+/* ================================================================
+   Start
+   ================================================================ */
+(async function start(){
+  if (!KEYS.maps || !KEYS.routes) return showGate(false);
+  try { await boot(); }
+  catch (e){
+    showGate(false);
+    const err = $("keyErr"); err.hidden = false;
+    err.innerHTML = e.message === "AUTH"
+      ? "The Maps JavaScript API key was rejected by Google. Check billing, that the API is enabled, and any referrer restrictions."
+      : "Could not reach Google Maps. Check your connection, then try again.";
+  }
+})();
+</script>
+</body>
+</html>
