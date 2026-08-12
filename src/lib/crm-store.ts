@@ -285,13 +285,27 @@ export const api = {
     const quotation: Quotation = { ...q, id: uid() };
     _db.quotations.unshift(quotation);
     const lead = _db.leads.find((l) => l.id === q.leadId);
+
+    // Capture what the stage move needs to persist and roll back. The stage was
+    // only ever changed in memory here, so a refresh re-fetched the old stage
+    // and the lead fell out of Negotiation.
+    const prevStage = lead?.stage;
+    const activityAt = now();
+    let stagePatch: Partial<Lead> | null = null;
     if (lead) {
-      lead.lastActivityAt = now();
-      if (lead.stage !== "Closed Won" && lead.stage !== "Closed Lost") lead.stage = "Negotiation";
+      lead.lastActivityAt = activityAt;
+      if (lead.stage !== "Closed Won" && lead.stage !== "Closed Lost") {
+        lead.stage = "Negotiation";
+        stagePatch = { stage: "Negotiation", lastActivityAt: activityAt };
+      } else {
+        stagePatch = { lastActivityAt: activityAt };
+      }
     }
+
     const act: ActivityLog = { id: uid(), leadId: q.leadId, type: "quotation", message: `Quotation: ${q.package} — ₹${q.finalPrice.toLocaleString("en-IN")}`, at: now() };
     _db.activity.unshift(act);
     notify("leads", "quotations", "activity");
+
     apiPost("/api/crm/quotations", quotation)
       .then(() => apiPost("/api/crm/activity", act).catch(console.error))
       .catch(() => {
@@ -299,6 +313,15 @@ export const api = {
         _db.activity = _db.activity.filter((a) => a.id !== act.id);
         notify("leads", "quotations", "activity");
       });
+
+    // Persist the stage move separately so it survives a refresh, and so a
+    // failed quotation write and a failed stage write roll back independently.
+    if (lead && stagePatch) {
+      apiPut(`/api/crm/leads/${lead.id}`, stagePatch).catch(() => {
+        if (prevStage) lead.stage = prevStage;
+        notify("leads");
+      });
+    }
   },
 
   updateQuotation(id: string, patch: Partial<Quotation>) {
@@ -332,7 +355,9 @@ export const api = {
     _db.closures.unshift(closure);
     const stage = c.type === "Won" ? "Closed Won" : "Closed Lost";
     const lead = _db.leads.find((l) => l.id === c.leadId);
-    if (lead) { lead.stage = stage; lead.lastActivityAt = now(); }
+    const prevStage = lead?.stage;
+    const activityAt = now();
+    if (lead) { lead.stage = stage; lead.lastActivityAt = activityAt; }
     const actMsg = c.type === "Won"
       ? `Closed Won${c.finalAmount ? ` — ₹${c.finalAmount.toLocaleString("en-IN")}` : ""}`
       : `Closed Lost — ${c.lostReason ?? ""}`;
@@ -349,6 +374,16 @@ export const api = {
           description: "The lead was not closed. Check the connection and try again.",
         });
       });
+
+    // Persist the stage change. Without this the closure row saved but the lead's
+    // stage stayed unchanged on the server, so a refresh pulled the lead back to
+    // its pre-close stage while a closure record still existed.
+    if (lead) {
+      apiPut(`/api/crm/leads/${lead.id}`, { stage, lastActivityAt: activityAt }).catch(() => {
+        if (prevStage) lead.stage = prevStage;
+        notify("leads");
+      });
+    }
   },
 
   updateClosure(id: string, patch: Partial<Closure>) {
