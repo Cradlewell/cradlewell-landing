@@ -441,6 +441,12 @@ input,select{font:inherit;color:inherit}
           <svg viewBox="0 0 24 24"><path d="M7 16V4M7 4L4 7M7 4l3 3M17 8v12M17 20l3-3M17 20l-3-3"/></svg>
         </button>
       </div>
+      <div class="staff-pick" style="margin-top:10px;display:flex;align-items:center;gap:8px">
+        <label for="staffSelect" style="font-size:12px;font-weight:600;color:#555;white-space:nowrap">Start from staff</label>
+        <select id="staffSelect" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font:inherit;background:#fff;cursor:pointer">
+          <option value="">Select a staff location…</option>
+        </select>
+      </div>
     </div>
 
     <div class="opts">
@@ -1065,6 +1071,39 @@ function wireUp(){
       { enableHighAccuracy: true, timeout: 8000 }
     );
   };
+
+  // Populate the "Start from staff" dropdown from the CRM staff roster and pin
+  // the chosen staff location as the trip's starting point. Fetch is same-origin,
+  // so the CRM auth cookie authenticates it; the pin uses the same {lat,lng}
+  // shape the geolocation button sets on `pinned.fromIn`.
+  (async () => {
+    const sel = $("staffSelect");
+    if (!sel) return;
+    try {
+      const res = await fetch("/api/crm/staff-locations", { credentials: "same-origin" });
+      if (res.ok) {
+        for (const s of await res.json()) {
+          if (s.home_lat == null || s.home_lng == null) continue;
+          const opt = document.createElement("option");
+          opt.value = s.id;
+          opt.textContent = s.name;
+          opt.dataset.lat = s.home_lat;
+          opt.dataset.lng = s.home_lng;
+          sel.appendChild(opt);
+        }
+      }
+    } catch { /* roster unavailable — the dropdown just stays empty */ }
+    sel.addEventListener("change", () => {
+      const opt = sel.selectedOptions[0];
+      if (!opt || !opt.dataset.lat) return;
+      const lat = Number(opt.dataset.lat), lng = Number(opt.dataset.lng);
+      pinned.fromIn = { lat, lng };
+      $("fromIn").value = opt.textContent;
+      if (map) { map.setCenter({ lat, lng }); map.setZoom(14); }
+    });
+    // Typing your own start point clears the dropdown selection so it can't lie.
+    $("fromIn").addEventListener("input", () => { sel.value = ""; });
+  })();
 
   $("goBtn").onclick = search;
   $("toIn").addEventListener("keydown", e => { if (e.key === "Enter" && $("toAc").hidden) search(); });
