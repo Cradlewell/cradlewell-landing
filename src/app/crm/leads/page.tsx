@@ -137,12 +137,18 @@ export default function LeadsPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return leads.filter(l => {
-      if (q && !l.name.toLowerCase().includes(q) && !l.phone.includes(q)) return false;
-      if (filterStage && l.stage !== filterStage) return false;
-      if (filterSource && l.source !== filterSource) return false;
-      return true;
-    });
+    return leads
+      .filter(l => {
+        if (q && !l.name.toLowerCase().includes(q) && !l.phone.includes(q)) return false;
+        if (filterStage && l.stage !== filterStage) return false;
+        if (filterSource && l.source !== filterSource) return false;
+        return true;
+      })
+      // Newest lead date first — the same value the Date/Time/Day columns show.
+      // The API orders by created_at, which drifts from lead_date when a known
+      // number re-enquires: that row is a current lead but rendered far down the
+      // list at its original creation date, which reads as a missing lead.
+      .sort((a, b) => new Date(b.leadDate).getTime() - new Date(a.leadDate).getTime());
   }, [leads, search, filterStage, filterSource]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
