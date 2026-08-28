@@ -111,7 +111,15 @@ async function queryNominatim(text: string): Promise<GeoPoint | null> {
  * request path a user is waiting on.
  */
 export async function geocodeAddress(address: string): Promise<GeoPoint | null> {
-  if (address.trim().length < 8) return null; // too short to place
+  const trimmed = address.trim();
+  // The Aria chat widget sends a locality picked from a fixed dropdown rather
+  // than a street address, so a perfectly good value can be one short word
+  // ("Hebbal", "Domlur"). Only reject what is too short to be a place name at
+  // all; junk like "Call me" is left to Nominatim, which already fails to match
+  // it, rather than to a length rule that also throws out real localities.
+  if (trimmed.length < 4) return null;
+  // A dropdown placeholder, not a place.
+  if (/^other$/i.test(trimmed)) return null;
 
   const ladder = buildQueryLadder(address);
   for (let i = 0; i < ladder.length; i++) {
