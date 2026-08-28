@@ -20,7 +20,8 @@ interface NearbyRow {
   nurses: Nurse[];
 }
 
-const STAGES: LeadStage[] = ["Nurse Required", "Due date soon", "Deferred Hot Lead", "Follow-up", "Negotiation"];
+// Mirrors TARGET_STAGES in /api/crm/nearby-staff.
+const STAGES: LeadStage[] = ["New Lead", "Nurse Required", "Due date soon", "Deferred Hot Lead", "Follow-up", "Negotiation"];
 
 const MENU_W = 320;
 const MENU_MAX_H = 320;
@@ -169,7 +170,7 @@ export default function NearbyStaffPage() {
           <EmptyState
             icon={<MapPin size={40} />}
             title="No leads in these stages"
-            description="Leads in Nurse Required, Due date soon, Deferred Hot Lead, Follow-up, or Negotiation will appear here."
+            description="Leads in New Lead, Nurse Required, Due date soon, Deferred Hot Lead, Follow-up, or Negotiation will appear here."
           />
         ) : (
           <table className="crm-table">

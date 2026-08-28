@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/auth-guard";
 import { nearestZone } from "@/lib/zones";
+import { geocodeAddress, NOMINATIM_MIN_INTERVAL_MS, sleep } from "@/lib/geocode";
 
 // ─── One-time (re-runnable) zone backfill ─────────────────────────────────────
 // Assigns the nearest zone to existing leads. Coordinates come from the lead row
 // (home_lat/home_lng); for older leads that shared location before coordinates
 // were saved on the row, we recover the lat/lng from their stored WhatsApp
-// location message ("📍 location:lat,lng"). Safe to run repeatedly.
+// location message ("📍 location:lat,lng"). Leads that never shared a pin but
+// typed an address — every website lead — are geocoded from that address.
+// Safe to run repeatedly.
+
+// Nominatim allows one request per second and geocodeAddress spends up to four
+// on one address, so a full backlog cannot be cleared in a single request
+// without tripping a serverless timeout. Each run works to a wall-clock budget
+// and reports what is left, rather than stopping silently and looking done.
+const GEOCODE_BUDGET_MS = 45_000;
+const GEOCODE_PER_RUN = 25;
 
 const MISSING_COLUMN_CODES = new Set(["42703", "PGRST204"]);
 
@@ -17,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   const { data: leads, error } = await supabase
     .from("leads")
-    .select("id, phone, home_lat, home_lng")
+    .select("id, phone, address, home_lat, home_lng")
     .limit(10000);
   if (error) {
     console.error("[backfill-zones select]", error);
@@ -50,6 +60,8 @@ export async function POST(req: NextRequest) {
   // also need their recovered coordinates written back.
   const zoneOnly: Record<string, string[]> = {};
   const coordPlusZone: Array<{ id: string; lat: number; lng: number; zone: string }> = [];
+  // No pin anywhere, but there is a typed address to geocode.
+  const needGeocode: Array<{ id: string; address: string }> = [];
   let noCoords = 0;
 
   for (const l of all) {
@@ -61,7 +73,11 @@ export async function POST(req: NextRequest) {
       const c = key ? coordByPhone[key] : undefined;
       if (c) { lat = c.lat; lng = c.lng; recovered = true; }
     }
-    if (lat == null || lng == null) { noCoords++; continue; }
+    if (lat == null || lng == null) {
+      noCoords++;
+      if (l.address) needGeocode.push({ id: l.id, address: l.address as string });
+      continue;
+    }
     const nz = nearestZone(lat, lng);
     if (!nz) { noCoords++; continue; }
     if (recovered) coordPlusZone.push({ id: l.id, lat, lng, zone: nz.name });
@@ -102,6 +118,28 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Geocode typed addresses for leads that have no pin from any source.
+  let geocoded = 0;
+  let geocodeFailed = 0;
+  const geocodeBatch = missingColumn ? [] : needGeocode.slice(0, GEOCODE_PER_RUN);
+  const deadline = Date.now() + GEOCODE_BUDGET_MS;
+  let attempted = 0;
+  for (let i = 0; i < geocodeBatch.length; i++) {
+    if (Date.now() > deadline) break;
+    attempted++;
+    const g = geocodeBatch[i];
+    if (i > 0) await sleep(NOMINATIM_MIN_INTERVAL_MS);
+    const point = await geocodeAddress(g.address);
+    if (!point) { geocodeFailed++; continue; }
+    const nz = nearestZone(point.lat, point.lng);
+    const { error: uErr } = await supabase
+      .from("leads")
+      .update({ home_lat: point.lat, home_lng: point.lng, ...(nz ? { zone: nz.name } : {}) })
+      .eq("id", g.id);
+    if (uErr) { console.error("[backfill-zones geocode update]", uErr); geocodeFailed++; continue; }
+    geocoded++;
+  }
+
   if (missingColumn) {
     return NextResponse.json(
       { error: "The 'zone' column is missing. Run in Supabase: alter table leads add column if not exists zone text;" },
@@ -114,5 +152,10 @@ export async function POST(req: NextRequest) {
     updated,
     recoveredFromMessages: coordPlusZone.length,
     noCoords,
+    geocoded,
+    geocodeFailed,
+    // Non-zero means this run hit its cap or its time budget — run it again to
+    // continue. Never silently truncated.
+    geocodeRemaining: Math.max(0, needGeocode.length - attempted),
   });
 }

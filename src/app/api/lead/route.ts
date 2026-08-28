@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createHash } from "crypto";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase-server";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { geocodeAddress } from "@/lib/geocode";
+import { nearestZone } from "@/lib/zones";
 
 function sha256(value: string): string {
     return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
@@ -162,10 +164,13 @@ export async function POST(req: NextRequest) {
         // Normalize the phone to the last 10 digits so it matches WhatsApp-sourced
         // leads, and upsert on it so one number = one record (no duplicates).
         const dbPhone = lead.phone.replace(/\D/g, "").slice(-10);
+        // Set to the row that still needs coordinates; geocoded after the
+        // response is sent. Left null when the row already has a pin.
+        let geocodeTargetId: string | null = null;
         try {
             const { data: matches } = await supabase
                 .from("leads")
-                .select("id, stage")
+                .select("id, stage, home_lat, home_lng")
                 .eq("phone", dbPhone)
                 .order("created_at", { ascending: true })
                 .limit(1);
@@ -202,6 +207,9 @@ export async function POST(req: NextRequest) {
                 const { error } = await supabase.from("leads").update(patch).eq("id", existing.id);
                 if (error) console.error("Supabase lead update error:", error.message);
                 else await logActivity(existing.id, "note", `Website form submitted — ${lead.service || "enquiry"}`, now);
+                // A WhatsApp GPS share is an exact pin; a geocoded street address
+                // is an approximation, so never let one overwrite the other.
+                if (!error && existing.home_lat == null && existing.home_lng == null) geocodeTargetId = existing.id;
             } else {
                 const newId = crypto.randomUUID();
                 const { error } = await supabase.from("leads").insert({
@@ -239,10 +247,32 @@ export async function POST(req: NextRequest) {
                     console.error("Supabase lead insert error:", error.message);
                 } else {
                     await logActivity(newId, "created", `Lead created from website form — ${lead.service || "enquiry"}`, now);
+                    geocodeTargetId = newId;
                 }
             }
         } catch (err) {
             console.error("Supabase lead upsert failed:", err);
+        }
+
+        // ── Locate the lead for the Nearby Staff board ────────────────────────
+        // Deferred until the response has been sent: Nominatim regularly takes a
+        // second or more, and that is latency the person waiting on the form
+        // should not pay for a field they cannot see. Registered here rather than
+        // at the end of the handler so a Google Sheets failure — which returns
+        // below — still leaves the lead located.
+        if (geocodeTargetId && lead.address) {
+            const targetId = geocodeTargetId;
+            const address = lead.address;
+            after(async () => {
+                const point = await geocodeAddress(address);
+                if (!point) return; // unplaceable address; the row keeps its null coords
+                const nz = nearestZone(point.lat, point.lng);
+                const { error } = await supabase
+                    .from("leads")
+                    .update({ home_lat: point.lat, home_lng: point.lng, ...(nz ? { zone: nz.name } : {}) })
+                    .eq("id", targetId);
+                if (error) console.error("Supabase lead geocode update error:", error.message);
+            });
         }
 
         // ── Write to Google Sheets (primary) ──────────────────────────────────

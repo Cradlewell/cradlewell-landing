@@ -3,8 +3,12 @@ import { supabase } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/auth-guard";
 import { haversineKm } from "@/lib/geo-utils";
 
-// Pipeline stages we surface on the Nearby Staff board.
+// Pipeline stages we surface on the Nearby Staff board. "New Lead" is included
+// because a website lead lands here with an address already filled in — that is
+// exactly when the team needs to know who is closest, and excluding it meant a
+// fresh enquiry only appeared once someone had manually moved its stage.
 const TARGET_STAGES = [
+  "New Lead",
   "Nurse Required",
   "Due date soon",
   "Deferred Hot Lead",
