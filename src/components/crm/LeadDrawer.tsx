@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { X, Phone, MessageCircle, Edit2, Save, Trash2, Plus, Check, Clock, ChevronDown } from "lucide-react";
-import { api, useDB, isOverdue, isToday, closureBalance, derivePaymentStatus } from "@/lib/crm-store";
+import { api, useDB, useLeadActivity, isOverdue, isToday, closureBalance, derivePaymentStatus } from "@/lib/crm-store";
 import type { Lead, LeadStage, FollowupType, LostReason, Closure, Quotation, Followup } from "@/lib/crm-types";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import StageBadge from "./StageBadge";
@@ -413,6 +413,9 @@ function ClosureCard({ closure }: { closure: Closure }) {
 export default function LeadDrawer({ leadId, onClose }: Props) {
   const db = useDB();
   const lead = leadId ? db.leads.find(l => l.id === leadId) ?? null : null;
+  // Called before the `if (!lead) return null` below — it is a hook, so it has
+  // to run on every render of this component, open drawer or not.
+  const { entries: leadActivity, loading: activityLoading } = useLeadActivity(leadId);
   const [tab, setTab] = useState<Tab>("profile");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Partial<Lead>>({});
@@ -462,7 +465,6 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
   const leadClosures = db.closures
     .filter(c => c.leadId === lead.id)
     .sort((a, b) => new Date(b.closureDate).getTime() - new Date(a.closureDate).getTime());
-  const leadActivity = db.activity.filter(a => a.leadId === lead.id).reverse();
 
   // Once the lead is closed, its quotations "move" to the Closure tab — hide them
   // from the drawer's Quotation History. They still appear on the standalone
@@ -1063,7 +1065,12 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
           {tab === "activity" && (
             <div className="crm-drawer-tab-content">
               <div className="crm-timeline">
-                {leadActivity.length === 0 && <div className="crm-empty" style={{ padding: "1.5rem" }}>No activity yet.</div>}
+                {activityLoading && leadActivity.length === 0 && (
+                  <div className="crm-empty" style={{ padding: "1.5rem" }}>Loading activity…</div>
+                )}
+                {!activityLoading && leadActivity.length === 0 && (
+                  <div className="crm-empty" style={{ padding: "1.5rem" }}>No activity yet.</div>
+                )}
                 {leadActivity.map(a => (
                   <div key={a.id} className="crm-timeline-item">
                     <div className="crm-timeline-dot" />

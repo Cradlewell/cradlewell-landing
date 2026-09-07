@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-server";
+import { supabase, fetchAllPages } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/auth-guard";
 
 // ─── Sales reporting API ──────────────────────────────────────────────────────
@@ -123,29 +123,36 @@ export async function GET(req: NextRequest) {
     "id,name,source,hospital_name,preferred_shift,baby_status,baby_birth_stage_status,baby_age,stage,temperature,service_required,zone,created_at";
 
   // 1. Leads received in the period (with optional filters)
-  let leadsQ = supabase
-    .from("leads")
-    .select(LEAD_COLS)
-    .gte("created_at", cur.startIso)
-    .lt("created_at", cur.endIso)
-    .limit(5000);
-  if (fSource) leadsQ = leadsQ.eq("source", fSource);
-  if (fHospital) leadsQ = leadsQ.eq("hospital_name", fHospital);
-  if (fShift) leadsQ = leadsQ.eq("preferred_shift", fShift);
-  if (fZone) leadsQ = leadsQ.eq("zone", fZone);
+  //
+  // Every whole-set read below is paged. The `.limit(5000)` these used to carry
+  // was never honoured: PostgREST clamps a response to the project's 1000-row
+  // ceiling, silently, so a busy period's report was computed from the first
+  // 1000 rows and quietly under-reported every total derived from them.
+  const leadsPage = (from: number, to: number) => {
+    let q = supabase
+      .from("leads")
+      .select(LEAD_COLS)
+      .gte("created_at", cur.startIso)
+      .lt("created_at", cur.endIso);
+    if (fSource) q = q.eq("source", fSource);
+    if (fHospital) q = q.eq("hospital_name", fHospital);
+    if (fShift) q = q.eq("preferred_shift", fShift);
+    if (fZone) q = q.eq("zone", fZone);
+    return q.order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, to);
+  };
 
   const [
-    leadsRes,
+    leads,
     prevLeadsRes,
     activeRes,
     deferredRes,
-    wonRes,
-    prevWonRes,
-    lostRes,
-    fuDoneRes,
+    won,
+    prevWonRows,
+    lost,
+    fuDone,
     fuPendingRes,
   ] = await Promise.all([
-    leadsQ,
+    fetchAllPages<Row>(leadsPage),
     // previous-period lead count (for comparison)
     supabase.from("leads").select("id", { count: "exact", head: true })
       .gte("created_at", prev.startIso).lt("created_at", prev.endIso),
@@ -156,26 +163,29 @@ export async function GET(req: NextRequest) {
     supabase.from("leads").select("id", { count: "exact", head: true })
       .eq("stage", "Deferred Hot Lead"),
     // Won closures in period
-    supabase.from("closures").select("id,lead_id,final_amount,closure_date,final_package,sales_owner")
-      .eq("type", "Won").gte("closure_date", cur.startDate).lt("closure_date", cur.endDate).limit(5000),
+    fetchAllPages<Row>((from, to) =>
+      supabase.from("closures").select("id,lead_id,final_amount,closure_date,final_package,sales_owner")
+        .eq("type", "Won").gte("closure_date", cur.startDate).lt("closure_date", cur.endDate)
+        .order("closure_date", { ascending: false }).order("id", { ascending: true }).range(from, to)),
     // previous-period Won closures (for comparison)
-    supabase.from("closures").select("final_amount")
-      .eq("type", "Won").gte("closure_date", prev.startDate).lt("closure_date", prev.endDate).limit(5000),
+    fetchAllPages<Row>((from, to) =>
+      supabase.from("closures").select("final_amount,id")
+        .eq("type", "Won").gte("closure_date", prev.startDate).lt("closure_date", prev.endDate)
+        .order("id", { ascending: true }).range(from, to)),
     // Lost closures in period
-    supabase.from("closures").select("id,lost_reason")
-      .eq("type", "Lost").gte("closure_date", cur.startDate).lt("closure_date", cur.endDate).limit(5000),
+    fetchAllPages<Row>((from, to) =>
+      supabase.from("closures").select("id,lost_reason")
+        .eq("type", "Lost").gte("closure_date", cur.startDate).lt("closure_date", cur.endDate)
+        .order("id", { ascending: true }).range(from, to)),
     // Follow-ups completed in period
-    supabase.from("followups").select("id,lead_id,completed_at")
-      .eq("completed", true).gte("completed_at", cur.startIso).lt("completed_at", cur.endIso).limit(5000),
+    fetchAllPages<Row>((from, to) =>
+      supabase.from("followups").select("id,lead_id,completed_at")
+        .eq("completed", true).gte("completed_at", cur.startIso).lt("completed_at", cur.endIso)
+        .order("completed_at", { ascending: false }).order("id", { ascending: true }).range(from, to)),
     // Follow-ups pending as of period end
     supabase.from("followups").select("id", { count: "exact", head: true })
       .eq("completed", false).lt("due_at", cur.endIso),
   ]);
-
-  const leads: Row[] = leadsRes.data ?? [];
-  const won: Row[] = wonRes.data ?? [];
-  const lost: Row[] = lostRes.data ?? [];
-  const fuDone: Row[] = fuDoneRes.data ?? [];
 
   const leadsReceived = leads.length;
   const conversions = won.length;
@@ -191,13 +201,16 @@ export async function GET(req: NextRequest) {
   let convFollowups: Row[] = [];
   if (wonLeadIds.length) {
     const [cl, cf] = await Promise.all([
-      supabase.from("leads").select("id,name,source,baby_status,temperature,created_at")
-        .in("id", wonLeadIds).limit(5000),
-      supabase.from("followups").select("lead_id,completed,completed_at")
-        .in("lead_id", wonLeadIds).eq("completed", true).limit(20000),
+      fetchAllPages<Row>((from, to) =>
+        supabase.from("leads").select("id,name,source,baby_status,temperature,created_at")
+          .in("id", wonLeadIds).order("id", { ascending: true }).range(from, to)),
+      fetchAllPages<Row>((from, to) =>
+        supabase.from("followups").select("id,lead_id,completed,completed_at")
+          .in("lead_id", wonLeadIds).eq("completed", true)
+          .order("id", { ascending: true }).range(from, to)),
     ]);
-    convLeads = cl.data ?? [];
-    convFollowups = cf.data ?? [];
+    convLeads = cl;
+    convFollowups = cf;
   }
   const leadById = new Map(convLeads.map((l) => [l.id, l]));
 
@@ -247,8 +260,8 @@ export async function GET(req: NextRequest) {
 
   // ── Comparison (MoM / QoQ) ─────────────────────────────────────────────────
   const prevLeads = prevLeadsRes.count ?? 0;
-  const prevWon = (prevWonRes.data ?? []).length;
-  const prevRevenue = (prevWonRes.data ?? []).reduce((s, c) => s + (Number(c.final_amount) || 0), 0);
+  const prevWon = prevWonRows.length;
+  const prevRevenue = prevWonRows.reduce((s, c) => s + (Number(c.final_amount) || 0), 0);
 
   return NextResponse.json(
     {

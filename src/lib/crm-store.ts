@@ -1,6 +1,6 @@
 "use client";
 import type { Lead, Followup, Quotation, Closure, ActivityLog, CRMDb, LeadStage } from "./crm-types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "@/components/ui/toast";
 
 const uid = () => crypto.randomUUID();
@@ -49,7 +49,13 @@ async function syncAll() {
   try {
     const res = await fetch("/api/crm/data", { cache: "no-store" });
     if (res.ok) {
-      _db = await res.json();
+      const next: CRMDb = await res.json();
+      // /api/crm/data no longer ships the activity table — the drawer fetches a
+      // lead's history on demand. What lives in _db.activity is purely the
+      // optimistic entries this session has written, so carry them across the
+      // swap; taking the server's empty array would erase the "Stage changed
+      // to…" line the user just caused, mid-session, for no reason.
+      _db = { ...next, activity: next.activity?.length ? next.activity : _db.activity };
       _initialized = true;
       _retryCount = 0;
     } else if (res.status === 401) {
@@ -72,20 +78,44 @@ async function syncAll() {
   }
 }
 
+function hasActiveListeners() {
+  return (
+    sliceListeners._all.size > 0 ||
+    sliceListeners.leads.size > 0 ||
+    sliceListeners.followups.size > 0 ||
+    sliceListeners.quotations.size > 0 ||
+    sliceListeners.closures.size > 0 ||
+    sliceListeners.activity.size > 0
+  );
+}
+
 // Re-sync when the user returns to this tab after it was hidden.
 // Only fires when there are active CRM components on the page.
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible" || _fetching) return;
-    const hasListeners =
-      sliceListeners._all.size > 0 ||
-      sliceListeners.leads.size > 0 ||
-      sliceListeners.followups.size > 0 ||
-      sliceListeners.quotations.size > 0 ||
-      sliceListeners.closures.size > 0 ||
-      sliceListeners.activity.size > 0;
-    if (hasListeners) syncAll();
+    if (hasActiveListeners()) syncAll();
   });
+}
+
+// Background refresh. Returning to the tab was previously the only thing that
+// pulled new rows, so a lead the WhatsApp bot created while the Leads or
+// Pipeline board sat open and focused never appeared — the board looked stale
+// for as long as the operator kept watching it, which reads as the backend not
+// reaching the CRM at all. Most leads arrive from the bot, so this is the common
+// case, not an edge one.
+const REFRESH_MS = 60_000;
+if (typeof window !== "undefined") {
+  setInterval(() => {
+    // A hidden tab is served by the visibilitychange handler on return; polling
+    // it just burns requests on a board nobody is looking at.
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    // _pendingWrites is re-checked inside syncAll, which is what makes this safe
+    // to fire blindly: a refresh mid-write would overwrite optimistic state with
+    // a pre-write row.
+    if (_fetching || !_initialized || !hasActiveListeners()) return;
+    syncAll();
+  }, REFRESH_MS);
 }
 
 async function apiPost(path: string, data: unknown) {
@@ -527,6 +557,50 @@ export function useActivity() {
     return () => { sliceListeners.activity.delete(cb); };
   }, []);
   return activity;
+}
+
+// One lead's complete activity history, oldest first — the drawer's timeline.
+// Fetched per lead rather than sliced out of a global list: the global list was
+// the most recent 200 rows across every lead, so any lead outside that window
+// showed an empty timeline however much history it actually had.
+//
+// Optimistic entries this session wrote (a stage change made with the drawer
+// open) live in _db.activity and have not reached the server yet, so they are
+// merged in by id and the timeline updates the moment the user acts.
+export function useLeadActivity(leadId: string | null) {
+  const [fetched, setFetched] = useState<ActivityLog[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [local, setLocal] = useState<ActivityLog[]>(_db.activity);
+
+  useEffect(() => {
+    const cb = () => setLocal([..._db.activity]);
+    sliceListeners.activity.add(cb);
+    return () => { sliceListeners.activity.delete(cb); };
+  }, []);
+
+  useEffect(() => {
+    if (!leadId) { setFetched([]); setLoading(false); return; }
+    // Guards against a slow response for a previously-opened lead landing after
+    // the user has already moved to the next one and painting its history there.
+    let cancelled = false;
+    setLoading(true);
+    setFetched([]);
+    fetch(`/api/crm/activity?leadId=${encodeURIComponent(leadId)}`, { cache: "no-store" })
+      .then(res => (res.ok ? res.json() : []))
+      .then((rows: ActivityLog[]) => { if (!cancelled) setFetched(Array.isArray(rows) ? rows : []); })
+      .catch(() => { if (!cancelled) setFetched([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [leadId]);
+
+  const entries = useMemo(() => {
+    if (!leadId) return [];
+    const seen = new Set(fetched.map(a => a.id));
+    const pending = local.filter(a => a.leadId === leadId && !seen.has(a.id));
+    return [...fetched, ...pending].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+  }, [leadId, fetched, local]);
+
+  return { entries, loading };
 }
 
 export function useDBReady() {

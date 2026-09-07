@@ -1,37 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, dbToLead, dbToFollowup, dbToQuotation, dbToClosure, dbToActivity } from "@/lib/supabase-server";
+import {
+  supabase,
+  fetchAllPages,
+  dbToLead,
+  dbToFollowup,
+  dbToQuotation,
+  dbToClosure,
+} from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/auth-guard";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>;
+
+// Every table here is read in full, via fetchAllPages. The previous `.limit(n)`
+// calls did not do that: `.limit(500)` on leads dropped the oldest leads
+// outright, and the `.limit(5000)` on the other tables was silently clamped to
+// PostgREST's 1000-row ceiling, so those were fixed caps dressed up as generous
+// ones. Both failure modes are invisible — the rows simply never arrive, and
+// the CRM renders a truncated table as if it were the whole one.
+//
+// Each query carries `id` as a secondary sort. Rows sharing a primary sort value
+// have no guaranteed order between two separate range requests, so without a
+// tiebreaker a row can land in two pages while another lands in none.
 export async function GET(req: NextRequest) {
   const authErr = requireAuth(req);
   if (authErr) return authErr;
 
-  const [leadsRes, followupsRes, quotationsRes, closuresRes, activityRes] = await Promise.all([
-    supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(500),
-    // Higher cap than the other tables: the Leads list derives each lead's
-    // completed follow-up count from these rows, so a truncated result would
-    // silently show older leads as having zero follow-ups.
-    supabase.from("followups").select("*").order("created_at", { ascending: false }).limit(5000),
-    // Same reasoning as follow-ups: the Leads list derives each lead's quoted
-    // amount from these rows, so truncation would show older leads as unquoted.
-    supabase.from("quotations").select("*").order("date", { ascending: false }).limit(5000),
-    // Feeds the Leads list's Lost Reason column as well as the dashboard totals,
-    // so truncation would blank the reason on older lost leads.
-    supabase.from("closures").select("*").order("closure_date", { ascending: false }).limit(5000),
-    supabase.from("activity_logs").select("*").order("at", { ascending: false }).limit(200),
-  ]);
+  try {
+    const [leads, followups, quotations, closures] = await Promise.all([
+      fetchAllPages<Row>((from, to) =>
+        supabase.from("leads").select("*")
+          .order("created_at", { ascending: false }).order("id", { ascending: true })
+          .range(from, to)
+      ),
+      // The Leads list derives each lead's completed follow-up count from these
+      // rows, so a truncated result silently shows older leads as having zero.
+      fetchAllPages<Row>((from, to) =>
+        supabase.from("followups").select("*")
+          .order("created_at", { ascending: false }).order("id", { ascending: true })
+          .range(from, to)
+      ),
+      // Same reasoning: the Leads list's quoted amount comes from these rows.
+      fetchAllPages<Row>((from, to) =>
+        supabase.from("quotations").select("*")
+          .order("date", { ascending: false }).order("id", { ascending: true })
+          .range(from, to)
+      ),
+      // Feeds the Leads list's Lost Reason column and the dashboard totals.
+      fetchAllPages<Row>((from, to) =>
+        supabase.from("closures").select("*")
+          .order("closure_date", { ascending: false }).order("id", { ascending: true })
+          .range(from, to)
+      ),
+    ]);
 
-  return NextResponse.json(
-    {
-      leads: (leadsRes.data ?? []).map(dbToLead),
-      followups: (followupsRes.data ?? []).map(dbToFollowup),
-      quotations: (quotationsRes.data ?? []).map(dbToQuotation),
-      closures: (closuresRes.data ?? []).map(dbToClosure),
-      activity: (activityRes.data ?? []).map(dbToActivity),
-    },
-    // Must not be cached. Mutations (stage moves, follow-ups) write through
-    // separate endpoints that cannot invalidate this entry, so a cached copy
-    // would be replayed over newer local state and visibly undo the change.
-    { headers: { "Cache-Control": "no-store" } }
-  );
+    return NextResponse.json(
+      {
+        leads: leads.map(dbToLead),
+        followups: followups.map(dbToFollowup),
+        quotations: quotations.map(dbToQuotation),
+        closures: closures.map(dbToClosure),
+        // Activity is deliberately absent. Its only reader is the lead drawer,
+        // which needs one lead's history, and the table grows faster than every
+        // other one here — shipping it whole would put an ever-larger payload on
+        // every CRM page load to serve a panel most visits never open. The
+        // drawer fetches /api/crm/activity?leadId=… on demand instead.
+        activity: [],
+      },
+      // Must not be cached. Mutations (stage moves, follow-ups) write through
+      // separate endpoints that cannot invalidate this entry, so a cached copy
+      // would be replayed over newer local state and visibly undo the change.
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (err) {
+    console.error("[crm data GET]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
