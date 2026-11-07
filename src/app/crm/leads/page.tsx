@@ -1,16 +1,15 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useLeads, useFollowups, useQuotations, useClosures, api, refreshStore } from "@/lib/crm-store";
+import { useLeads, useFollowups, useQuotations, useClosures, api } from "@/lib/crm-store";
 import { confirm } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
 import StageBadge from "@/components/crm/StageBadge";
 import LeadDrawer from "@/components/crm/LeadDrawer";
 import LeadFormModal from "@/components/crm/LeadFormModal";
-import WhatsAppImportModal from "@/components/crm/WhatsAppImportModal";
 import { useHScroll, HScrollButtons } from "@/components/crm/HScrollControls";
 import { waStageLabel, waStageTone } from "@/lib/whatsapp-stage";
-import { Plus, Search, Download, Trash2, MessageSquare } from "lucide-react";
+import { Plus, Search, Download, Trash2 } from "lucide-react";
 import { LEAD_STAGES } from "@/lib/crm-types";
 import type { Lead, LeadSource, LeadStage } from "@/lib/crm-types";
 
@@ -68,7 +67,6 @@ export default function LeadsPage() {
   const closures = useClosures();
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
-  const [showWAImport, setShowWAImport] = useState(false);
   const [page, setPage] = useState(1);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportFrom, setExportFrom] = useState("");
@@ -218,11 +216,6 @@ export default function LeadsPage() {
   return (
     <>
       <LeadFormModal open={showNewLead} onClose={() => setShowNewLead(false)} />
-      <WhatsAppImportModal
-        open={showWAImport}
-        onClose={() => setShowWAImport(false)}
-        onImported={() => refreshStore()}
-      />
       <LeadDrawer leadId={selectedLead} onClose={() => setSelectedLead(null)} />
 
       {/* Export date-range dialog */}
@@ -265,9 +258,6 @@ export default function LeadsPage() {
         <div className="d-flex gap-2">
           <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => { setExportFrom(""); setExportTo(""); setShowExportDialog(true); }}>
             <Download size={15} /> Export
-          </button>
-          <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => setShowWAImport(true)}>
-            <MessageSquare size={15} style={{ color: "#25D366" }} /> Import WhatsApp
           </button>
           <button className="crm-btn crm-btn-primary" onClick={() => setShowNewLead(true)}>
             <Plus size={16} /> New Lead

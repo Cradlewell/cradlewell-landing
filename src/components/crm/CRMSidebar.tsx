@@ -3,7 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Users, Kanban, CalendarClock,
   FileText, Receipt, BarChart3,
-  ChevronLeft, ChevronRight, X, LogOut, MessageCircle, MapPin,
+  ChevronLeft, ChevronRight, X, LogOut, MapPin,
 } from "lucide-react";
 
 const NAV = [
@@ -11,7 +11,6 @@ const NAV = [
   { href: "/crm/leads",           label: "Leads",       icon: Users },
   { href: "/crm/pipeline",        label: "Pipeline",    icon: Kanban },
   { href: "/crm/nearby-staff",    label: "Nearby Staff", icon: MapPin },
-  { href: "/crm/whatsapp",        label: "WhatsApp",    icon: MessageCircle },
   { href: "/crm/followups",  label: "Follow-ups",      icon: CalendarClock },
   { href: "/crm/quotations", label: "Quotations",      icon: FileText },
   { href: "/crm/invoice",    label: "Invoice",         icon: Receipt },
