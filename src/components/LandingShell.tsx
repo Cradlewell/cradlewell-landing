@@ -10,9 +10,8 @@ export default function LandingShell({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const isCRM = pathname.startsWith("/crm");
   const isOps = pathname.startsWith("/operations");
-  const isWhatsAppCrm = pathname.startsWith("/whatsapp-crm");
 
-  if (isCRM || isOps || isWhatsAppCrm) {
+  if (isCRM || isOps) {
     return <>{children}</>;
   }
 

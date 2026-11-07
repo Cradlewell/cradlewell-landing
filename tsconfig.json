@@ -40,7 +40,6 @@
   ],
   "exclude": [
     "node_modules",
-    "whatsapp-crm",
     ".next" // ✅ This line avoids checking compiled files
   ]
 }
