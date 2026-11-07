@@ -42,6 +42,15 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // Cradlewell: no public signup. This project's users are shared with the main
+  // site, so accounts only come from a teammate invite link.
+  if (request.nextUrl.pathname === '/signup' && !request.nextUrl.searchParams.get('invite')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.search = ''
+    return withRefreshedCookies(NextResponse.redirect(url))
+  }
+
   // Auth pages - redirect to dashboard if already logged in.
   // Exception: when an invite token is in the query string we
   // send the already-signed-in user to /join/<token> instead so

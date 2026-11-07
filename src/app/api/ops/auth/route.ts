@@ -27,8 +27,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
   }
 
-  const portalRole = data.user?.user_metadata?.portal_role;
-  if (portalRole && portalRole !== "ops") {
+  // app_metadata only: user_metadata is user-editable, so it cannot grant access.
+  const portalRole = data.user?.app_metadata?.portal_role;
+  if (portalRole !== "ops" && portalRole !== "admin") {
     return NextResponse.json({ success: false, error: "Access denied for this portal" }, { status: 403 });
   }
 

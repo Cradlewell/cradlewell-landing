@@ -74,15 +74,15 @@ async function tokenValid(token: string): Promise<boolean> {
   return verifyToken(token);
 }
 
-// portal_role rides in the access token's user_metadata / app_metadata. Reading
-// it here lets the middleware keep a CRM token off Ops routes and vice versa,
-// which login-time checks alone cannot enforce on every request.
+// portal_role is read from app_metadata only: user_metadata is writable by the
+// user themselves, so trusting it would let anyone grant their own access.
+// "admin" covers both portals. Reading it here keeps a CRM token off Ops routes
+// and vice versa, which login-time checks alone cannot enforce on every request.
 function portalRoleOf(token: string): string | null {
   const payload = decodeJwtPayload(token);
   if (!payload) return null;
-  const um = payload.user_metadata as { portal_role?: string } | undefined;
   const am = payload.app_metadata as { portal_role?: string } | undefined;
-  return um?.portal_role ?? am?.portal_role ?? null;
+  return am?.portal_role ?? null;
 }
 
 const cookieOpts = {
@@ -172,11 +172,10 @@ async function checkAuth(
 
   if (!validToken) return deny();
 
-  // Keep a token minted for one portal out of the other. A token with no role
-  // is allowed through for backward compatibility with users provisioned before
-  // portal_role existed; assign portal_role to every user to make this strict.
+  // The WhatsApp CRM shares this Supabase project's users, so a valid token
+  // alone proves nothing here: a token must carry a role for this portal.
   const role = portalRoleOf(validToken);
-  if (role && role !== expectedPortal) {
+  if (role !== expectedPortal && role !== "admin") {
     return isApiRoute
       ? NextResponse.json({ error: "Forbidden" }, { status: 403 })
       : NextResponse.redirect(new URL(loginPath, request.url));
