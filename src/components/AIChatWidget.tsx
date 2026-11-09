@@ -165,7 +165,6 @@ function SpeedDial({ onOpenAria, isMobile }: { onOpenAria: () => void; isMobile:
 export default function AIChatWidget() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
-    const [hasAutoOpened, setHasAutoOpened] = useState(false);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([
@@ -225,28 +224,6 @@ export default function AIChatWidget() {
             document.body.style.width = "";
         };
     }, [isMobile, isOpen]);
-
-    useEffect(() => {
-        if (isMobile) return; // no auto-open on mobile
-        const timer = setTimeout(() => {
-            if (!hasAutoOpened) {
-                setIsOpen(true);
-                setHasAutoOpened(true);
-            }
-        }, 20000);
-        return () => clearTimeout(timer);
-    }, [hasAutoOpened, isMobile, pathname]);
-
-    useEffect(() => {
-        const handleExitIntent = (e: MouseEvent) => {
-            if (e.clientY <= 0 && !hasAutoOpened) {
-                setIsOpen(true);
-                setHasAutoOpened(true);
-            }
-        };
-        document.addEventListener("mouseleave", handleExitIntent);
-        return () => document.removeEventListener("mouseleave", handleExitIntent);
-    }, [hasAutoOpened]);
 
     useEffect(() => {
         if (scrollRef.current) {
