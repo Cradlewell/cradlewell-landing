@@ -221,8 +221,7 @@ const breadcrumbSchema = {
   "itemListElement": [
     { "@type": "ListItem", "position": 1, "name": "Home", "item": `${BASE_URL}/` },
     { "@type": "ListItem", "position": 2, "name": "Blog", "item": `${BASE_URL}/blog` },
-    { "@type": "ListItem", "position": 3, "name": "Join as Nurse", "item": `${BASE_URL}/nurses` },
-    { "@type": "ListItem", "position": 4, "name": "Privacy Policy", "item": `${BASE_URL}/privacy-policy` },
+    { "@type": "ListItem", "position": 3, "name": "Privacy Policy", "item": `${BASE_URL}/privacy-policy` },
   ],
 };
 

@@ -71,7 +71,6 @@ const Footer = () => {
               <li><a href="/#ourplans">Care plans</a></li>
               <li><a href="/#testimonials">Reviews</a></li>
               <li><Link href="/blog">Blog</Link></li>
-              <li><Link href="/nurses">Join as a nurse</Link></li>
             </ul>
           </div>
 
