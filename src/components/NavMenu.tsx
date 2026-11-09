@@ -12,7 +12,6 @@ const routes: Route[] = [
   { name: "How it works",   href: "/#howitworks" },
   { name: "Plans",          href: "/#ourplans" },
   { name: "Reviews",        href: "/#testimonials" },
-  { name: "Team",           href: "/#ourteam" },
   { name: "Blog",           href: "/blog" },
 ];
 
