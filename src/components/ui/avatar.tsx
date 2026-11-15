@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 
 // ── Deterministic palette — same name always gets the same colour ──────────────
 const PALETTE: Array<{ bg: string; color: string }> = [
-  { bg: "#EEF1FF", color: "#6388FF" },
+  { bg: "#FBF4F7", color: "#B4436C" },
   { bg: "#F0FDF4", color: "#16A34A" },
   { bg: "#FFF7ED", color: "#EA580C" },
   { bg: "#F5F3FF", color: "#7C3AED" },

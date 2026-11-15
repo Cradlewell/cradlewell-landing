@@ -42,10 +42,11 @@ export const toast = {
 
 // ── Variant config ─────────────────────────────────────────────────────────────
 const VARIANT = {
-  success: { Icon: CheckCircle2,  iconColor: "#16A34A", bg: "#F0FDF4", border: "#BBF7D0" },
-  error:   { Icon: XCircle,       iconColor: "#DC2626", bg: "#FEF2F2", border: "#FECACA" },
-  warning: { Icon: AlertTriangle, iconColor: "#D97706", bg: "#FFFBEB", border: "#FDE68A" },
-  info:    { Icon: Info,          iconColor: "#6388FF", bg: "#EEF1FF", border: "#C7D2FE" },
+  // Dark ink toasts (prototype style); the icon carries the semantic colour.
+  success: { Icon: CheckCircle2,  iconColor: "#4ADE80", bg: "#1F1F1F", border: "#1F1F1F" },
+  error:   { Icon: XCircle,       iconColor: "#F87171", bg: "#1F1F1F", border: "#1F1F1F" },
+  warning: { Icon: AlertTriangle, iconColor: "#FBBF24", bg: "#1F1F1F", border: "#1F1F1F" },
+  info:    { Icon: Info,          iconColor: "#D4D4D4", bg: "#1F1F1F", border: "#1F1F1F" },
 };
 
 // ── Single toast card ──────────────────────────────────────────────────────────
@@ -78,26 +79,27 @@ function ToastCard({ item, onRemove }: { item: ToastItem; onRemove: (id: string)
         alignItems: "flex-start",
         gap: "0.625rem",
         padding: "0.75rem 0.875rem 0.75rem 0.875rem",
-        borderRadius: 10,
+        borderRadius: 8,
+        fontFamily: "'Inter', system-ui, sans-serif",
         background: bg,
         border: `1px solid ${border}`,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)",
+        boxShadow: "0 12px 32px rgba(0,0,0,.18)",
         minWidth: 272,
         maxWidth: 380,
         pointerEvents: "auto",
-        transition: "opacity 0.28s ease, transform 0.28s cubic-bezier(0.34,1.56,0.64,1)",
+        transition: "opacity 0.28s ease, transform 0.32s cubic-bezier(0.22,1,0.36,1)",
         opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateX(0) scale(1)" : "translateX(24px) scale(0.97)",
+        transform: mounted ? "translateY(0)" : "translateY(10px)",
         willChange: "transform, opacity",
       }}
     >
       <Icon size={17} color={iconColor} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#1E293B", lineHeight: 1.35 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#fff", lineHeight: 1.4 }}>
           {item.title}
         </div>
         {item.description && (
-          <div style={{ fontSize: "0.775rem", color: "#64748B", marginTop: 2, lineHeight: 1.45 }}>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.65)", marginTop: 2, lineHeight: 1.45 }}>
             {item.description}
           </div>
         )}
@@ -109,11 +111,11 @@ function ToastCard({ item, onRemove }: { item: ToastItem; onRemove: (id: string)
           flexShrink: 0,
           background: "none", border: "none", cursor: "pointer",
           padding: "2px 2px 2px 4px", borderRadius: 4,
-          color: "#94A3B8", display: "flex", alignItems: "center",
+          color: "rgba(255,255,255,.5)", display: "flex", alignItems: "center",
           transition: "color 0.15s",
         }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#475569")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#94A3B8")}
+        onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+        onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,.5)")}
       >
         <X size={13} />
       </button>
@@ -122,7 +124,7 @@ function ToastCard({ item, onRemove }: { item: ToastItem; onRemove: (id: string)
 }
 
 // ── ToastContainer — mount once in the CRM layout ─────────────────────────────
-// Renders a portal-like fixed stack bottom-right. Zero z-index conflicts.
+// Renders a portal-like fixed stack bottom-centre. Zero z-index conflicts.
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -147,7 +149,9 @@ export function ToastContainer() {
       style={{
         position: "fixed",
         bottom: "1.5rem",
-        right: "1.5rem",
+        left: "50%",
+        transform: "translateX(-50%)",
+        alignItems: "center",
         zIndex: 9999,
         display: "flex",
         flexDirection: "column",

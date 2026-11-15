@@ -100,7 +100,7 @@ export default function DashboardPage() {
     label: string; value: number; icon: React.ElementType;
     bg: string; color: string; onClick?: () => void;
   }[] = [
-    { label: "New leads", value: rangeLeads.length, icon: UserPlus, bg: "rgba(95,71,255,0.07)", color: "#5F47FF" },
+    { label: "New leads", value: rangeLeads.length, icon: UserPlus, bg: "var(--cw-brand-tint)", color: "#B4436C" },
     { label: "Closed won", value: rangeWon.length, icon: Trophy, bg: "rgba(48,164,108,0.08)", color: "#30A46C", onClick: () => setShowWonBreakdown(true) },
     { label: "Closed lost", value: rangeLost.length, icon: XCircle, bg: "rgba(0,0,0,0.04)", color: "#6B6B6A" },
   ];
@@ -120,7 +120,7 @@ export default function DashboardPage() {
       .sort((a, b) => b.booked - a.booked);
   }, [rangeWon, leads]);
   const statusStats = [
-    { label: "Total leads", value: leads.length, icon: Users, bg: "rgba(95,71,255,0.07)", color: "#5F47FF" },
+    { label: "Total leads", value: leads.length, icon: Users, bg: "var(--cw-brand-tint)", color: "#B4436C" },
     { label: "In pipeline", value: pipelineLeads.length, icon: TrendingUp, bg: "rgba(124,58,237,0.07)", color: "#7C3AED" },
     { label: "Follow-ups today", value: today.length, icon: CalendarClock, bg: "rgba(229,146,10,0.08)", color: "#B45309" },
     { label: "Overdue", value: overdue.length, icon: AlertTriangle, bg: "rgba(229,72,77,0.07)", color: "#DC2626" },

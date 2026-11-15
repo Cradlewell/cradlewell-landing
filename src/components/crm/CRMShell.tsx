@@ -30,19 +30,18 @@ export default function CRMShell({ children }: { children: React.ReactNode }) {
         />
 
         <main className={`crm-main ${collapsed ? "sidebar-collapsed" : ""}`}>
+          {/* Mobile-only top bar (hidden ≥768px via CSS) */}
           <header className="crm-header">
             <button
-              className="crm-btn crm-btn-ghost crm-btn-icon d-md-none"
+              className="crm-icon-btn"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-            <span
-              style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--crm-text)", display: "none" }}
-              className="d-md-block"
-            >
-              Cradlewell Sales CRM
+            <div className="crm-sidebar-logo-placeholder" aria-hidden>C</div>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>
+              Cradlewell <span style={{ fontWeight: 400, color: "var(--cw-ink-4)" }}>sales</span>
             </span>
           </header>
 

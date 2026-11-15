@@ -1,21 +1,21 @@
 "use client";
+import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, Kanban, CalendarClock,
-  FileText, Receipt, BarChart3,
-  ChevronLeft, ChevronRight, X, LogOut, MapPin,
+  LayoutDashboard, Users, Kanban, CalendarClock, BarChart3,
+  ChevronsLeft, ChevronsRight, X, LogOut,
 } from "lucide-react";
+import { useLeads, useFollowups, isOverdue, isToday } from "@/lib/crm-store";
+
+type BadgeTone = "red" | "amber" | "blue" | "muted";
 
 const NAV = [
-  { href: "/crm",                 label: "Dashboard",   icon: LayoutDashboard },
-  { href: "/crm/leads",           label: "Leads",       icon: Users },
-  { href: "/crm/pipeline",        label: "Pipeline",    icon: Kanban },
-  { href: "/crm/nearby-staff",    label: "Nearby Staff", icon: MapPin },
-  { href: "/crm/followups",  label: "Follow-ups",      icon: CalendarClock },
-  { href: "/crm/quotations", label: "Quotations",      icon: FileText },
-  { href: "/crm/invoice",    label: "Invoice",         icon: Receipt },
-  { href: "/crm/reports",    label: "Reports",         icon: BarChart3 },
-];
+  { href: "/crm",           label: "Dashboard",  icon: LayoutDashboard },
+  { href: "/crm/leads",     label: "Leads",      icon: Users },
+  { href: "/crm/pipeline",  label: "Pipeline",   icon: Kanban },
+  { href: "/crm/followups", label: "Follow-ups", icon: CalendarClock },
+  { href: "/crm/reports",   label: "Reports",    icon: BarChart3 },
+] as const;
 
 interface Props {
   collapsed: boolean;
@@ -27,80 +27,89 @@ interface Props {
 export default function CRMSidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const leads = useLeads();
+  const followups = useFollowups();
+
+  // Small live counts beside nav items, like the prototype: new leads (blue),
+  // overdue follow-ups (red) or, when none are overdue, today's (amber).
+  const badges = useMemo(() => {
+    const out: Record<string, { n: number; tone: BadgeTone }> = {};
+    const newLeads = leads.filter(l => l.stage === "New Lead").length;
+    if (newLeads) out["/crm/leads"] = { n: newLeads, tone: "blue" };
+    const open = followups.filter(f => !f.completed);
+    const overdue = open.filter(f => isOverdue(f.dueAt) && !isToday(f.dueAt)).length;
+    const today = open.filter(f => isToday(f.dueAt)).length;
+    if (overdue) out["/crm/followups"] = { n: overdue, tone: "red" };
+    else if (today) out["/crm/followups"] = { n: today, tone: "amber" };
+    return out;
+  }, [leads, followups]);
 
   const isActive = (href: string) =>
     href === "/crm" ? pathname === "/crm" : pathname.startsWith(href);
 
   return (
     <>
-      {/* Mobile overlay */}
-      <div
-        className={`crm-sidebar-overlay ${mobileOpen ? "show" : ""}`}
-        onClick={onMobileClose}
-      />
+      <div className={`crm-sidebar-overlay ${mobileOpen ? "show" : ""}`} onClick={onMobileClose} />
 
       <aside className={`crm-sidebar ${collapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
-        {/* Header */}
         <div className="crm-sidebar-header">
-          <div className="crm-sidebar-logo-placeholder">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="5.5" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" />
-              <circle cx="8" cy="8" r="2.25" fill="rgba(255,255,255,0.85)" />
-            </svg>
-          </div>
+          <div className="crm-sidebar-logo-placeholder" aria-hidden>C</div>
           {!collapsed && (
             <div className="crm-sidebar-title">
               <h2>Cradlewell</h2>
-              <span>Sales CRM</span>
+              <span>sales</span>
             </div>
           )}
           <button
             onClick={onMobileClose}
-            className="crm-btn crm-btn-ghost crm-btn-icon ms-auto d-md-none"
-            style={{ minHeight: 32, minWidth: 32 }}
+            className="crm-icon-btn ms-auto d-md-none"
             aria-label="Close sidebar"
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="crm-nav">
-          {NAV.map(({ href, label, icon: Icon }) => (
-            <button
-              key={href}
-              onClick={() => { router.push(href); onMobileClose(); }}
-              className={`crm-nav-item ${isActive(href) ? "active" : ""}`}
-              title={collapsed ? label : undefined}
-              aria-label={label}
-            >
-              <Icon size={18} />
-              {!collapsed && <span className="crm-nav-label">{label}</span>}
-            </button>
-          ))}
+          {!collapsed && <div className="crm-nav-section">Workspace</div>}
+          {NAV.map(({ href, label, icon: Icon }) => {
+            const badge = badges[href];
+            return (
+              <button
+                key={href}
+                onClick={() => { router.push(href); onMobileClose(); }}
+                className={`crm-nav-item ${isActive(href) ? "active" : ""}`}
+                title={collapsed ? label : undefined}
+                aria-label={label}
+                aria-current={isActive(href) ? "page" : undefined}
+              >
+                <Icon size={16} />
+                {!collapsed && <span className="crm-nav-label">{label}</span>}
+                {!collapsed && badge && (
+                  <span className={`crm-nav-badge ${badge.tone === "muted" ? "" : badge.tone}`}>{badge.n}</span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
-        {/* Logout */}
-        <div className="crm-sidebar-toggle" style={{ borderTop: "1px solid var(--crm-border)" }}>
+        <div className="crm-sidebar-toggle d-none d-md-block" style={{ borderTop: "none" }}>
+          <button onClick={onToggle} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand" : undefined}>
+            {collapsed ? <ChevronsRight size={16} /> : <><ChevronsLeft size={16} /><span>Collapse</span></>}
+          </button>
+        </div>
+
+        <div className="crm-sidebar-toggle">
           <button
             onClick={async () => {
               await fetch("/api/crm/auth", { method: "DELETE" });
               router.push("/crm/login");
               router.refresh();
             }}
-            aria-label="Logout"
-            title={collapsed ? "Logout" : undefined}
-            style={{ color: "#DC2626" }}
+            aria-label="Log out"
+            title={collapsed ? "Log out" : undefined}
           >
             <LogOut size={16} />
-            {!collapsed && <span>Logout</span>}
-          </button>
-        </div>
-
-        {/* Collapse toggle (desktop) */}
-        <div className="crm-sidebar-toggle d-none d-md-block">
-          <button onClick={onToggle} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
-            {collapsed ? <ChevronRight size={16} /> : <><ChevronLeft size={16} /><span>Collapse</span></>}
+            {!collapsed && <span>Log out</span>}
           </button>
         </div>
       </aside>
