@@ -602,9 +602,9 @@ export default function LeadDrawer({ leadId, onClose }: Props) {
               size={44}
               shape="rounded"
               style={{
-                background: "rgba(95,71,255,0.08)",
-                color: "#5F47FF",
-                border: "1px solid rgba(95,71,255,0.18)",
+                background: "var(--cw-brand-tint)",
+                color: "#B4436C",
+                border: "1px solid var(--cw-brand-line)",
                 fontWeight: 700,
               }}
             />

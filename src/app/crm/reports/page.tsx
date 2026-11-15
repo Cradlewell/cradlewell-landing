@@ -10,7 +10,7 @@ import { format } from "date-fns";
 import { ZONES } from "@/lib/zones";
 import { toast } from "@/components/ui/toast";
 
-const COLORS = ["#5F47FF", "#6388FF", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7", "#EC4899"];
+const COLORS = ["#B4436C", "#3A3A3A", "#0D9488", "#D97706", "#7C3AED", "#2563EB", "#A8A29E", "#DC2626"];
 
 type Period = "daily" | "monthly" | "quarterly";
 type NameValue = { name: string; value: number };
@@ -95,7 +95,7 @@ function PieBreakdown({ data }: { data: NameValue[] }) {
   );
 }
 
-function BarBreakdown({ data, color = "#5F47FF", vertical = false }: { data: NameValue[]; color?: string; vertical?: boolean }) {
+function BarBreakdown({ data, color = "#B4436C", vertical = false }: { data: NameValue[]; color?: string; vertical?: boolean }) {
   if (!data.length) return <div className="crm-empty">No data</div>;
   if (vertical) {
     return (
@@ -347,7 +347,7 @@ export default function ReportsPage() {
             <ChartCard title="Leads by Service (Nurse / Japa)"><PieBreakdown data={b.byService} /></ChartCard>
           </div>
           <div className="crm-grid-2 mb-4">
-            <ChartCard title="Leads by Shift"><BarBreakdown data={b.byShift} color="#6388FF" /></ChartCard>
+            <ChartCard title="Leads by Shift"><BarBreakdown data={b.byShift} color="#3A3A3A" /></ChartCard>
             <ChartCard title="Day vs Night"><PieBreakdown data={b.byDayNight} /></ChartCard>
           </div>
           <div className="crm-grid-2 mb-4">
