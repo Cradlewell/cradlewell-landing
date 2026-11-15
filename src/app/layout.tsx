@@ -1,6 +1,6 @@
 // src/app/layout.tsx
-import 'bootstrap/dist/css/bootstrap.min.css';
-import './globals.css';
+// Bootstrap and globals.css are imported by the (site) and operations layouts,
+// not here, so the CRM is not affected by them.
 import { ReactNode } from 'react';
 import LandingShell from '@/components/LandingShell';
 import { Metadata } from 'next';

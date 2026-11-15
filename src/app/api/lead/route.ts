@@ -52,10 +52,11 @@ async function sendFacebookCAPIEvent(events: object[]) {
 }
 
 // Stages a lead only reaches once it is out of play. A fresh website submission
-// from the same number is a new enquiry, so these are reset to "New Lead";
+// from the same number is a new enquiry, so these are reset to "New";
 // anything mid-pipeline is left untouched so a re-submission cannot undo a rep's
-// work. "Closed Won" is deliberately absent — that record should stay won.
-const DEAD_STAGES = ["Invalid Lead", "Closed Lost", "Not Responding"];
+// work. "Won" is deliberately absent — that record should stay won.
+// (Old stage names are kept so rows not yet migrated still match.)
+const DEAD_STAGES = ["Lost", "Invalid Lead", "Closed Lost", "Not Responding"];
 
 // Timeline entry for the CRM lead drawer. Best-effort: a failure here must never
 // affect the lead write itself.
@@ -190,7 +191,7 @@ export async function POST(req: NextRequest) {
                 };
                 // Bring a lead back from a dead stage. Active pipeline stages are
                 // left alone so a re-submission cannot walk back a rep's work.
-                if (DEAD_STAGES.includes(existing.stage)) patch.stage = "New Lead";
+                if (DEAD_STAGES.includes(existing.stage)) patch.stage = "New";
                 if (lead.name)             patch.name = lead.name;
                 if (lead.service)          patch.service_required = lead.service;
                 if (lead.babyStatus)       patch.baby_status = lead.babyStatus;
@@ -232,7 +233,7 @@ export async function POST(req: NextRequest) {
                     care_start_date: lead.careStartDate || null,
                     service_days: lead.serviceDays ? parseInt(lead.serviceDays) || null : null,
                     owner: "Unassigned",
-                    stage: "New Lead",
+                    stage: "New",
                     temperature: "Cold",
                     last_activity_at: now.toISOString(),
                     created_at: now.toISOString(),
