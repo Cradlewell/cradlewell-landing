@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import CRMShell from "@/components/crm/CRMShell";
 import "./crm.css";
 
-// Renders as "CRM | Cradlewell" via the root layout's "%s | Cradlewell" template.
+// Renders as "CRM - Cradlewell" via the root layout's title template.
 export const metadata: Metadata = {
   title: "CRM",
+  robots: { index: false, follow: false },
 };
 
 export default function CRMLayout({ children }: { children: React.ReactNode }) {
-  return <CRMShell>{children}</CRMShell>;
+  return <>{children}</>;
 }

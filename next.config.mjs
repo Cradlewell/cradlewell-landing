@@ -9,6 +9,14 @@ const nextConfig = {
   // Pin the workspace root — a stray lockfile above this folder otherwise makes
   // Turbopack resolve modules against the wrong node_modules.
   turbopack: { root: __dirname },
+  // The CRM is one app at /crm now; old sub-pages go there.
+  async redirects() {
+    return ['leads', 'followups', 'pipeline', 'reports', 'quotations', 'invoice', 'nearby-staff'].map((p) => ({
+      source: `/crm/${p}`,
+      destination: '/crm',
+      permanent: false,
+    }));
+  },
   async headers() {
     return [
       {

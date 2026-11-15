@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "../globals.css";
 import "./ops.css";
 
 export const metadata = { title: "Operations | Cradlewell" };

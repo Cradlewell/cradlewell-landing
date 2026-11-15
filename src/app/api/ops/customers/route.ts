@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     supabase
       .from("leads")
       .select("*")
-      .eq("stage", "Closed Won")
+      .in("stage", ["Won", "Closed Won"])
       .order("created_at", { ascending: false }),
     supabase
       .from("ops_customer_state")
