@@ -1,6 +1,5 @@
 -- New CRM (v2) — move leads from the old 12 stages to the new 8.
--- NOT YET APPLIED. Run it once the new CRM is deployed (the old CRM does not
--- know the new stage names). The new CRM already reads the old names correctly,
+-- Applied on 16 Nov 2026 after the go-live deploy (a1cb69f). The new CRM already reads the old names correctly,
 -- so there is no rush. Reversible: the old stage is kept in legacy_stage.
 --
 --   Undo:  update leads set stage = legacy_stage where legacy_stage is not null;
@@ -34,10 +33,12 @@ where stage in ('New Lead','Contacted','Nurse Required','Moba Required','Due dat
                 'Not Responding','Negotiation','Deferred Hot Lead','Closed Won','Closed Lost','Invalid Lead');
 
 -- Keep the meaning of the two stages that become a tag / reason
-update public.leads set meta = meta || '{"tag":"Not responding"}'::jsonb
-  where legacy_stage = 'Not Responding' and not (meta ? 'tag');
-update public.leads set meta = meta || '{"lostReason":"Invalid lead"}'::jsonb
-  where legacy_stage = 'Invalid Lead' and not (meta ? 'lostReason');
+update public.leads set meta = coalesce(meta, '{}'::jsonb) || '{"tag":"Not responding"}'::jsonb
+  where legacy_stage = 'Not Responding' and not (coalesce(meta, '{}'::jsonb) ? 'tag');
+-- Only where no Lost reason was recorded on a closure (that one is more specific)
+update public.leads l set meta = coalesce(l.meta, '{}'::jsonb) || '{"lostReason":"Invalid lead"}'::jsonb
+  where l.legacy_stage = 'Invalid Lead' and not (coalesce(l.meta, '{}'::jsonb) ? 'lostReason')
+    and not exists (select 1 from public.closures c where c.lead_id = l.id and c.type = 'Lost' and c.lost_reason is not null);
 
 -- Leads created by the website form / WhatsApp default to the new first stage
 alter table public.leads alter column stage set default 'New';
