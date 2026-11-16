@@ -10,6 +10,12 @@ begin;
 
 update public.leads set legacy_stage = stage where legacy_stage is null;
 
+-- Operations' Requirements tab used the "Nurse Required" / "Moba Required" stages. Keep that flag on the lead
+-- (meta.opsRequirement) before those stages become "Qualified". /api/ops/requirements reads it.
+update public.leads
+  set meta = coalesce(meta, '{}'::jsonb) || jsonb_build_object('opsRequirement', case stage when 'Nurse Required' then 'Nurse' else 'Moba' end)
+  where stage in ('Nurse Required', 'Moba Required') and not (coalesce(meta, '{}'::jsonb) ? 'opsRequirement');
+
 update public.leads set stage = case stage
     when 'New Lead'          then 'New'
     when 'Contacted'         then 'Qualified'

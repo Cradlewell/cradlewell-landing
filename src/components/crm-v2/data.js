@@ -9,6 +9,11 @@
 
 const DAY = 86400000;
 
+// Fresh start for follow-ups: only leads that arrive from this date (16 Nov 2026, IST) get their
+// follow-ups shown. Follow-ups someone creates from now on (for any lead) are shown too.
+// Older follow-ups stay in the database untouched — they are just not loaded.
+export const FOLLOWUP_CUTOFF = new Date("2026-11-16T00:00:00+05:30");
+
 /* ---------- Serialising (Dates survive the round trip) ---------- */
 
 export function pack(value) {
@@ -93,7 +98,8 @@ const FU_TYPE = {
   "Closure follow-up": "Call",
 };
 
-const scoreFromTemp = (t) => ({ Hot: 85, Warm: 65, Cold: 40 }[t] ?? 50);
+// "Cold" is the column default (every lead has it), so it means "not rated", not low interest
+const scoreFromTemp = (t) => ({ Hot: 85, Warm: 65 }[t] ?? 50);
 
 /* ---------- Leads ---------- */
 
@@ -128,6 +134,8 @@ export function dbLeadToUi(row, ctx) {
     shiftType: mapShift(row.preferred_shift),
     shiftHours: row.shift_hours_count || null,
     package: closure?.final_package || null,
+    deals: closure?.deals || 0, // number of Won closures (trial, month, extension…)
+    wonDeals: closure?.history || [], // [{ at, amount, paid }] per closure, for revenue by month
     tag: rawStage === "Not Responding" ? "Not responding" : null,
     score: scoreFromTemp(row.temperature),
     lastActivity: lastAt && Math.abs(lastAt - createdAt) > 60000 ? { type: "Updated", by: row.owner || "You", at: lastAt, none: false } : { type: "Created", by: row.owner || "You", at: createdAt, none: true },
@@ -141,7 +149,8 @@ export function dbLeadToUi(row, ctx) {
     paymentStatus: closure ? (finalAmount && paidAmount >= finalAmount ? "Paid" : paidAmount > 0 ? "Partial" : "Not sent") : "Not sent",
     bookingStatus: stage === "Won" ? "Confirmed" : "Not booked",
     amountPaid: paidAmount,
-    dealValue: finalAmount || Number(row.budget) || null,
+    // Budget column holds junk like "-1" on old rows: only a positive number counts
+    dealValue: finalAmount || (Number(row.budget) > 0 ? Number(row.budget) : null),
     starred: false,
     stageSince: ctx.stageSince.get(row.id) || createdAt,
     notes: row.notes || "",
@@ -168,8 +177,12 @@ export function dbLeadToUi(row, ctx) {
   // The soonest open follow-up wins over a stale value in meta
   if (nextOpen) lead.nextFollowUp = nextOpen;
   else if (lead.nextFollowUp === undefined) lead.nextFollowUp = null;
-  if (!lead.customerNo) lead.customerNo = ctx.customerNo.get(row.id);
+  // Old follow-up dates (from before the fresh start) are not carried over
+  if (lead.nextFollowUp instanceof Date && lead.nextFollowUp < FOLLOWUP_CUTOFF) lead.nextFollowUp = null;
+  // The stored number is permanent; the rank is only a fallback for rows saved before customer_no existed
+  lead.customerNo = row.customer_no ?? (lead.customerNo || ctx.customerNo.get(row.id));
   // Same format as the UI's customerId(): CW-P-0001 (pregnancy) / CW-B-0001 (baby born)
+  delete lead.lastWin; // only for deals won in this session; after a reload it's in wonDeals
   lead.customerId = `CW-${lead.careKind === "P" ? "P" : "B"}-${String(lead.customerNo || 0).padStart(4, "0")}`;
   return lead;
 }
@@ -178,6 +191,9 @@ export function uiLeadToDb(l, { packageValue, serviceDays }) {
   const meta = { ...l };
   LEAD_COLUMN_FIELDS.forEach((k) => delete meta[k]);
   delete meta.customerId; // recomputed from customerNo
+  delete meta.customerNo; // lives in the customer_no column, assigned by the database
+  delete meta.wonDeals; // read from closures
+  delete meta.deals;
   let pv = 0;
   let sd = null;
   try { pv = packageValue(l) || 0; } catch { /* ignore */ }
@@ -270,9 +286,22 @@ export async function loadCRM() {
 
   const wonClosure = new Map();
   const lostClosure = new Map();
-  for (const c of d.closures || []) (c.type === "Won" ? wonClosure : lostClosure).set(c.lead_id, c);
+  // A customer can have several Won closures (trial, then a month, then an extension):
+  // add them up, and show the latest package.
+  const dealOf = (c) => ({ at: toDate(c.closure_date), amount: Number(c.final_amount || 0), paid: Number(c.advance_received || 0) });
+  const byDate = [...(d.closures || [])].sort((x, y) => new Date(x.closure_date || 0) - new Date(y.closure_date || 0));
+  for (const c of byDate) {
+    if (c.type !== "Won") { lostClosure.set(c.lead_id, c); continue; }
+    const cur = wonClosure.get(c.lead_id);
+    wonClosure.set(c.lead_id, cur
+      ? { ...c, final_package: c.final_package || cur.final_package, final_amount: Number(cur.final_amount || 0) + Number(c.final_amount || 0), advance_received: Number(cur.advance_received || 0) + Number(c.advance_received || 0), deals: cur.deals + 1, history: [...cur.history, dealOf(c)] }
+      : { ...c, deals: 1, history: [dealOf(c)] });
+  }
 
-  const followups = (d.followups || []).map(dbFollowupToUi);
+  const leadCreated = new Map((d.leads || []).map((r) => [r.id, toDate(r.created_at) || toDate(r.lead_date)]));
+  const followups = (d.followups || [])
+    .map(dbFollowupToUi)
+    .filter((f) => (leadCreated.get(f.leadId) || 0) >= FOLLOWUP_CUTOFF || (f.createdAt && f.createdAt >= FOLLOWUP_CUTOFF));
   const nextFollowUp = new Map();
   for (const f of followups) {
     if (f.status !== "open" || !f.leadId) continue;
@@ -339,6 +368,16 @@ let onError = null;
 let inflight = Promise.resolve();
 export const setSaveErrorHandler = (fn) => (onError = fn);
 
+// New leads get their customer number from the database; the CRM is told which one
+let onAssigned = null;
+export const setAssignedHandler = (fn) => { onAssigned = fn; };
+
+// Marking a lead Won writes its closure with exactly what was entered in the Won dialog
+export function recordWin(leadId, deal) {
+  const dealId = `cl-${leadId}-${Date.now()}`; // fixed here so a retried request can't record the deal twice
+  enqueue([{ coll: "won", op: "upsert", id: leadId, row: { dealId, package: deal.package, total: deal.dealValue, paid: deal.amountPaid || 0, method: deal.paymentMethod || null } }]);
+}
+
 export function enqueue(ops) {
   for (const o of ops) queue.set(`${o.coll}:${o.id}`, o);
   clearTimeout(timer);
@@ -359,9 +398,15 @@ async function send(ops, attempt = 0) {
     }
     const body = await res.json().catch(() => ({}));
     if (!res.ok && res.status !== 207) throw new Error(`HTTP ${res.status}`);
+    if (body.assigned && Object.keys(body.assigned).length) onAssigned?.(body.assigned);
     if (body.failed?.length) {
-      const retry = ops.filter((o) => body.failed.includes(o.id));
-      if (attempt < 2) return send(retry, attempt + 1);
+      // Failures come back as "coll:id" (older servers: bare id). A lead, its timeline and its Won entry share an id.
+      const failed = new Set(body.failed);
+      const retry = ops.filter((o) => failed.has(`${o.coll}:${o.id}`) || failed.has(o.id));
+      if (attempt < 2 && retry.length) {
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        return send(retry, attempt + 1);
+      }
       onError?.(`Couldn't save ${body.failed.length} change${body.failed.length > 1 ? "s" : ""}. Please refresh.`);
     }
   } catch (e) {

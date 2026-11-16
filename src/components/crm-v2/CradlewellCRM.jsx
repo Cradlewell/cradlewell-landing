@@ -12,7 +12,7 @@ import {
   LogOut, Bell, Flag, ChevronUp, CreditCard, Webhook, Workflow, Trash2, GripVertical, HeartHandshake, ArrowUpRight,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
-import { loadCRM, enqueue, flush, hasPending, setSaveErrorHandler, diffById, diffTimelines, uiLeadToDb, uiFollowupToDb, pack } from "./data";
+import { FOLLOWUP_CUTOFF, loadCRM, enqueue, flush, hasPending, setSaveErrorHandler, setAssignedHandler, recordWin, diffById, diffTimelines, uiLeadToDb, uiFollowupToDb, pack } from "./data";
 
 /* ==========================================================================
    LIVE DATA — leads, follow-ups, consultations and timelines are loaded from
@@ -68,7 +68,11 @@ const DIVIDER = "#EEEDEA";
 const HOVER = "#F7F6F3";
 
 // Status tags get a 6px coloured dot; package names are plain grey text.
-const PACKAGES = new Set(["Essential", "Together", "Complete"]);
+// Packages the team actually sells (names used on real closures). Free text is still allowed in the Won dialog.
+const REAL_PACKAGES = ["1-Day Trial", "3-Days Trial", "7-Days Trial", "15 Days", "1 Month", "Monthly Day shift package", "1 Month Night Shift service", "60 Days"];
+const PACKAGES = new Set(REAL_PACKAGES);
+// Expert sessions (lactation, yoga, nutrition…) and their prices came from the prototype. Hidden until real ones exist.
+const SELL_EXPERTS = false;
 const TAG_DOTS = {
   New: "bg-brand",
   Interested: "bg-blue-500",
@@ -1109,8 +1113,8 @@ function MyDay({ now, items, leads = [], onOpen, showToast, md }) {
           icon={BarChart3}
           value={<CountUp value={rev} format={fmtL} ms={1000} />}
           sub={<>{Math.round(revPct * 100)}% of {fmtL(REVENUE_MONTH.target)} · <span className={paceWord === "behind" ? "text-red-700" : ""}>{paceWord}</span></>}
-          title={`Care ${fmtL(REVENUE_MONTH.care)} · Experts ${fmtL(REVENUE_MONTH.experts)} · tick marks where we should be today (${Math.round(monthPace * 100)}% of the month gone)`}
-          onClick={() => jumpTo("sec-opps", [])}
+          title={`${SELL_EXPERTS ? `Care ${fmtL(REVENUE_MONTH.care)} · Experts ${fmtL(REVENUE_MONTH.experts)}` : `Received on deals closed in ${monthName}`} · tick marks where we should be today (${Math.round(monthPace * 100)}% of the month gone) · click to change the target`}
+          onClick={() => md.onEditTarget?.()}
         >
           <div className="relative mt-2">
             <div className="h-[3px] rounded-full bg-surface-active overflow-hidden">
@@ -1277,7 +1281,8 @@ const BOOKING_DOT = { "Not booked": "bg-stone-300", Tentative: "bg-amber-500", C
 // Unread WhatsApp messages per lead (mock)
 const UNREAD_WHATSAPP = {};
 
-const PACKAGE_OPTIONS = ["Essential", "Together", "Complete"];
+const PACKAGE_OPTIONS = REAL_PACKAGES;
+const OPS_REQUIREMENTS = ["Nurse", "Moba"];
 const LOST_REASONS = ["Price", "Not responding", "Chose competitor", "Family will manage", "Not needed", "Invalid lead", "Other"];
 const OUTCOME_TAGS = ["Interested", "Price concern", "Not responding", "Deferred", "Converted", "Lost"];
 const WA_TEMPLATES = ["Welcome & brochure", "Consult reminder", "Payment link reminder", "Gentle check-in"];
@@ -1362,12 +1367,11 @@ const customerId = (n, kind = "B") => `CW-${kind === "P" ? "P" : "B"}-${String(n
 // Auto-calculated fields
 const serviceDays = (l) => (l.careStart && l.careEnd ? dayDiff(l.careEnd, l.careStart) + 1 : null);
 const packageValue = (l) => {
-  // Real money first: the closed deal amount, or the budget the lead gave
-  if (l.dealValue) return l.dealValue;
-  const days = serviceDays(l);
-  const rate = DAY_RATE[`${l.shiftType}-${l.shiftHours}`];
-  if (!days || !rate) return 0;
-  return Math.round((rate * days * (l.babies > 1 ? TWIN_MULTIPLIER : 1)) / 500) * 500;
+  // Real money only: the closed deal amount or budget (dealValue), else what was quoted.
+  // (The prototype estimated from placeholder day rates; those numbers weren't Cradlewell prices.)
+  if (l.dealValue > 0) return l.dealValue;
+  if (l.quoted > 0) return l.quoted;
+  return 0;
 };
 const babyAge = (l, now) => {
   if (!l.babyDob) return null;
@@ -1388,6 +1392,16 @@ const careStage = (l, now) => {
   }
   const age = babyAge(l, now);
   return age ? `Born · ${age}` : "Born";
+};
+
+// "Born · 3 weeks" / "Expecting · 32w", or just "Born" / "Expecting" when the date isn't known (never "· —")
+const careLabel = (l, now, expecting = "Expecting") => {
+  if (l.careKind === "B") {
+    const age = babyAge(l, now);
+    return age ? `Born · ${age}` : "Born";
+  }
+  const w = careStage(l, now).split(" · ")[1];
+  return w ? `${expecting} · ${w}` : expecting;
 };
 
 const fmtRel = (ms) => {
@@ -1717,7 +1731,84 @@ const SecondaryButton = ({ children, className = "", ...props }) => (
   </button>
 );
 
-function StageExtraModal({ pending, count, onCancel, onConfirm }) {
+// Package names the team has used on real closures (free text; these are only suggestions)
+const PACKAGE_SUGGESTIONS = REAL_PACKAGES;
+const PAYMENT_METHODS = ["UPI", "Bank transfer", "Cash", "Card", "Razorpay link"];
+const inr = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
+
+// Everything a Won lead needs so revenue and Operations get real numbers
+function wonFields(extra) {
+  return { package: extra.package, dealValue: extra.dealValue, amountPaid: extra.amountPaid, paymentMethod: extra.paymentMethod || null, customerSince: null, lastWin: { at: new Date(), paid: extra.amountPaid || 0 } };
+}
+
+function WonForm({ lead, count, onCancel, onConfirm }) {
+  const [pkg, setPkg] = useState(lead?.package || "");
+  const [total, setTotal] = useState(lead?.dealValue ? String(lead.dealValue) : "");
+  const [paid, setPaid] = useState("");
+  const [method, setMethod] = useState("UPI");
+  const t = Number(total) || 0;
+  const p = Number(paid) || 0;
+  const tooMuch = p > t && t > 0;
+  const ok = pkg.trim() && t > 0 && p >= 0 && !tooMuch;
+  if (count > 1)
+    return (
+      <Modal title="Mark as won" onClose={onCancel} width={400}>
+        <div className="p-5 text-body text-ink-2">Mark leads as won one at a time, so each customer&apos;s package and payment are recorded.</div>
+        <div className="flex justify-end px-5 pb-5"><SecondaryButton onClick={onCancel}>OK</SecondaryButton></div>
+      </Modal>
+    );
+  const status = !t ? "" : p >= t ? "Fully paid" : p > 0 ? `Part paid · ${inr(t - p)} due` : `Nothing received yet · ${inr(t)} due`;
+  return (
+    <Modal title={`Mark ${lead?.name || "this lead"} as won`} onClose={onCancel} width={420}>
+      <form
+        className="p-5 space-y-4"
+        onSubmit={(e) => { e.preventDefault(); if (ok) onConfirm({ package: pkg.trim(), dealValue: t, amountPaid: p, paymentMethod: p > 0 ? method : null }); }}
+      >
+        <Field label="Package" required>
+          <input autoFocus list="cw-package-suggestions" value={pkg} onChange={(e) => setPkg(e.target.value)} placeholder="e.g. 1 Month" className={inputCls} />
+          <datalist id="cw-package-suggestions">{PACKAGE_SUGGESTIONS.map((x) => <option key={x} value={x} />)}</datalist>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Total amount (₹)" required>
+            <input type="number" inputMode="numeric" min="1" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="55000" className={inputCls} />
+          </Field>
+          <Field label="Received so far (₹)">
+            <input type="number" inputMode="numeric" min="0" value={paid} onChange={(e) => setPaid(e.target.value)} placeholder="0" className={inputCls} />
+          </Field>
+        </div>
+        {p > 0 && (
+          <Field label="Paid by">
+            <select value={method} onChange={(e) => setMethod(e.target.value)} className={inputCls}>
+              {PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
+            </select>
+          </Field>
+        )}
+        <div className={`text-small leading-4 ${tooMuch ? "text-red-700" : "text-ink-4"}`}>{tooMuch ? "Received can't be more than the total." : status}</div>
+        <div className="flex justify-end gap-2 pt-1">
+          <SecondaryButton type="button" onClick={onCancel}>Cancel</SecondaryButton>
+          <PrimaryButton type="submit" disabled={!ok}>Mark as won</PrimaryButton>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function StageExtraModal({ pending, count, lead, consults = [], onCancel, onConfirm }) {
+  if (pending.stage === "Won") return <WonForm lead={lead} count={count} onCancel={onCancel} onConfirm={onConfirm} />;
+  if (pending.stage === "Consult booked") {
+    if (count > 1 || !lead)
+      return (
+        <Modal title="Book consultations" onClose={onCancel} width={400}>
+          <div className="p-5 text-body text-ink-2">Book consultations one lead at a time, so each one gets its own slot.</div>
+          <div className="flex justify-end px-5 pb-5"><SecondaryButton onClick={onCancel}>OK</SecondaryButton></div>
+        </Modal>
+      );
+    return <BookConsultModal leads={[lead]} consults={consults} now={new Date()} initial={{ leadName: lead.name }} onClose={onCancel} onBook={(b) => onConfirm({ consult: b })} />;
+  }
+  return <LostOrDeferModal pending={pending} count={count} onCancel={onCancel} onConfirm={onConfirm} />;
+}
+
+function LostOrDeferModal({ pending, count, onCancel, onConfirm }) {
   const [reason, setReason] = useState("Price");
   const [date, setDate] = useState(() => atTen(14).toISOString().slice(0, 10));
   const [note, setNote] = useState("");
@@ -1862,7 +1953,7 @@ function SearchSelect({ value, onChange, options, placeholder = "Search…" }) {
 }
 
 function NewLeadModal({ leads, onClose, onCreate, onOpenExisting }) {
-  const [f, setF] = useState({ phone: "", name: "", status: "P", date: "", hospital: "", zone: "", source: "", priority: "Medium" });
+  const [f, setF] = useState({ phone: "", name: "", status: "P", date: "", hospital: "", zone: "", source: "", priority: "" });
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target ? e.target.value : e }));
   const d = mobileDigits(f.phone);
   const valid = /^[6-9]\d{9}$/.test(d);
@@ -1950,7 +2041,7 @@ function NewLeadModal({ leads, onClose, onCreate, onOpenExisting }) {
           ].map(([k, label, opts]) => (
             <Field key={k} label={label}>
               <select value={f[k]} onChange={set(k)} className={`${inputCls} ${f[k] ? "" : "text-ink-4"}`}>
-                <option value="">Select</option>
+                <option value="">{k === "priority" ? "Auto" : "Select"}</option>
                 {opts.map((o) => (
                   <option key={o} value={o} className="text-ink">
                     {o}
@@ -2273,7 +2364,11 @@ function LeadPanel({ lead, now, onClose, onSnooze, onToast, onOpenRecord }) {
                 </>
               ) : (
                 <PanelRow label="Due date">
-                  <span className="tabular-nums">{fmtDate(l.dueDate)}</span> <span className="text-ink-4">· {(careStage(l, now).split(" · ")[1] || "—")}</span>
+                  {l.dueDate ? (
+                    <><span className="tabular-nums">{fmtDate(l.dueDate)}</span> <span className="text-ink-4">· {(careStage(l, now).split(" · ")[1] || "—")}</span></>
+                  ) : (
+                    <span className="text-ink-4">Not known yet</span>
+                  )}
                 </PanelRow>
               )}
               <PanelRow label="Number of babies">
@@ -2520,9 +2615,9 @@ const WA_TEMPLATE_TEXT = {
   Welcome: (l) =>
     `Hi ${firstName(l)}, this is the Cradlewell care team. Thank you for reaching out. I'd love to understand how you and your baby are doing and what support would help most at home. Is now a good time for a quick call?`,
   "Package details": (l) =>
-    `Hi ${firstName(l)}, sharing the details of the ${l.package || "Together"} care plan: ${(l.services || []).join(", ").toLowerCase() || "newborn and mother care"}, ${l.shiftType ? `${l.shiftType.toLowerCase()} shifts of ${l.shiftHours} hrs` : "flexible shifts"}, with a care coordinator checking in every week. Happy to walk you through it.`,
+    `Hi ${firstName(l)}, sharing the details of ${l.package ? `the ${l.package} care plan` : "our care plan"}: ${(l.services || []).join(", ").toLowerCase() || "newborn and mother care"}, ${l.shiftType ? `${l.shiftType.toLowerCase()} shifts of ${l.shiftHours} hrs` : "flexible shifts"}, with a care coordinator checking in every week. Happy to walk you through it.`,
   "Payment link": (l) =>
-    `Hi ${firstName(l)}, here is the secure payment link for your ${l.package || ""} plan (${fmtINR(packageValue(l))}): https://pay.cradlewell.com/${l.customerId}. Your care starts ${l.careStart ? `on ${fmtShortDate(l.careStart)}` : "on the date we agreed"}.`,
+    `Hi ${firstName(l)}, here is the secure payment link for your ${l.package ? `${l.package} ` : ""}care plan${packageValue(l) ? ` (${fmtINR(packageValue(l))})` : ""}: [paste payment link]. Your care starts ${l.careStart ? `on ${fmtShortDate(l.careStart)}` : "on the date we agreed"}.`,
   "Payment reminder": (l) =>
     `Hi ${firstName(l)}, a gentle reminder about the payment link for your care plan. Once it's done we'll confirm your caregiver and share their profile. Let me know if you have any questions.`,
   "Consult reminder": (l) =>
@@ -2869,11 +2964,11 @@ function Composer({ lead, tab, setTab, focusKey, onWhatsApp, onNote, onCall, onF
 
 /* ---------- Next step card + modal ---------- */
 
-function NextFollowUpModal({ lead, outcome, onSave }) {
+function NextFollowUpModal({ lead, outcome, onSave, onCancel }) {
   const [when, setWhen] = useState(() => toLocalInput(atTen(1)));
   const [action, setAction] = useState(NEXT_ACTION_BY_STAGE[lead.stage] || "");
   return (
-    <Modal title="Set next follow-up" width={420}>
+    <Modal title="Set next follow-up" onClose={onCancel} width={420}>
       <div className="p-5 space-y-4">
         <div className="text-body text-ink-3">
           Logged as <Tag label={outcome} />. Every open lead needs a next step.
@@ -2885,7 +2980,8 @@ function NextFollowUpModal({ lead, outcome, onSave }) {
           <input value={action} onChange={(e) => setAction(e.target.value)} placeholder="e.g. Call Arjun about the payment link" className={inputCls} />
         </Field>
       </div>
-      <div className="flex justify-end px-5 pb-5">
+      <div className="flex justify-end gap-2 px-5 pb-5">
+        <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
         <PrimaryButton disabled={!when || !action.trim()} onClick={() => onSave(new Date(when), action.trim())}>
           Set follow-up
         </PrimaryButton>
@@ -2914,7 +3010,7 @@ function useRecordActions({ lead, timeline, onUpdate, onEvent, showToast, dismis
     set,
     changeStage: (to) => {
       if (to === lead.stage) return;
-      if (to === "Lost" || to === "Deferred") return onRequestStage(lead.id, to);
+      if (to === "Lost" || to === "Deferred" || to === "Won" || to === "Consult booked") return onRequestStage(lead.id, to);
       const snapshot = { ...lead };
       const evId = uid();
       set(
@@ -2941,6 +3037,7 @@ function useRecordActions({ lead, timeline, onUpdate, onEvent, showToast, dismis
       if (autoConfirm) showToast("Marked as paid · booking confirmed");
     },
     sendWhatsApp: (text) => {
+      openWhatsApp(lead.phone, text); // the CRM can't send by itself yet: WhatsApp opens with the message ready
       const top = timeline[0];
       if (top && top.type === "whatsapp" && top.by === ME && Date.now() - top.at < 2 * 3600000)
         onEvent(lead.id, null, (evs) => evs.map((e, i) => (i === 0 ? { ...e, at: new Date(), messages: [...e.messages, { from: "agent", text, at: new Date() }] } : e)));
@@ -3149,7 +3246,16 @@ const STAGE_PILL = {
 const PRIORITIES = ["High", "Medium", "Low"];
 // Priority is about importance, not lateness, so it stays out of red/amber (those mean late or waiting).
 const PRIORITY_DOT = { High: "bg-ink", Medium: "bg-ink-4", Low: "bg-line-heavy" };
-const leadPriority = (l) => l.priority || (l.score >= 75 ? "High" : l.score >= 50 ? "Medium" : "Low");
+// A priority someone set wins. Otherwise it comes from real signals (the old "temperature" column was "Cold" on every lead).
+const autoPriority = (l) => {
+  if (["Lost", "Deferred"].includes(l.stage) || l.tag === "Not responding") return "Low";
+  if (["Consult booked", "Consult done", "Payment pending"].includes(l.stage) || l.needsReply) return "High";
+  const now = Date.now();
+  if (l.careKind === "P" && l.dueDate && l.dueDate - now <= 30 * DAY && now - l.dueDate <= 14 * DAY) return "High";
+  if (l.careKind === "B" && l.babyDob && now - l.babyDob <= 30 * DAY) return "High";
+  return "Medium";
+};
+const leadPriority = (l) => l.priority || autoPriority(l);
 const fmtConsult = (d) => `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${fmtTime(d)}`;
 
 // Starting key notes for the demo leads, written as a person would jot them down
@@ -3560,7 +3666,7 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
     ["calls", "Calls", calls.length],
     ["activity", "Activity", sorted.length],
     ["followups", "Follow-ups", openFus],
-    ...(isCustomer ? [["services", "Services", liveSessions(lead).length]] : []),
+    ...(isCustomer ? [["services", SELL_EXPERTS ? "Services" : "Care plan", SELL_EXPERTS ? liveSessions(lead).length : null]] : []),
     ["notes", "Notes", notes.length + keyNotes.length],
     ["files", "Files", files.length],
   ];
@@ -3621,7 +3727,7 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
   const primary = unread || /whatsapp|reply/i.test(actionText || "")
     ? { label: "Reply", Icon: MessageCircle, run: () => setTab("whatsapp") }
     : lead.stage === "Payment pending" || /link/i.test(actionText || "")
-      ? { label: "Send link", Icon: Send, run: () => { actions.setPayment("Link sent"); showToast("Payment link sent on WhatsApp"); } }
+      ? { label: "Send link", Icon: Send, run: () => { openWhatsApp(lead.phone); actions.setPayment("Link sent"); showToast("WhatsApp opened · paste the payment link. Marked as link sent"); } }
       : { label: "Call", Icon: Phone, run: () => openCall(lead.phone) };
   const ActionIcon = primary.Icon;
   const snoozeTo = (k) => {
@@ -3641,6 +3747,11 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
     addFollowup({ type: "Call", due: d, action: NEXT_ACTION_BY_STAGE[lead.stage] || "Follow-up call" });
     closeMenu();
   };
+  // "Done" in the header completes the lead's earliest open task (it used to only tag the lead)
+  const closeOpenTask = (outcome) => {
+    const open = followups.filter((x) => x.leadId === lead.id && x.status === "open").sort((a, b) => a.due - b.due)[0];
+    if (open) setFollowups?.((fs) => fs.map((x) => (x.id === open.id ? { ...x, status: "done", completedAt: new Date(), completedBy: ME, outcome } : x)));
+  };
   const fuDone = (id, outcome) => {
     const f = followups.find((x) => x.id === id);
     setFollowups?.((fs) => fs.map((x) => (x.id === id ? { ...x, status: "done", completedAt: new Date(), completedBy: ME, outcome } : x)));
@@ -3654,7 +3765,7 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
   const quoted = lead.quoted ?? value;
   const la = lead.lastActivity;
   const lastInteraction = la.none ? null : `${la.type} · ${shortRel(la.at, now)}`;
-  const careWeeks = born ? `Born · ${babyAge(lead, now) || "—"}` : `Expecting · ${(careStage(lead, now).split(" · ")[1] || "—")}`;
+  const careWeeks = careLabel(lead, now);
   const consultLine = consult ? `Consult ${fmtConsult(consult.start)}` : null;
   const days = serviceDays(lead);
 
@@ -3678,12 +3789,14 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
   ];
   const validateCustomer = (d) => {
     const ph = mobileDigits(d.phone);
-    const date = fromDateInput(born ? d.babyDob : d.dueDate);
+    const raw = born ? d.babyDob : d.dueDate;
+    const date = fromDateInput(raw);
+    const changed = !!raw && raw !== dateInput(born ? lead.babyDob : lead.dueDate);
     const today = startOfDay(new Date());
     return {
       phone: /^[6-9]\d{9}$/.test(ph) ? null : "Enter a 10-digit mobile number starting with 6–9.",
-      dueDate: !born && (!date || date < new Date(+today - 14 * DAY) || date > new Date(+today + 42 * 7 * DAY)) ? "Due date should be between 2 weeks ago and 42 weeks from today." : null,
-      babyDob: born && (!date || date > today || date < new Date(+today - 365 * DAY)) ? "Birth date can't be in the future or over a year ago." : null,
+      dueDate: !born && changed && (!date || date < new Date(+today - 14 * DAY) || date > new Date(+today + 42 * 7 * DAY)) ? "Due date should be between 2 weeks ago and 42 weeks from today." : null,
+      babyDob: born && changed && (!date || date > today || date < new Date(+today - 365 * DAY)) ? "Birth date can't be in the future or over a year ago." : null,
     };
   };
   const saveCustomer = (d) => {
@@ -3702,13 +3815,15 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
     { key: "duration", label: "Duration", auto: true, view: days ? `${days} days` : null },
     { key: "value", label: "Package value", view: value ? fmtINR(value) : null },
     { key: "services", label: "Required services", full: true, divider: true, view: lead.services?.join(", "), edit: { type: "multi", value: lead.services || [], options: SERVICES } },
+    // Shows the lead on the Operations board's Requirements tab (was the "Nurse/Moba Required" stage)
+    { key: "opsRequirement", label: "Operations needs", view: lead.opsRequirement ? `${lead.opsRequirement} — on Operations board` : "Not sent to Operations", edit: { type: "select", value: lead.opsRequirement || "", options: OPS_REQUIREMENTS, allowEmpty: true } },
   ];
   const validateCare = (d) => ({
     careEnd: d.careStart && d.careEnd && fromDateInput(d.careEnd) <= fromDateInput(d.careStart) ? "Care end must be after care start." : d.careEnd && !d.careStart ? "Add a care start date first." : null,
   });
   const saveCare = (d) => {
     const [st, sh] = d.shift ? d.shift.split("|") : [null, null];
-    edit({ package: d.package || null, shiftType: st, shiftHours: sh ? +sh : null, careStart: fromDateInput(d.careStart), careEnd: fromDateInput(d.careEnd), services: d.services }, "Care requirements");
+    edit({ package: d.package || null, shiftType: st, shiftHours: sh ? +sh : null, careStart: fromDateInput(d.careStart), careEnd: fromDateInput(d.careEnd), services: d.services, opsRequirement: d.opsRequirement || null }, "Care requirements");
     showToast("Care requirements saved");
   };
   const payFields = [
@@ -3735,7 +3850,7 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
         </div>
       </div>
       <button
-        onClick={() => { actions.sendWhatsApp(WA_TEMPLATE_TEXT["Consult reminder"](lead)); showToast("Reminder sent on WhatsApp"); }}
+        onClick={() => { actions.sendWhatsApp(WA_TEMPLATE_TEXT["Consult reminder"](lead)); showToast("WhatsApp opened with the reminder · press send there"); }}
         className="h-8 rounded-md border border-line-control bg-white px-2.5 text-small text-ink-2 hover:bg-surface-subtle"
       >
         Send reminder
@@ -3981,6 +4096,7 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
                   if (o === "Lost") { closeMenu(); return onRequestStage(lead.id, "Lost"); }
                   if (o === "Deferred") { closeMenu(); return onRequestStage(lead.id, "Deferred"); }
                   const needsNext = actions.done(o);
+                  closeOpenTask(o);
                   if (needsNext) setMenu((m) => ({ ...m, outcome: o }));
                   else closeMenu();
                 }}>
@@ -4036,7 +4152,16 @@ function RollingNumber({ value }) {
   );
 }
 
-function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRaised, timelines, setTimelines, recordRequest, filterRequest, viewRequest, viewRowMatch, onViewChange, onStateChange, onNewView, onSell, newLeadRequest, consults = [], followups = [], setFollowups }) {
+// One-shot requests (open a record, apply a filter, open the new-lead form) are kept in App state.
+// Leads remounts whenever you come back to it, so remember which ones were already applied.
+const handledRequests = new Set();
+const firstTime = (req) => {
+  if (!req || handledRequests.has(req)) return false;
+  handledRequests.add(req);
+  return true;
+};
+
+function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRaised, timelines, setTimelines, recordRequest, filterRequest, viewRequest, viewRowMatch, onViewChange, onStateChange, onNewView, onSell, newLeadRequest, consults = [], followups = [], setFollowups, onBookConsult }) {
   const [activeView, setActiveView] = useState(null);
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
@@ -4056,7 +4181,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   const [recordId, setRecordId] = useState(null);
   const [recordView, setRecordView] = useState("simple");
   useEffect(() => {
-    if (filterRequest) {
+    if (firstTime(filterRequest)) {
       setTab("all");
       setRecordId(null);
       setActiveView(null);
@@ -4091,7 +4216,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
     setActiveView(null);
   };
   useEffect(() => {
-    if (recordRequest) {
+    if (firstTime(recordRequest)) {
       setTab("all");
       setRecordId(recordRequest.id);
     }
@@ -4112,7 +4237,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   };
   const [newOpen, setNewOpen] = useState(false);
   useEffect(() => {
-    if (newLeadRequest) {
+    if (firstTime(newLeadRequest)) {
       setRecordId(null);
       setNewOpen(true);
     }
@@ -4154,12 +4279,14 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   const nameOrCount = (ids) => (ids.length === 1 ? leads.find((l) => l.id === ids[0])?.name : `${ids.length} leads`);
 
   const commitStage = (ids, stage, extra = {}) => {
+    if (stage === "Won" && extra.dealValue) ids.forEach((id) => recordWin(id, extra));
+    if (stage === "Consult booked" && extra.consult) onBookConsult?.(extra.consult);
     ids.forEach((id) => {
       const l = leads.find((x) => x.id === id);
       if (l && l.stage !== stage)
         logEvent(id, {
           id: uid(), type: "stage", from: l.stage, to: stage, by: ME, at: new Date(),
-          extra: stage === "Lost" ? extra.lostReason : stage === "Deferred" ? [extra.deferredUntil && `Until ${fmtShortDate(extra.deferredUntil)}`, extra.deferNote].filter(Boolean).join(" · ") : null,
+          extra: stage === "Lost" ? extra.lostReason : stage === "Deferred" ? [extra.deferredUntil && `Until ${fmtShortDate(extra.deferredUntil)}`, extra.deferNote].filter(Boolean).join(" · ") : extra.consult ? `${extra.consult.mode} consult · ${fmtDay(extra.consult.start)}, ${fmtTime(extra.consult.start)}` : null,
         });
     });
     mutate(
@@ -4173,12 +4300,14 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
         deferNote: stage === "Deferred" ? extra.deferNote || "" : "",
         ...(stage === "Deferred" ? { nextFollowUp: extra.deferredUntil, needsReply: false } : {}),
         ...(stage === "Lost" || stage === "Won" ? { nextFollowUp: null, needsReply: false } : {}),
+        ...(stage === "Won" && extra.dealValue ? wonFields(extra) : {}),
+        ...(extra.consult ? { nextFollowUp: extra.consult.start, needsReply: false } : {}),
       }),
-      stage === "Won" ? `${nameOrCount(ids)} ${ids.length > 1 ? "are" : "is"} now in Paid customers` : `Moved ${nameOrCount(ids)} to ${stage}`
+      stage === "Won" ? `${nameOrCount(ids)} ${ids.length > 1 ? "are" : "is"} now in Paid customers` : extra.consult ? `Consult booked for ${nameOrCount(ids)} · ${fmtDay(extra.consult.start)}, ${fmtTime(extra.consult.start)}` : `Moved ${nameOrCount(ids)} to ${stage}`
     );
   };
   const requestStage = (ids, stage) => {
-    if (stage === "Lost" || stage === "Deferred") setPendingStage({ ids, stage });
+    if (stage === "Lost" || stage === "Deferred" || stage === "Won" || stage === "Consult booked") setPendingStage({ ids, stage });
     else commitStage(ids, stage);
   };
   const setFollowUp = (ids, date) =>
@@ -4186,7 +4315,9 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
 
   const createLead = (f) => {
     const t = Date.now();
-    const date = startOfDay(f.date ? new Date(`${f.date}T10:00:00`) : f.status === "P" ? new Date(t + 60 * DAY) : new Date(t));
+    const date = f.date ? startOfDay(new Date(`${f.date}T10:00:00`)) : null;
+    // A real first-call task, so the lead shows up in Follow-ups and My day (not just a date on the lead)
+    const firstCall = { id: uid(), leadId: `N${t}`, type: "Call", action: NEXT_ACTION_BY_STAGE.New, due: workHours(roundQuarter(new Date(t + 3600000))), owner: ME, status: "open", createdAt: new Date(t) };
     const nextNo = Math.max(0, ...leads.map((l) => l.customerNo || 0)) + 1;
     const lead = {
       id: `N${t}`,
@@ -4194,7 +4325,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
       customerId: customerId(nextNo, f.status === "P" ? "P" : "B"),
       name: f.name.trim() || "New lead",
       phone: f.phone,
-      priority: f.priority || "Medium",
+      priority: f.priority || null,
       createdAt: new Date(t),
       stage: "New",
       careKind: f.status,
@@ -4218,7 +4349,8 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
       lastActivity: { type: "Created", at: new Date(t), by: null, none: true },
       unread: 0,
       needsReply: false,
-      nextFollowUp: workHours(roundQuarter(new Date(t + 3600000))),
+      nextFollowUp: firstCall.due,
+      nextAction: firstCall.action,
       lostReason: null,
       deferredUntil: null,
       deferNote: "",
@@ -4228,9 +4360,11 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
       paymentLinkOpened: false,
     };
     setLeads((prev) => [lead, ...prev]);
+    setFollowups?.((fs) => [...fs, firstCall]);
     setNewOpen(false);
     setPanelId(lead.id);
-    showToast(`${lead.name} added`, () => {
+    showToast(`${lead.name} added · first call due ${fmtTime(firstCall.due)}${dayDiff(firstCall.due, new Date(t)) ? `, ${fmtDay(firstCall.due)}` : ""}`, () => {
+      setFollowups?.((fs) => fs.filter((x) => x.id !== firstCall.id));
       setLeads((prev) => prev.filter((l) => l.id !== lead.id));
       setPanelId(null);
       dismissToast();
@@ -4356,7 +4490,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
       case "stage":
         return editableCell("stage", l, <StageLabel lead={l} />);
       case "care":
-        return <span className="text-ink whitespace-nowrap tabular-nums">{born ? `Born · ${babyAge(l, now) || "—"}` : (careStage(l, now).split(" · ")[1] || "—")}</span>;
+        return <span className="text-ink whitespace-nowrap tabular-nums">{born ? careLabel(l, now) : (careStage(l, now).split(" · ")[1] || <span className="text-ink-4">Expecting</span>)}</span>;
       case "value": {
         const v = packageValue(l);
         return v ? num(fmtINR(v)) : NA;
@@ -4489,6 +4623,8 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
     <StageExtraModal
       pending={pendingStage}
       count={pendingStage.ids.length}
+      lead={leads.find((l) => l.id === pendingStage.ids[0])}
+      consults={consults}
       onCancel={() => setPendingStage(null)}
       onConfirm={(extra) => {
         commitStage(pendingStage.ids, pendingStage.stage, extra);
@@ -4552,9 +4688,6 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
             <PrimaryButton onClick={() => setNewOpen(true)} className="flex items-center gap-1.5">
               <Plus className="h-3.5 w-3.5" /> New lead
             </PrimaryButton>
-            <SecondaryButton onClick={(e) => openMenu("waAll", e)} className="flex items-center gap-1.5">
-              <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp all
-            </SecondaryButton>
             <span className="mx-1 h-5 w-px bg-surface-active" />
             {view === "table" && (
               <HeaderIconButton title="Hide columns" active={menu?.type === "columns"} onClick={(e) => openMenu("columns", e)}>
@@ -4722,7 +4855,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                             <span className="ml-auto shrink-0 text-small"><StageLabel lead={l} /></span>
                           </span>
                           <span className="mt-1 flex items-center gap-1.5 text-small text-ink-4 min-w-0">
-                            <span className="whitespace-nowrap">{l.careKind === "B" ? `Born · ${babyAge(l, now) || "—"}` : (careStage(l, now).split(" · ")[1] || "—")}</span>
+                            <span className="whitespace-nowrap">{l.careKind === "B" ? careLabel(l, now) : (careStage(l, now).split(" · ")[1] || "Expecting")}</span>
                             <span aria-hidden="true">·</span>
                             <span className="truncate">Next: <FollowUp lead={l} now={now} /></span>
                           </span>
@@ -4898,7 +5031,6 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
           ))}
           <span className="h-4 w-px bg-white/15 mx-1.5" />
           {[
-            ["bulkTemplate", "Send WhatsApp template", (p) => <WhatsAppIcon {...p} />],
             ["bulkSnooze", "Snooze follow-ups", (p) => <AlarmClock {...p} strokeWidth={1.75} />],
           ].map(([type, label, render]) => (
             <button
@@ -5174,6 +5306,8 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
         <StageExtraModal
           pending={pendingStage}
           count={pendingStage.ids.length}
+          lead={leads.find((l) => l.id === pendingStage.ids[0])}
+          consults={consults}
           onCancel={() => setPendingStage(null)}
           onConfirm={(extra) => {
             commitStage(pendingStage.ids, pendingStage.stage, extra);
@@ -5419,6 +5553,7 @@ function InboxDetails({ chat, lead, now, actions, onOpenRecord, onCreateLead }) 
             set({ nextFollowUp: when, nextAction: action, needsReply: false }, { id: uid(), type: "followup", by: ME, at: new Date(), when, action });
             setForce(null);
           }}
+          onCancel={() => setForce(null)}
         />
       )}
     </div>
@@ -5554,7 +5689,7 @@ function InboxPage({ chats, setChats, leads, setLeads, now, showToast, dismissTo
   };
 
   const lm = chat ? lastMessage(chat) : null;
-  const careLine = lead ? (lead.careKind === "B" ? `Baby ${babyAge(lead, now) || "—"}${lead.babies > 1 ? " · twins" : ""}` : `Expecting · ${(careStage(lead, now).split(" · ")[1] || "—")}`) : chat?.contact?.phone;
+  const careLine = lead ? `${careLabel(lead, now)}${lead.babies > 1 ? " · twins" : ""}` : chat?.contact?.phone;
   const composerLead = lead || { name, package: null, services: [], careStart: null, customerId: "", shiftType: null };
 
   return (
@@ -5698,11 +5833,14 @@ function InboxPage({ chats, setChats, leads, setLeads, now, showToast, dismissTo
         <StageExtraModal
           pending={pendingStage}
           count={1}
+          lead={leads.find((l) => l.id === pendingStage.ids[0])}
           onCancel={() => setPendingStage(null)}
           onConfirm={(extra) => {
             const id = pendingStage.ids[0];
             const l = leads.find((x) => x.id === id);
+            if (pendingStage.stage === "Won") recordWin(id, extra);
             updateLead(id, {
+              ...(pendingStage.stage === "Won" ? { ...wonFields(extra), needsReply: false } : {}),
               stage: pendingStage.stage,
               prevStage: PIPELINE.includes(l.stage) ? l.stage : l.prevStage,
               lostReason: pendingStage.stage === "Lost" ? extra.lostReason : null,
@@ -5780,7 +5918,7 @@ function FuTypeIcon({ type, size = "md" }) {
 }
 
 const leadCareLine = (l, now) =>
-  l ? [l.careKind === "B" ? `Baby ${babyAge(l, now) || "—"}${l.babies > 1 ? " · twins" : ""}` : `Expecting ${(careStage(l, now).split(" · ")[1] || "—")}${l.babies > 1 ? " · twins" : ""}`, l.package].filter(Boolean).join(" · ") : "";
+  l ? [`${l.careKind === "B" ? (babyAge(l, now) ? `Baby ${babyAge(l, now)}` : "Baby born") : (careStage(l, now).split(" · ")[1] ? `Expecting ${careStage(l, now).split(" · ")[1]}` : "Expecting")}${l.babies > 1 ? " · twins" : ""}`, l.package].filter(Boolean).join(" · ") : "";
 
 const fuDueLabel = (f, now, group) => {
   if (group === "overdue") {
@@ -5796,12 +5934,12 @@ const primaryForType = (t) => ({ Call: "Call", WhatsApp: "WhatsApp", Payment: "S
 
 /* ---------- Modals ---------- */
 
-function NextFollowUpTypedModal({ outcome, leadName, defaultType, onSave }) {
+function NextFollowUpTypedModal({ outcome, leadName, defaultType, onSave, onCancel }) {
   const [type, setType] = useState(defaultType || "Call");
   const [when, setWhen] = useState(() => toLocalInput(atTen(outcome === "Deferred" ? 7 : 2)));
   const [action, setAction] = useState("");
   return (
-    <Modal title="Set next follow-up" width={440}>
+    <Modal title="Set next follow-up" onClose={onCancel} width={440}>
       <div className="p-5 space-y-4">
         <div className="text-body text-ink-3">
           {leadName} · logged as <Tag label={outcome} />. Open leads always need a next step.
@@ -5823,7 +5961,8 @@ function NextFollowUpTypedModal({ outcome, leadName, defaultType, onSave }) {
           <input value={action} onChange={(e) => setAction(e.target.value)} placeholder="e.g. Call about the payment link" className={inputCls} />
         </Field>
       </div>
-      <div className="flex justify-end px-5 pb-5">
+      <div className="flex justify-end gap-2 px-5 pb-5">
+        <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
         <PrimaryButton disabled={!when} onClick={() => onSave({ type, due: new Date(when), action: action.trim() || `${type} follow-up` })}>
           Set follow-up
         </PrimaryButton>
@@ -6087,7 +6226,7 @@ function FollowUpsPage({ followups, setFollowups, leads, setLeads, now, showToas
     ids.forEach((id) => {
       const f = followups.find((x) => x.id === id);
       logLead(f.leadId, { id: uid(), type: "followup", done: true, by: ME, at, outcome, action: f.action });
-      if (next) {
+      if (next && !["Won", "Lost"].includes(leadById(f.leadId)?.stage)) {
         const nf = { id: uid(), leadId: f.leadId, type: next.type, action: next.action, due: next.due, owner: ME, status: "open", createdAt: at };
         created.push(nf);
       }
@@ -6109,8 +6248,11 @@ function FollowUpsPage({ followups, setFollowups, leads, setLeads, now, showToas
     });
   };
 
+  const isClosedLead = (fuId) => ["Won", "Lost"].includes(leadById(followups.find((x) => x.id === fuId)?.leadId)?.stage);
   const pickOutcome = (ids, outcome) => {
     if (outcome === "Converted" || outcome === "Lost") return completeIds(ids, outcome, null);
+    // Paid customers and lost leads: complete it, no next step needed
+    if (ids.every(isClosedLead)) return completeIds(ids, outcome, null);
     if (ids.length > 1) {
       // Bulk: each gets a next follow-up of the same type in 2 days
       const due = atTen(outcome === "Deferred" ? 7 : 2);
@@ -6202,18 +6344,7 @@ function FollowUpsPage({ followups, setFollowups, leads, setLeads, now, showToas
           <PrimaryButton onClick={() => setNewOpen(true)} className="flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" /> New follow-up</PrimaryButton>
         </div>
         <div className="mt-1.5 flex items-center gap-2 text-small text-ink-4">
-          <span className="group/rules relative inline-flex items-center gap-1 cursor-default">
-            <Zap className="h-3 w-3 text-ink-4" strokeWidth={1.75} />
-            Auto follow-ups on
-            <Info className="h-3 w-3 text-ink-4" />
-            <span className="pointer-events-none absolute left-0 top-full z-40 mt-2 w-[360px] rounded-lg bg-ink p-3 text-small leading-relaxed text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/rules:opacity-100">
-              <span className="block mb-1.5 font-medium">Follow-ups are created automatically when:</span>
-              {AUTO_RULES.map((r) => (
-                <span key={r} className="flex gap-2"><span className="text-white/40">•</span>{r}</span>
-              ))}
-            </span>
-          </span>
-          {overdueTotal > 0 && <span className="text-red-700">· {overdueTotal} overdue</span>}
+          {overdueTotal > 0 && <span className="text-red-700">{overdueTotal} overdue</span>}
         </div>
 
         <div className="mt-6 flex items-center gap-5 border-b border-line">
@@ -6371,7 +6502,7 @@ function FollowUpsPage({ followups, setFollowups, leads, setLeads, now, showToas
                 <MenuItem key={o} onClick={() => { closeMenu(); pickOutcome(menu.type === "done" ? [menu.id] : selIds, o); }}>
                   <span className={`h-1.5 w-1.5 rounded-full ${TAG_DOTS[o]}`} />
                   <span className="flex-1">{o}</span>
-                  {o !== "Converted" && o !== "Lost" && <span className="text-caption text-ink-4">+ next</span>}
+                  {o !== "Converted" && o !== "Lost" && !(menu.type === "done" ? [menu.id] : selIds).every(isClosedLead) && <span className="text-caption text-ink-4">+ next</span>}
                 </MenuItem>
               ))}
             </>
@@ -6417,6 +6548,7 @@ function FollowUpsPage({ followups, setFollowups, leads, setLeads, now, showToas
             completeIds(pendingNext.ids, pendingNext.outcome, next);
             setPendingNext(null);
           }}
+          onCancel={() => setPendingNext(null)}
         />
       )}
 
@@ -6559,7 +6691,7 @@ function BookConsultModal({ leads, consults, now, initial = {}, onClose, onBook 
         </Field>
       </div>
       <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-line">
-        <span className="inline-flex items-center gap-1.5 text-small text-ink-4"><WhatsAppIcon className="h-3.5 w-3.5 text-emerald-700" /> WhatsApp confirmation will be sent</span>
+        <span />
         <div className="flex gap-2">
           <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
           <PrimaryButton disabled={!lead || !slot} onClick={() => onBook({ leadId: lead.id, start: new Date(slot), mode, note: note.trim() })}>Book consultation</PrimaryButton>
@@ -6573,7 +6705,7 @@ function BookConsultModal({ leads, consults, now, initial = {}, onClose, onBook 
 
 function ConsultOutcomeForm({ consult, lead, callNotes, onCancel, onSave }) {
   const [outcome, setOutcome] = useState("Interested");
-  const [pkg, setPkg] = useState(lead.package || "Together");
+  const [pkg, setPkg] = useState(lead.package || PACKAGE_OPTIONS[0]);
   const [price, setPrice] = useState(String(packageValue(lead) || ""));
   const [obj, setObj] = useState([]);
   const [sendLink, setSendLink] = useState(false);
@@ -6620,7 +6752,7 @@ function ConsultOutcomeForm({ consult, lead, callNotes, onCancel, onSave }) {
         </div>
       </div>
       <label className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 cursor-pointer">
-        <span className="text-body">Send payment link now</span>
+        <span className="text-body">Payment link sent</span>
         <button type="button" role="switch" aria-checked={sendLink} onClick={() => setSendLink((s) => !s)} disabled={outcome === "Paid on call" || outcome === "Not interested"} className={`relative h-5 w-9 rounded-full transition-colors duration-150 disabled:opacity-35 ${sendLink ? "bg-ink" : "bg-line-control"}`}>
           <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-150 ${sendLink ? "translate-x-4" : "translate-x-0"}`} />
         </button>
@@ -6725,7 +6857,7 @@ function ConsultPopover({ c, lead, st, anchor, onClose, onDetails, onJoin }) {
       <div className="mt-3.5 grid grid-cols-2 gap-y-3 gap-x-4 text-small">
         <div><div className="text-ink-4">Consultation type</div><div className="mt-0.5 text-body text-ink inline-flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${ms.dot}`} />{ms.label}</div></div>
         <div><div className="text-ink-4">Priority</div><div className="mt-0.5 text-body text-ink">{lead ? leadPriority(lead) : "—"}</div></div>
-        <div><div className="text-ink-4">Care stage</div><div className="mt-0.5 text-body text-ink">{lead ? (lead.careKind === "B" ? `Born · ${babyAge(lead, new Date()) || "—"}` : `Expecting · ${careStage(lead, new Date()).split(" · ")[1] || "—"}`) : "—"}</div></div>
+        <div><div className="text-ink-4">Care stage</div><div className="mt-0.5 text-body text-ink">{lead ? careLabel(lead, new Date()) : "—"}</div></div>
         <div><div className="text-ink-4">Package</div><div className="mt-0.5 text-body text-ink">{lead?.package || "Not decided"}</div></div>
       </div>
       <div className="mt-4 space-y-2 text-small text-ink-2">
@@ -7109,7 +7241,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
     updateLead(l.id, { ...(["New", "Qualified"].includes(l.stage) ? { stage: "Consult booked" } : {}), nextFollowUp: b.start, nextAction: "Consult call" });
     setBookOpen(null);
     setSelectedId(nc.id);
-    showToast(`Consult booked for ${l.name} · ${fmtDay(b.start)}, ${fmtTime(b.start)} · WhatsApp confirmation will be sent`, () => {
+    showToast(`Consult booked for ${l.name} · ${fmtDay(b.start)}, ${fmtTime(b.start)}`, () => {
       setConsults((cs) => cs.filter((c) => c.id !== nc.id));
       dismissToast();
     });
@@ -7122,7 +7254,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
     patchConsult(id, { start, rescheduledFrom: c.rescheduledFrom || c.start });
     logEvents(c.leadId, [{ id: uid(), type: "followup", by: ME, at: new Date(), when: start, action: `Consult rescheduled from ${fmtDay(c.start)}, ${fmtTime(c.start)}` }]);
     updateLead(c.leadId, { nextFollowUp: start, nextAction: "Consult call" });
-    showToast(`Rescheduled to ${fmtDay(start)}, ${fmtTime(start)} · WhatsApp update will be sent`, () => {
+    showToast(`Rescheduled to ${fmtDay(start)}, ${fmtTime(start)}`, () => {
       setConsults(snapshot);
       dismissToast();
     });
@@ -7141,7 +7273,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
     setFollowups((fs) => [...fs, { id: uid(), leadId: l.id, type: "Call", action: "Call to rebook consult", due, owner: ME, status: "open", auto: "Consult no-show", createdAt: at }]);
     updateLead(l.id, { nextFollowUp: due, nextAction: "Call to rebook consult", tag: "Not responding" });
     setConfirmNoShow(false);
-    showToast(`Marked no-show · reschedule message sent · rebook call set for ${dayDiff(due, now) === 0 ? "today" : "tomorrow"}, ${fmtTime(due)}`);
+    showToast(`Marked no-show · rebook call set for ${dayDiff(due, now) === 0 ? "today" : "tomorrow"}, ${fmtTime(due)}`);
   };
 
   const saveOutcome = (o) => {
@@ -7182,7 +7314,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
     setPanel("notes");
     setCall(null);
     setDrawerOpen(false);
-    showToast(`Outcome saved · ${o.outcome}${o.sendLink ? " · payment link sent" : o.outcome === "Paid on call" ? " · verify payment to mark Won" : ""}`);
+    showToast(`Outcome saved · ${o.outcome}${o.sendLink ? " · marked payment link as sent" : o.outcome === "Paid on call" ? " · verify payment to mark Won" : ""}`);
   };
 
   /* ----- side panel: key notes, call notes, outcome ----- */
@@ -7192,7 +7324,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
     const st = consultStatus(sel, now, nextId);
     const tl = (timelines[l.id] || buildTimeline(l)).filter((e) => e.type !== "edit").slice(0, 3);
     const born = l.careKind === "B";
-    const facts = [born ? `Baby ${babyAge(l, now) || "—"}` : `${(careStage(l, now).split(" · ")[1] || "—").replace("w", " weeks")}`, NICU_DAYS[l.name] ? `NICU ${NICU_DAYS[l.name]} days` : null, l.babies > 1 ? "Twins" : null, l.hospital, l.zone].filter(Boolean).join(" · ");
+    const facts = [born ? (babyAge(l, now) ? `Baby ${babyAge(l, now)}` : "Baby born") : careStage(l, now).split(" · ")[1] ? `${careStage(l, now).split(" · ")[1].replace("w", " weeks")}` : "Expecting", NICU_DAYS[l.name] ? `NICU ${NICU_DAYS[l.name]} days` : null, l.babies > 1 ? "Twins" : null, l.hospital, l.zone].filter(Boolean).join(" · ");
     const section = (title, children, icon) => (
       <div className="mt-4">
         <div className="flex items-center gap-1 text-small font-medium text-ink-4 mb-1">{icon}{title}</div>
@@ -7241,7 +7373,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
                 </div>
               )
             ) : sel.status === "noshow" ? (
-              section("No-show", <div className="text-body text-ink-3">Reschedule message sent on WhatsApp. A call to rebook is in Follow-ups.</div>)
+              section("No-show", <div className="text-body text-ink-3">A call to rebook is in Follow-ups.</div>)
             ) : null}
             {section("Key notes", <KeyNotes notes={l.keyNotes || seedKeyNotes(l)} onChange={(list) => updateLead(l.id, { keyNotes: list })} />)}
             {section(
@@ -7276,7 +7408,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
   const careChip = (l) => (
     <span className="inline-flex items-center gap-1 text-small text-ink-3 tabular-nums whitespace-nowrap">
       {l.careKind === "B" ? <Baby className="h-3.5 w-3.5 text-ink-placeholder" strokeWidth={1.5} /> : <Sprout className="h-3.5 w-3.5 text-ink-placeholder" strokeWidth={1.5} />}
-      {l.careKind === "B" ? `Born · ${babyAge(l, now) || "—"}` : `Pregnancy · ${(careStage(l, now).split(" · ")[1] || "—")}`}
+      {careLabel(l, now, "Pregnancy")}
     </span>
   );
 
@@ -7479,7 +7611,7 @@ const STUCK_LIMITS = { Qualified: 3, "Consult booked": 1, "Consult done": 2, "Pa
 // Average ticket used to value leads without a package yet (planning figure, not a price)
 const EST_TICKET = 40000;
 
-const leadValue = (l) => packageValue(l) || EST_TICKET;
+const leadValue = (l) => packageValue(l);
 const fmtLakh = (n) => fmtShortINR(n);
 
 function stuckDays(l, consults, now) {
@@ -7565,7 +7697,7 @@ function PipeCard({ l, consults, now, fields, active, lifted }) {
       {fields.timeline && <CareTimeline lead={l} now={now} compact />}
       {(fields.value || fields.date) && (
         <div className="mt-3 pt-2.5 border-t border-line-subtle flex items-center gap-2 text-small tabular-nums min-w-0">
-          {fields.value && (value ? <span className="font-medium text-ink-2">{fmtINR(value)}</span> : <span className="text-ink-4">{fmtINR(EST_TICKET)} est.</span>)}
+          {fields.value && value > 0 && <span className="font-medium text-ink-2">{fmtINR(value)}</span>}
           {fields.value && fields.date && <span className="h-1 w-1 rounded-full bg-line-heavy shrink-0" />}
           {fields.date && <span className="text-ink-4 truncate">{keyDate}</span>}
         </div>
@@ -7612,7 +7744,7 @@ function useCardFlip(rootRef) {
   });
 }
 
-function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast, setTimelines, onOpenRecord, onAddLead, onOpenTable }) {
+function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast, setTimelines, onOpenRecord, onAddLead, onOpenTable, onBookConsult }) {
   const [prio, setPrio] = useState("All");
   const [care, setCare] = useState("All");
   const [source, setSource] = useState("All");
@@ -7679,6 +7811,10 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
   const move = (id, to, extra = {}) => {
     const l = leads.find((x) => x.id === id);
     if (!l || l.stage === to) return;
+    if (to === "Won" && !extra.dealValue) return setPending({ ids: [id], stage: "Won" });
+    if (to === "Won") recordWin(id, extra);
+    if (to === "Consult booked" && !extra.consult) return setPending({ ids: [id], stage: "Consult booked" });
+    if (extra.consult) onBookConsult?.(extra.consult);
     const snapshot = { ...l };
     const evId = uid();
     setLeads((prev) =>
@@ -7695,6 +7831,8 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
               stageSince: new Date(),
               ...(to === "Deferred" ? { nextFollowUp: extra.deferredUntil, needsReply: false } : {}),
               ...(to === "Lost" || to === "Won" ? { nextFollowUp: null, needsReply: false } : {}),
+              ...(to === "Won" ? wonFields(extra) : {}),
+              ...(extra.consult ? { nextFollowUp: extra.consult.start, needsReply: false } : {}),
             }
           : x
       )
@@ -7887,7 +8025,7 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
       {/* Title row */}
       <div className="cw-fade-in shrink-0 px-5 md:px-8 pt-8 md:pt-10 pb-4 flex items-center gap-4 flex-wrap">
         <h1 className="text-h1 font-medium tracking-[-0.01em] flex items-baseline gap-2">
-          Pipeline <span className="text-title-sm font-normal text-ink-4 tabular-nums">{open.length} open · {fmtLakh(openValue)}</span>
+          Pipeline <span className="text-title-sm font-normal text-ink-4 tabular-nums">{open.length} open{openValue > 0 ? ` · ${fmtLakh(openValue)} quoted` : ""}</span>
         </h1>
         <div className="ml-auto">
           {searchOpen ? (
@@ -7917,7 +8055,7 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
         </ToolbarButton>
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden md:inline-flex"><ToolbarButton onClick={onOpenTable}><Table2 className="h-3.5 w-3.5" /> Table</ToolbarButton></span>
-          <span className="hidden md:inline-flex"><ToolbarButton onClick={() => showToast(`WhatsApp template ready for ${open.length} leads in this view`)}><WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp all</ToolbarButton></span>
+
           <ToolbarButton primary onClick={onAddLead}><Plus className="h-3.5 w-3.5" /> New lead</ToolbarButton>
         </div>
       </div>
@@ -7969,7 +8107,7 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
                   <GripVertical className="h-3.5 w-3.5 text-ink-4" />
                   <span className="h-3.5 w-[3px] rounded-full" style={{ backgroundColor: STAGE_BAR[stage] }} />
                   <span className="text-body font-medium text-ink truncate">{label}</span>
-                  <span className="ml-auto text-small text-ink-4 tabular-nums opacity-0 group-hover/col:opacity-100 transition-opacity duration-150">{fmtLakh(value)}</span>
+                  <span className="ml-auto text-small text-ink-4 tabular-nums opacity-0 group-hover/col:opacity-100 transition-opacity duration-150">{value > 0 ? fmtLakh(value) : ""}</span>
                   <button onClick={(e) => setMenu(menu?.key === `col-${stage}` ? null : { key: `col-${stage}`, anchor: e.currentTarget, stage })} aria-label={`${stage} options`} className="h-6 w-6 -mr-1 rounded-md flex items-center justify-center text-ink-4 opacity-0 group-hover/col:opacity-100 hover:bg-surface-active hover:text-ink transition-opacity duration-150"><MoreHorizontal className="h-3.5 w-3.5" /></button>
                   <span className="text-small text-ink-2 tabular-nums min-w-[14px] text-right">{all.length}</span>
                 </div>
@@ -8113,6 +8251,8 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
         <StageExtraModal
           pending={pending}
           count={1}
+          lead={leads.find((l) => l.id === pending.ids[0])}
+          consults={consults}
           onCancel={() => setPending(null)}
           onConfirm={(extra) => {
             move(pending.ids[0], pending.stage, extra);
@@ -8766,7 +8906,6 @@ function ReportsPage({ onOpenLeads, followups }) {
    ========================================================================== */
 
 const SETTINGS_MENU = [
-  { group: "Workspace", items: [["notifications", "Notifications", Bell]] },
   {
     group: "Sales setup",
     items: [
@@ -8775,11 +8914,31 @@ const SETTINGS_MENU = [
       ["fields", "Lead fields", Rows3],
       ["packages", "Packages and services", Package],
       ["places", "Hospitals and zones", Building2],
+      ["targets", "Targets", BarChart3],
     ],
   },
-  { group: "Automation", items: [["rules", "Auto follow-ups", Zap], ["templates", "WhatsApp templates", MessageCircle]] },
-  { group: "Connections", items: [["wa-api", "WhatsApp API", WhatsAppIcon], ["payments", "Payments", CreditCard], ["n8n", "n8n and webhooks", Webhook]] },
 ];
+
+function TargetSettings({ s, upd, showToast }) {
+  const current = Number(s.revenueTarget) || 500000;
+  const [v, setV] = useState(String(current));
+  const n = Number(v);
+  const ok = n > 0 && n !== current;
+  return (
+    <div>
+      <SHeader title="Targets" desc="The monthly revenue goal on My day. Revenue counts money received on deals closed that month." />
+      <div className="mt-5 max-w-[360px]">
+        <Field label="Monthly revenue target (₹)">
+          <input type="number" inputMode="numeric" min="1" value={v} onChange={(e) => setV(e.target.value)} className={`${inputCls} tabular-nums`} />
+        </Field>
+        <div className="mt-1.5 text-small text-ink-4 tabular-nums">{n > 0 ? `${fmtINR(n)} a month` : "Enter an amount in rupees"}</div>
+        <div className="mt-4">
+          <PrimaryButton disabled={!ok} onClick={() => { upd("revenueTarget", n); showToast(`Monthly target set to ${fmtINR(n)}`); }}>Save target</PrimaryButton>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const sid = () => Math.random().toString(36).slice(2, 9);
 const moveItem = (arr, a, b) => {
@@ -9609,8 +9768,9 @@ function ConnectionSettings({ which, s, upd, patch, remove, showToast }) {
 
 /* ---------- Shell ---------- */
 
-function SettingsPage({ settings, setSettings, showToast, leads }) {
-  const [page, setPage] = useState("rules");
+function SettingsPage({ settings, setSettings, showToast, leads, pageRequest }) {
+  const [page, setPage] = useState(pageRequest?.page || "stages");
+  useEffect(() => { if (pageRequest?.page) setPage(pageRequest.page); }, [pageRequest]);
   const upd = useCallback((key, fn) => setSettings((s) => ({ ...s, [key]: typeof fn === "function" ? fn(s[key]) : fn })), [setSettings]);
   const patch = useCallback((key, id, p) => upd(key, (list) => list.map((x) => (x.id === id ? { ...x, ...p } : x))), [upd]);
   const remove = (key, id, msg) => {
@@ -9652,6 +9812,7 @@ function SettingsPage({ settings, setSettings, showToast, leads }) {
           {page === "fields" && <FieldSettings {...props} />}
           {page === "packages" && <PackageSettings {...props} />}
           {page === "places" && <PlaceSettings {...props} />}
+          {page === "targets" && <TargetSettings {...props} />}
           {page === "rules" && <RuleSettings {...props} />}
           {page === "templates" && <TemplateSettings {...props} />}
           {(page === "wa-api" || page === "payments" || page === "n8n") && <ConnectionSettings which={page} {...props} />}
@@ -9802,7 +9963,8 @@ const SUGGEST_RULES = [
 ];
 function suggestFor(l, now) {
   const plan = carePlan(l, now);
-  if (plan && plan.status === "active" && plan.left <= 7) return { kind: "renew", label: "Renew + expert bundle", expert: null };
+  if (plan && plan.status === "active" && plan.left <= 7) return { kind: "renew", label: SELL_EXPERTS ? "Renew + expert bundle" : "Renew care plan", expert: null };
+  if (!SELL_EXPERTS) return null;
   const a = ageDays(l, now);
   if (a == null) return null;
   let included = null;
@@ -9823,17 +9985,18 @@ function suggestFor(l, now) {
 
 // Make a Won lead a customer (keeps every existing field and its history)
 function asCustomer(l, since) {
-  const amount = l.amountPaid || packageValue(l);
+  const total = l.dealValue || 0;
+  const amount = l.amountPaid || 0;
   return {
     ...l,
     customerSince: l.customerSince || since || new Date(),
-    paymentStatus: "Paid",
+    paymentStatus: amount > 0 && (!total || amount >= total) ? "Paid" : amount > 0 ? "Partial" : "Not sent",
     bookingStatus: "Confirmed",
     amountPaid: amount,
     nextFollowUp: null,
     needsReply: false,
     sessions: l.sessions || [],
-    payments: l.payments || (amount ? [{ id: uid(), label: [l.package, l.shiftType].filter(Boolean).join(" · ") || "Care plan", amount, at: since || new Date(), method: "Razorpay" }] : []),
+    payments: l.payments || (amount ? [{ id: uid(), label: [l.package, l.shiftType].filter(Boolean).join(" · ") || "Care plan", amount, at: since || new Date(), method: l.paymentMethod || "Not recorded" }] : []),
     caregiver: l.caregiver || null,
     caregiverNote: l.caregiverNote || "",
   };
@@ -9940,6 +10103,7 @@ function CustomerServices({ lead, now, onUpdate, onEvent, onSell, showToast }) {
         </div>
       </section>
 
+      {SELL_EXPERTS && (<>
       <section>
         <div className="flex items-center mb-2">
           <h3 className="text-body font-medium">Expert sessions <span className="text-ink-4 font-normal tabular-nums">{liveSessions(lead).length}</span></h3>
@@ -9997,6 +10161,7 @@ function CustomerServices({ lead, now, onUpdate, onEvent, onSell, showToast }) {
           </tbody>
         </table>
       </section>
+      </>)}
     </div>
   );
 }
@@ -10077,7 +10242,7 @@ function SellServiceModal({ customers, initial, onClose, onSave, now }) {
 
 const CUSTOMER_TABS = [
   { id: "active", label: "Active care" },
-  { id: "ready", label: "Ready for experts" },
+  ...(SELL_EXPERTS ? [{ id: "ready", label: "Ready for experts" }] : []),
   { id: "ending", label: "Ending in 7 days" },
   { id: "completed", label: "Completed" },
 ];
@@ -10204,7 +10369,7 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
           <h1 className="text-h1 font-medium tracking-[-0.01em]">
             Paid customers <span className="text-title-sm font-normal text-ink-4 tabular-nums">{customers.length}</span>
           </h1>
-          <PrimaryButton onClick={() => onSell(null, null)} className="inline-flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" /> Sell a service</PrimaryButton>
+          {SELL_EXPERTS && <PrimaryButton onClick={() => onSell(null, null)} className="inline-flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" /> Sell a service</PrimaryButton>}
         </div>
 
         <div className="mt-6 flex items-center gap-5 border-b border-line overflow-x-auto">
@@ -10217,20 +10382,23 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
           ))}
         </div>
 
-        <div className="mt-7 grid grid-cols-2 md:grid-cols-4 gap-y-5">
+        <div className={`mt-7 grid grid-cols-2 ${SELL_EXPERTS ? "md:grid-cols-4" : "md:grid-cols-3"} gap-y-5`}>
           {kpi("Customer revenue", fmtMoneyShort(revenue), `${customers.length} customers, all time`, true)}
-          {kpi("Expert sessions sold", soldSessions.length, `${allSessions.length - soldSessions.length} more included in packages`)}
-          {kpi("Expert revenue", fmtMoneyShort(expertRevenue), `${revenue ? ((expertRevenue / revenue) * 100).toFixed(1) : 0}% of customer revenue`)}
-          {kpi("Renewal rate", `${Math.round(renewalRate)}%`, `${renewedN} of ${renewedN + endedN} plans that reached the end`)}
+          {SELL_EXPERTS && kpi("Expert sessions sold", soldSessions.length, `${allSessions.length - soldSessions.length} more included in packages`)}
+          {SELL_EXPERTS && kpi("Expert revenue", fmtMoneyShort(expertRevenue), `${revenue ? ((expertRevenue / revenue) * 100).toFixed(1) : 0}% of customer revenue`)}
+          {!SELL_EXPERTS && kpi("Average per customer", fmtMoneyShort(customers.length ? revenue / customers.length : 0), "all deals added up")}
+          {SELL_EXPERTS
+            ? kpi("Renewal rate", `${Math.round(renewalRate)}%`, `${renewedN} of ${renewedN + endedN} plans that reached the end`)
+            : kpi("Repeat customers", `${customers.length ? Math.round((customers.filter((c) => c.deals > 1).length / customers.length) * 100) : 0}%`, `${customers.filter((c) => c.deals > 1).length} of ${customers.length} booked again or extended`)}
         </div>
 
-        <div className="mt-9 flex items-center gap-x-4 gap-y-2 flex-wrap text-small text-ink-4">
+        {SELL_EXPERTS && <div className="mt-9 flex items-center gap-x-4 gap-y-2 flex-wrap text-small text-ink-4">
           {EXPERTS.map((e) => (
             <span key={e.id} className="inline-flex items-center gap-1.5"><span className="h-4 w-4 rounded-full border border-line-strong text-micro font-semibold flex items-center justify-center text-ink-4">{e.id}</span>{e.short}</span>
           ))}
           <span className="inline-flex items-center gap-1.5 ml-2"><span className="h-2.5 w-2.5 rounded-full bg-teal-600" /> used or booked</span>
           <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full border border-line-strong" /> not yet</span>
-        </div>
+        </div>}
         {/* Phones: one card per customer */}
         {!rows.length && <div className="md:hidden py-16 text-center text-body text-ink-4">No customers match these filters</div>}
         <ul className="md:hidden mt-3 divide-y divide-line-subtle border-y border-line-subtle" aria-label="Paid customers">
@@ -10245,7 +10413,7 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
                       <span className="font-medium text-ink truncate">{l.name}</span>
                       <span className="ml-auto shrink-0 text-body tabular-nums text-ink">{fmtINR(I.paid)}</span>
                     </span>
-                    <span className="block text-small text-ink-4 truncate">{babyAge(l, now) ? `Baby ${babyAge(l, now) || "—"}` : "—"} · {[l.package, l.shiftType].filter(Boolean).join(" · ") || "No plan"}</span>
+                    <span className="block text-small text-ink-4 truncate">{babyAge(l, now) ? `Baby ${babyAge(l, now)}` : "Baby born"} · {[l.package, l.shiftType].filter(Boolean).join(" · ") || "No plan"}</span>
                     <span className="mt-1.5 block"><PlanProgress plan={I.plan} compact /></span>
                     {I.next && <span className="mt-1 block text-small text-ink-3 truncate">Next: {EXPERT[I.next.expert].short} · {fmtSessionWhen(I.next.at, now)}</span>}
                   </span>
@@ -10258,7 +10426,7 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
           <table className="w-full min-w-[1080px] text-body border-separate border-spacing-0">
             <thead>
               <tr className="text-small leading-4 text-ink-4">
-                {[["Customer", "w-[220px]"], ["Care plan", "w-[210px]"], ["Experts", "w-[150px]"], ["Next session", "w-[190px]"], ["Suggested next", "w-[210px]"], ["Paid", "text-right w-[110px]"], ["", "w-[118px]"]].map(([h, c]) => (
+                {[["Customer", "w-[220px]"], ["Care plan", "w-[210px]"], ...(SELL_EXPERTS ? [["Experts", "w-[150px]"], ["Next session", "w-[190px]"]] : []), ["Suggested next", "w-[210px]"], ["Paid", "text-right w-[110px]"], ["", "w-[118px]"]].map(([h, c]) => (
                   <th key={h || "actions"} className={`h-9 font-medium text-left border-b border-line ${c}`}>{h || <span className="sr-only">Actions</span>}</th>
                 ))}
               </tr>
@@ -10274,7 +10442,7 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
                         <Avatar name={l.name} />
                         <div className="min-w-0">
                           <div className="font-medium truncate">{l.name}</div>
-                          <div className="text-small text-ink-4 tabular-nums truncate">{babyAge(l, now) ? `Baby ${babyAge(l, now) || "—"}` : "—"}{l.babies > 1 ? " · twins" : ""}</div>
+                          <div className="text-small text-ink-4 tabular-nums truncate">{babyAge(l, now) ? `Baby ${babyAge(l, now)}` : "Baby born"}{l.babies > 1 ? " · twins" : ""}</div>
                         </div>
                       </div>
                     </td>
@@ -10282,27 +10450,31 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
                       <div className="text-body truncate">{[l.package, l.shiftType].filter(Boolean).join(" · ") || "—"}</div>
                       <div className="mt-1"><PlanProgress plan={I.plan} compact /></div>
                     </td>
-                    <td className="border-b border-line-subtle">
-                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {EXPERTS.map((e) => <ExpertDot key={e.id} expertId={e.id} lead={l} />)}
-                      </div>
-                    </td>
-                    <td className="border-b border-line-subtle pr-3">
-                      {I.next ? (
-                        <>
-                          <div className="truncate">{EXPERT[I.next.expert].short}</div>
-                          <div className="text-small text-ink-4 tabular-nums">{fmtSessionWhen(I.next.at, now)}</div>
-                        </>
-                      ) : <span className="text-ink-faint">—</span>}
-                    </td>
+                    {SELL_EXPERTS && (
+                      <>
+                        <td className="border-b border-line-subtle">
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            {EXPERTS.map((e) => <ExpertDot key={e.id} expertId={e.id} lead={l} />)}
+                          </div>
+                        </td>
+                        <td className="border-b border-line-subtle pr-3">
+                          {I.next ? (
+                            <>
+                              <div className="truncate">{EXPERT[I.next.expert].short}</div>
+                              <div className="text-small text-ink-4 tabular-nums">{fmtSessionWhen(I.next.at, now)}</div>
+                            </>
+                          ) : <span className="text-ink-faint">—</span>}
+                        </td>
+                      </>
+                    )}
                     <td className="border-b border-line-subtle pr-3" onClick={(e) => e.stopPropagation()}>
-                      <SuggestionChip s={I.sugg} quiet={sameAsAbove} onClick={() => onSell(l.id, I.sugg?.expert)} />
+                      <SuggestionChip s={I.sugg} quiet={sameAsAbove} onClick={() => (SELL_EXPERTS ? onSell(l.id, I.sugg?.expert) : (setRecordTab(null), setRecordId(l.id)))} />
                     </td>
                     <td className="border-b border-line-subtle text-right tabular-nums">{fmtINR(I.paid)}</td>
                     <td className="border-b border-line-subtle" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-0.5 opacity-0 [@media(hover:none)]:opacity-100 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
                         <button title="WhatsApp" aria-label={`WhatsApp ${l.name}`} onClick={() => { setRecordTab("whatsapp"); setRecordId(l.id); }} className="h-7 w-7 rounded-md flex items-center justify-center text-ink-3 hover:bg-white hover:text-emerald-700 hover:shadow-ring-line"><WhatsAppIcon className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => onSell(l.id, I.sugg?.expert)} className="h-7 rounded-md px-2 text-small text-ink-2 hover:bg-white hover:shadow-ring-line">Sell</button>
+                        {SELL_EXPERTS && <button onClick={() => onSell(l.id, I.sugg?.expert)} className="h-7 rounded-md px-2 text-small text-ink-2 hover:bg-white hover:shadow-ring-line">Sell</button>}
                         <button title="Open record" aria-label={`Open ${l.name}`} onClick={() => { setRecordTab(null); setRecordId(l.id); }} className="h-7 w-7 rounded-md flex items-center justify-center text-ink-3 hover:bg-white hover:text-ink hover:shadow-ring-line"><ArrowRight className="h-3.5 w-3.5" /></button>
                       </div>
                     </td>
@@ -10376,11 +10548,21 @@ function buildQueueItems(leads, followups, now) {
   const base = (l) => ({ leadId: l.id, name: l.name, phone: l.phone, tag: l.tag || l.stage, stage: careStage(l, now), short: shortOf(l), source: l.source || "" });
   const out = [];
   // New leads nobody has contacted yet (last 14 days, so an old backlog doesn't flood the day)
-  leads
-    .filter((l) => l.stage === "New" && l.lastActivity?.none && now - l.createdAt < 14 * DAY)
-    .forEach((l) => out.push({ ...base(l), id: `n:${l.id}`, section: "new", note: l.notes || "", reason: "New lead · not contacted", createdAt: l.createdAt.getTime(), action: "Call" }));
+  // A new lead's first-call task is shown once, as the new-lead row (done/snooze act on that task)
+  const firstTask = new Map();
   followups
-    .filter((f) => f.status === "open" && byId.has(f.leadId) && dayDiff(f.due, now) <= 0)
+    .filter((f) => f.status === "open")
+    .forEach((f) => { const cur = firstTask.get(f.leadId); if (!cur || f.due < cur.due) firstTask.set(f.leadId, f); });
+  const shownAsNew = new Set();
+  leads
+    .filter((l) => l.stage === "New" && l.lastActivity?.none && l.createdAt >= FOLLOWUP_CUTOFF)
+    .forEach((l) => {
+      const f = firstTask.get(l.id);
+      if (f) shownAsNew.add(f.id);
+      out.push({ ...base(l), id: `n:${l.id}`, ...(f ? { fuId: f.id } : {}), section: "new", note: l.notes || "", reason: "New lead · not contacted", createdAt: l.createdAt.getTime(), action: "Call" });
+    });
+  followups
+    .filter((f) => f.status === "open" && !shownAsNew.has(f.id) && byId.has(f.leadId) && dayDiff(f.due, now) <= 0)
     .forEach((f) => {
       const l = byId.get(f.leadId);
       const late = -dayDiff(f.due, now);
@@ -10412,13 +10594,13 @@ function snoozeDate(label) {
 }
 
 const telHref = (phone) => `tel:${String(phone || "").replace(/[^\d+]/g, "")}`;
-const waHref = (phone) => {
+const waHref = (phone, text) => {
   let d = String(phone || "").replace(/\D/g, "");
   if (d.length === 10) d = `91${d}`;
-  return `https://wa.me/${d}`;
+  return `https://wa.me/${d}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 };
 const openCall = (phone) => { if (phone) window.location.href = telHref(phone); };
-const openWhatsApp = (phone) => { if (phone) window.open(waHref(phone), "_blank", "noopener"); };
+const openWhatsApp = (phone, text) => { if (phone) window.open(waHref(phone, text), "_blank", "noopener"); };
 
 function CRMApp({ initial }) {
   const [now, setNow] = useState(() => new Date());
@@ -10492,6 +10674,7 @@ function CRMApp({ initial }) {
   const [inboxResetKey, setInboxResetKey] = useState(0);
   const [newLeadRequest, setNewLeadRequest] = useState(null);
   const leadsStateRef = useRef({ tab: "all", filters: {}, viewId: null });
+  const [settingsPageRequest, setSettingsPageRequest] = useState(null);
   const [settings, setSettings] = useState(() => {
     const def = buildSettings();
     const saved = initial.settings;
@@ -10531,6 +10714,8 @@ function CRMApp({ initial }) {
   const needsReplyCount = chats.filter(needsHumanReply).length;
   const [followups, setFollowups] = useState(() => initial.followups);
   const [consults, setConsults] = useState(() => initial.consults);
+  // Booking from a stage change (Leads, Pipeline, lead record) — same shape as the Consultations page
+  const bookConsult = (b) => setConsults((cs) => [...cs, { id: uid(), duration: 30, status: "scheduled", ...b }]);
 
   /* ---------- Saving: every change to leads / follow-ups / consults / timelines / settings is diffed and queued ---------- */
   const saved = useRef({ leads, followups, consults, timelines, settings, customViews });
@@ -10587,7 +10772,9 @@ function CRMApp({ initial }) {
     let care = 0;
     let experts = 0;
     leads.forEach((l) => {
-      if (l.stage === "Won" && (l.customerSince || l.stageSince || l.createdAt).getTime() >= monthStart) care += l.amountPaid || 0;
+      // Money received on deals closed this month (a customer can have several: trial, month, extension)
+      (l.wonDeals || []).forEach((d) => { if (d.at && d.at.getTime() >= monthStart) care += d.paid || 0; });
+      if (l.lastWin && new Date(l.lastWin.at).getTime() >= monthStart) care += l.lastWin.paid || 0;
       (l.sessions || []).forEach((x) => { if (x.paid && x.at && new Date(x.at).getTime() >= monthStart) experts += x.price || 0; });
     });
     Object.assign(REVENUE_MONTH, { care, experts, target: Number(settings.revenueTarget) || 500000 });
@@ -10608,6 +10795,14 @@ function CRMApp({ initial }) {
     setToast(null);
   };
   useEffect(() => { setSaveErrorHandler((msg) => showToast(msg)); }, [showToast]);
+  // Adopt the customer number the database gave a new lead (it can differ if a website lead arrived meanwhile)
+  useEffect(() => {
+    setAssignedHandler((assigned) =>
+      setLeads((ls) => (ls.some((l) => assigned[l.id] && assigned[l.id] !== l.customerNo)
+        ? ls.map((l) => (assigned[l.id] && assigned[l.id] !== l.customerNo ? { ...l, customerNo: assigned[l.id], customerId: customerId(assigned[l.id], l.careKind) } : l))
+        : ls)));
+    return () => setAssignedHandler(null);
+  }, []);
 
   // My day: attention filter (from stat cards), customer opportunities, and J/K order across all three sections
   const [attnFilter, setAttnFilter] = useState(null);
@@ -10976,7 +11171,8 @@ function CRMApp({ initial }) {
                 onSellOpp: (lead, sugg) => openSell(lead.id, sugg.expert),
                 onCallOpp: (lead) => openCall(lead.phone),
                 dismissOpp, attnFilter, setAttnFilter, jumpTo, flash,
-                onViewAllOpps: () => { setCustomersTabRequest({ tab: "ready", key: Date.now() }); setActiveNav("customers"); },
+                onEditTarget: () => { setSettingsPageRequest({ page: "targets", key: Date.now() }); setActiveNav("settings"); },
+                onViewAllOpps: () => { setCustomersTabRequest({ tab: SELL_EXPERTS ? "ready" : "ending", key: Date.now() }); setActiveNav("customers"); },
                 onCalendar: () => setActiveNav("consultations"),
               }}
             />
@@ -10997,7 +11193,7 @@ function CRMApp({ initial }) {
               setFollowups={setFollowups}
             />
           ) : activeNav === "settings" ? (
-            <SettingsPage settings={settings} setSettings={setSettings} showToast={showToast} leads={leads} />
+            <SettingsPage settings={settings} setSettings={setSettings} showToast={showToast} leads={leads} pageRequest={settingsPageRequest} />
           ) : activeNav === "reports" ? (
             <ReportsPage
               followups={followups}
@@ -11022,6 +11218,7 @@ function CRMApp({ initial }) {
               }}
               onAddLead={() => { setNewLeadRequest(Date.now()); setActiveNav("leads"); }}
               onOpenTable={() => navigate("leads")}
+              onBookConsult={bookConsult}
             />
           ) : activeNav === "consultations" ? (
             <ConsultationsPage
@@ -11075,6 +11272,7 @@ function CRMApp({ initial }) {
             />
           ) : activeNav === "leads" ? (
             <LeadsPage
+              onBookConsult={bookConsult}
               leads={leads}
               setLeads={setLeads}
               now={now}

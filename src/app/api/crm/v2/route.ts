@@ -48,20 +48,62 @@ export async function GET(req: NextRequest) {
   }
 }
 
+const paymentStatus = (total: number | null, got: number) => (total && got >= total ? "Paid" : got > 0 ? "Partial" : "Pending");
+
+// The Won dialog: package, total and amount received, exactly as entered. Creates or corrects the Won closure.
+async function recordWin(leadId: string, r: Row) {
+  const total = Number(r.total);
+  if (!(total > 0)) return { message: "Won needs a total amount" };
+  const paid = Math.min(Math.max(0, Number(r.paid) || 0), total);
+  const method = typeof r.method === "string" && r.method ? r.method : null;
+  const patch: Row = {
+    final_package: typeof r.package === "string" && r.package.trim() ? r.package.trim() : null,
+    final_amount: total,
+    advance_received: paid,
+    balance: total - paid,
+    payment_status: paymentStatus(total, paid),
+  };
+  // A new Won is a new deal (customers renew and extend). Only an incomplete closure (no amount yet) is filled in.
+  const { data: incomplete, error: selErr } = await supabase
+    .from("closures").select("id, notes").eq("lead_id", leadId).eq("type", "Won").is("final_amount", null).limit(1);
+  if (selErr) return selErr;
+  if (incomplete && incomplete.length) {
+    if (method && !incomplete[0].notes) patch.notes = `Paid by ${method}`;
+    const { error } = await supabase.from("closures").update(patch).eq("id", incomplete[0].id);
+    return error;
+  }
+  const { data: lead } = await supabase.from("leads").select("owner").eq("id", leadId).limit(1);
+  // The client names the deal, so a retried request updates the same closure instead of adding a second one
+  const dealId = typeof r.dealId === "string" && r.dealId.startsWith(`cl-${leadId}-`) ? r.dealId : `cl-${leadId}-${Date.now()}`;
+  const { error } = await supabase.from("closures").upsert({
+    id: dealId,
+    lead_id: leadId,
+    type: "Won",
+    closure_date: new Date().toISOString(),
+    sales_owner: lead?.[0]?.owner ?? null,
+    notes: method ? `Paid by ${method}` : null,
+    ...patch,
+  }, { onConflict: "id" });
+  return error;
+}
+
 // When a lead becomes Won, make sure Operations (which reads `closures`) sees it.
 async function ensureWonClosure(lead: Row) {
   const meta = (lead.meta ?? {}) as Row;
   const { data: existing } = await supabase
-    .from("closures").select("id, final_amount, final_package, advance_received").eq("lead_id", lead.id as string).eq("type", "Won").limit(1);
-  const amount = Number(meta.packageValue ?? 0) || null;
+    .from("closures").select("id, final_amount, final_package, advance_received").eq("lead_id", lead.id as string).eq("type", "Won").limit(2);
+  // Several deals for this customer: the CRM shows their sum, so it can't safely patch any single one.
+  if (existing && existing.length > 1) return;
+  const amount = Number(meta.dealValue ?? 0) || null;
   const paid = Number(meta.amountPaid ?? 0) || 0;
-  const status = (total: number | null, got: number) => (total && got >= total ? "Paid" : got > 0 ? "Partial" : "Pending");
+  const status = paymentStatus;
   if (existing && existing.length) {
     // Never overwrite a recorded deal amount or package; only fill gaps and keep payments current.
     const cur = existing[0];
     const total = cur.final_amount != null ? Number(cur.final_amount) : amount;
     const got = Math.max(paid, Number(cur.advance_received ?? 0));
     const patch: Row = { advance_received: got, payment_status: status(total, got) };
+    if (total) patch.balance = Math.max(0, total - got);
     if (cur.final_amount == null && amount) patch.final_amount = amount;
     if (!cur.final_package && meta.package) patch.final_package = meta.package;
     await supabase.from("closures").update(patch).eq("id", cur.id);
@@ -95,6 +137,7 @@ export async function POST(req: NextRequest) {
   }
   const ops = Array.isArray(body.ops) ? body.ops.slice(0, 500) : [];
   const failed: string[] = [];
+  const assigned: Record<string, number> = {};
 
   for (const o of ops) {
     if (!o || typeof o.id !== "string" || !o.id) continue;
@@ -104,7 +147,14 @@ export async function POST(req: NextRequest) {
         if (o.op === "delete") ({ error } = await supabase.from("leads").delete().eq("id", o.id));
         else {
           const row: Row = { ...pick(o.row ?? {}, LEAD_COLS), id: o.id };
-          ({ error } = await supabase.from("leads").upsert(row, { onConflict: "id" }));
+          // Update first, insert only if new: an upsert would burn a customer_no from the sequence on every save
+          const upd = await supabase.from("leads").update(row).eq("id", o.id).select("id");
+          error = upd.error;
+          if (!error && !upd.data?.length) {
+            const ins = await supabase.from("leads").insert(row).select("customer_no").single();
+            error = ins.error;
+            if (!error && ins.data?.customer_no != null) assigned[o.id] = ins.data.customer_no as number;
+          }
           if (!error && row.stage === "Won") await ensureWonClosure(row);
         }
       } else if (o.coll === "followups") {
@@ -122,6 +172,8 @@ export async function POST(req: NextRequest) {
           { lead_id: o.id, events: o.row?.events ?? [], updated_at: new Date().toISOString() },
           { onConflict: "lead_id" }
         ));
+      } else if (o.coll === "won") {
+        error = await recordWin(o.id, o.row ?? {});
       } else if (o.coll === "settings") {
         ({ error } = await supabase.from("crm_settings").upsert(
           { id: o.id, data: o.row?.data ?? {}, updated_at: new Date().toISOString() },
@@ -130,13 +182,13 @@ export async function POST(req: NextRequest) {
       } else continue;
       if (error) {
         console.error(`[crm v2 POST] ${o.coll} ${o.op} ${o.id}`, error);
-        failed.push(o.id);
+        failed.push(`${o.coll}:${o.id}`);
       }
     } catch (err) {
       console.error(`[crm v2 POST] ${o.coll} ${o.op} ${o.id}`, err);
-      failed.push(o.id);
+      failed.push(`${o.coll}:${o.id}`);
     }
   }
 
-  return NextResponse.json({ ok: failed.length === 0, failed }, { status: failed.length ? 207 : 200 });
+  return NextResponse.json({ ok: failed.length === 0, failed, assigned }, { status: failed.length ? 207 : 200 });
 }
