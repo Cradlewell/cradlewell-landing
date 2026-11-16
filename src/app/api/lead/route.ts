@@ -104,7 +104,7 @@ const LeadSchema = z.object({
 export async function POST(req: NextRequest) {
     try {
         // Throttle form spam per IP before doing any downstream work.
-        const limited = rateLimit(`lead:${clientIp(req)}`, 20, 10 * 60_000);
+        const limited = await rateLimit(`lead:${clientIp(req)}`, 20, 10 * 60_000);
         if (limited) return limited;
 
         const body = await req.json();

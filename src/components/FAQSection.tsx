@@ -134,7 +134,7 @@ To get an exact quote tailored to your needs, you can connect with us on WhatsAp
               Our Night Care package covers 9 hours of overnight nursing support. The nurse handles 
               all nighttime baby needs including feeding, burping, diaper changes, soothing, and sleep 
               monitoring — so parents can rest and recover. In the morning, you receive a full handover 
-              report covering the baby's night observations, feeding times, and any concerns. This is 
+              report covering the baby&apos;s night observations, feeding times, and any concerns. This is 
               especially beneficial in the first 4-6 weeks when sleep deprivation is at its highest 
               and both mother and baby are adjusting to new routines.
             </Accordion.Body>

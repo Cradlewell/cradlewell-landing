@@ -5,9 +5,15 @@ import { requireAuth } from "@/lib/auth-guard";
 /* ==========================================================================
    New CRM data API.
    GET  → every collection the CRM needs, as raw rows (the client adapts them).
-   POST → a batch of writes: { ops: [{ coll, op: "upsert" | "delete", id, row? }] }
+   POST → a batch of writes: { ops: [{ coll, op: "upsert" | "patch" | "delete", id, row?, meta? }] }
+   A lead "patch" carries only the changed columns plus meta keys to set/unset,
+   merged into the stored row, so edits from two tabs don't overwrite each other.
    Only whitelisted columns are written, so the client cannot touch anything else.
    ========================================================================== */
+
+// Run next to the database (Supabase, AWS Mumbai). From Vercel's default US
+// region every query crossed the world, which was most of the CRM's load time.
+export const preferredRegion = "bom1";
 
 type Row = Record<string, unknown>;
 
@@ -129,7 +135,7 @@ export async function POST(req: NextRequest) {
   const authErr = requireAuth(req);
   if (authErr) return authErr;
 
-  let body: { ops?: { coll: string; op: string; id: string; row?: Row }[] };
+  let body: { ops?: { coll: string; op: string; id: string; row?: Row; meta?: { set?: Row; unset?: string[] } }[] };
   try {
     body = await req.json();
   } catch {
@@ -145,7 +151,29 @@ export async function POST(req: NextRequest) {
       let error: unknown = null;
       if (o.coll === "leads") {
         if (o.op === "delete") ({ error } = await supabase.from("leads").delete().eq("id", o.id));
-        else {
+        else if (o.op === "patch") {
+          const cols: Row = pick(o.row ?? {}, LEAD_COLS);
+          delete cols.id;
+          delete cols.meta;
+          const set = (o.meta?.set && typeof o.meta.set === "object" ? o.meta.set : {}) as Row;
+          const unset = Array.isArray(o.meta?.unset) ? o.meta.unset.filter((k) => typeof k === "string") : [];
+          if (Object.keys(set).length || unset.length) {
+            const cur = await supabase.from("leads").select("meta").eq("id", o.id).maybeSingle();
+            error = cur.error;
+            if (!error && cur.data) {
+              const meta: Row = { ...((cur.data.meta ?? {}) as Row), ...set };
+              for (const k of unset) delete meta[k];
+              cols.meta = meta;
+            }
+          }
+          if (!error && Object.keys(cols).length) {
+            // A lead deleted elsewhere matches no row: nothing left to update, not a failure
+            const upd = await supabase.from("leads").update(cols).eq("id", o.id).select("*");
+            error = upd.error;
+            const saved = upd.data?.[0];
+            if (!error && saved && saved.stage === "Won") await ensureWonClosure(saved);
+          }
+        } else {
           const row: Row = { ...pick(o.row ?? {}, LEAD_COLS), id: o.id };
           // Update first, insert only if new: an upsert would burn a customer_no from the sequence on every save
           const upd = await supabase.from("leads").update(row).eq("id", o.id).select("id");
@@ -168,10 +196,22 @@ export async function POST(req: NextRequest) {
         ));
       } else if (o.coll === "timelines") {
         if (o.op === "delete") ({ error } = await supabase.from("crm_timelines").delete().eq("lead_id", o.id));
-        else ({ error } = await supabase.from("crm_timelines").upsert(
-          { lead_id: o.id, events: o.row?.events ?? [], updated_at: new Date().toISOString() },
-          { onConflict: "lead_id" }
-        ));
+        else {
+          // Merge by event id: events another tab added since this one loaded are
+          // kept, unless this tab deleted them.
+          const incoming = (Array.isArray(o.row?.events) ? o.row.events : []) as Row[];
+          const removed = new Set(Array.isArray(o.row?.removed) ? (o.row.removed as unknown[]) : []);
+          const cur = await supabase.from("crm_timelines").select("events").eq("lead_id", o.id).maybeSingle();
+          error = cur.error;
+          if (!error) {
+            const have = new Set(incoming.map((e) => e?.id));
+            const extra = ((cur.data?.events ?? []) as Row[]).filter((e) => e && !have.has(e.id) && !removed.has(e.id));
+            ({ error } = await supabase.from("crm_timelines").upsert(
+              { lead_id: o.id, events: [...incoming, ...extra].slice(0, 600), updated_at: new Date().toISOString() },
+              { onConflict: "lead_id" }
+            ));
+          }
+        }
       } else if (o.coll === "won") {
         error = await recordWin(o.id, o.row ?? {});
       } else if (o.coll === "settings") {

@@ -12,7 +12,7 @@ import {
   LogOut, Bell, Flag, ChevronUp, CreditCard, Webhook, Workflow, Trash2, GripVertical, HeartHandshake, ArrowUpRight,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
-import { FOLLOWUP_CUTOFF, loadCRM, enqueue, flush, hasPending, setSaveErrorHandler, setAssignedHandler, recordWin, diffById, diffTimelines, uiLeadToDb, uiFollowupToDb, pack } from "./data";
+import { FOLLOWUP_CUTOFF, loadCRM, enqueue, enqueueLater, cancelLater, flush, hasPending, restoreStash, retryStash, setSaveStatusHandler, settleTasks, stageKey, leadPatch, mergeRemote, mergeRemoteMap, isBusy, isRemote, setSaveErrorHandler, setAssignedHandler, recordWin, diffById, diffTimelines, uiLeadToDb, uiFollowupToDb, pack } from "./data";
 
 /* ==========================================================================
    LIVE DATA — leads, follow-ups, consultations and timelines are loaded from
@@ -1465,6 +1465,8 @@ const SORT_FIELDS = [
   { id: "deferred", label: "Deferred until", dir: "asc", val: (l) => (l.deferredUntil ? l.deferredUntil.getTime() : Infinity) },
 ];
 const DEFAULT_SORT = { field: "next", dir: "asc" };
+// Undo toast shows for 5 s; the delete reaches the server just after it closes
+const LEAD_DELETE_DELAY = 6000;
 
 const GROUP_OPTIONS = [
   { id: "none", label: "None" },
@@ -1741,9 +1743,9 @@ function wonFields(extra) {
   return { package: extra.package, dealValue: extra.dealValue, amountPaid: extra.amountPaid, paymentMethod: extra.paymentMethod || null, customerSince: null, lastWin: { at: new Date(), paid: extra.amountPaid || 0 } };
 }
 
-function WonForm({ lead, count, onCancel, onConfirm }) {
-  const [pkg, setPkg] = useState(lead?.package || "");
-  const [total, setTotal] = useState(lead?.dealValue ? String(lead.dealValue) : "");
+function WonForm({ lead, count, onCancel, onConfirm, newDeal = false }) {
+  const [pkg, setPkg] = useState(newDeal ? "" : lead?.package || "");
+  const [total, setTotal] = useState(!newDeal && lead?.dealValue ? String(lead.dealValue) : "");
   const [paid, setPaid] = useState("");
   const [method, setMethod] = useState("UPI");
   const t = Number(total) || 0;
@@ -1759,7 +1761,7 @@ function WonForm({ lead, count, onCancel, onConfirm }) {
     );
   const status = !t ? "" : p >= t ? "Fully paid" : p > 0 ? `Part paid · ${inr(t - p)} due` : `Nothing received yet · ${inr(t)} due`;
   return (
-    <Modal title={`Mark ${lead?.name || "this lead"} as won`} onClose={onCancel} width={420}>
+    <Modal title={newDeal ? `Record a deal for ${lead?.name || "this customer"}` : `Mark ${lead?.name || "this lead"} as won`} onClose={onCancel} width={420}>
       <form
         className="p-5 space-y-4"
         onSubmit={(e) => { e.preventDefault(); if (ok) onConfirm({ package: pkg.trim(), dealValue: t, amountPaid: p, paymentMethod: p > 0 ? method : null }); }}
@@ -1786,7 +1788,7 @@ function WonForm({ lead, count, onCancel, onConfirm }) {
         <div className={`text-small leading-4 ${tooMuch ? "text-red-700" : "text-ink-4"}`}>{tooMuch ? "Received can't be more than the total." : status}</div>
         <div className="flex justify-end gap-2 pt-1">
           <SecondaryButton type="button" onClick={onCancel}>Cancel</SecondaryButton>
-          <PrimaryButton type="submit" disabled={!ok}>Mark as won</PrimaryButton>
+          <PrimaryButton type="submit" disabled={!ok}>{newDeal ? "Record deal" : "Mark as won"}</PrimaryButton>
         </div>
       </form>
     </Modal>
@@ -1806,6 +1808,39 @@ function StageExtraModal({ pending, count, lead, consults = [], onCancel, onConf
     return <BookConsultModal leads={[lead]} consults={consults} now={new Date()} initial={{ leadName: lead.name }} onClose={onCancel} onBook={(b) => onConfirm({ consult: b })} />;
   }
   return <LostOrDeferModal pending={pending} count={count} onCancel={onCancel} onConfirm={onConfirm} />;
+}
+
+// Undo puts back just the deleted lead, in its old place, so edits made to
+// other leads during the Undo window are kept.
+const restoreLead = (list, lead, at) => (!lead || list.some((x) => x.id === lead.id) ? list : [...list.slice(0, at), lead, ...list.slice(at)]);
+
+function DeleteLeadModal({ lead, followups = [], consults = [], onCancel, onConfirm }) {
+  const tasks = followups.filter((f) => f.leadId === lead.id && f.status === "open").length;
+  const booked = consults.filter((c) => c.leadId === lead.id).length;
+  const paid = lead.amountPaid || 0;
+  const goes = [
+    tasks && `${tasks} open follow-up${tasks === 1 ? "" : "s"}`,
+    booked && `${booked} consultation${booked === 1 ? "" : "s"}`,
+    paid && `payment records (${fmtINR(paid)} received)`,
+    "notes and activity history",
+  ].filter(Boolean);
+  return (
+    <Modal title={`Delete ${lead.name}?`} onClose={onCancel} width={400}>
+      <div className="p-5 text-body text-ink-2">
+        <p>This also deletes their {goes.length > 1 ? `${goes.slice(0, -1).join(", ")} and ${goes[goes.length - 1]}` : goes[0]}.</p>
+        <p className="mt-2 text-small leading-4 text-ink-4">You can undo for a few seconds after deleting. After that it can&apos;t be recovered.</p>
+      </div>
+      <div className="flex justify-end gap-2 px-5 pb-5">
+        <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
+        <button
+          onClick={onConfirm}
+          className="h-8 px-3 rounded-md text-body font-medium text-white bg-red-600 hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+        >
+          Delete lead
+        </button>
+      </div>
+    </Modal>
+  );
 }
 
 function LostOrDeferModal({ pending, count, onCancel, onConfirm }) {
@@ -1840,7 +1875,7 @@ function LostOrDeferModal({ pending, count, onCancel, onConfirm }) {
               onChange={(e) => setDate(e.target.value)}
               className="w-full h-9 rounded-md border border-line-control px-3 text-body outline-none focus:border-line-heavy"
             />
-            <div className="mt-2 text-small leading-4 text-ink-4">A follow-up will be set for this date.</div>
+            <div className="mt-2 text-small leading-4 text-ink-4">A reconnect call is added for this date, and the lead&apos;s other open tasks are cleared.</div>
             <div className="text-small leading-4 text-ink-4 mt-4 mb-2">Note</div>
             <textarea
               value={note}
@@ -1972,7 +2007,7 @@ function NewLeadModal({ leads, onClose, onCreate, onOpenExisting }) {
     setTouched(true);
     if (!valid || existing || dateError || sent.current) return;
     sent.current = true;
-    onCreate({ ...f, phone: `+91 ${d.slice(0, 5)} ${d.slice(5)}` });
+    onCreate({ ...f, phone: d });
   };
 
   return (
@@ -2000,8 +2035,10 @@ function NewLeadModal({ leads, onClose, onCreate, onOpenExisting }) {
                 </button>
               </div>
             ) : (
-              d.length > 0 && !valid && (touched || d.length >= 10) ? (
-                <div role="alert" className="mt-1.5 text-small text-red-700">Enter a 10-digit mobile number starting with 6–9 ({d.length} digits so far).</div>
+              !valid && (touched || d.length >= 10) ? (
+                <div role="alert" className="mt-1.5 text-small text-red-700">
+                  {d.length ? `Enter a 10-digit mobile number starting with 6–9 (${d.length} digits so far).` : "Enter the mobile number to create the lead."}
+                </div>
               ) : (
                 !d.length && <div className="mt-1.5 text-small text-ink-4">We'll check it against existing leads</div>
               )
@@ -2055,7 +2092,7 @@ function NewLeadModal({ leads, onClose, onCreate, onOpenExisting }) {
           <SecondaryButton type="button" onClick={onClose}>
             Cancel
           </SecondaryButton>
-          <PrimaryButton type="submit" disabled={!valid || !!existing || !!dateError}>
+          <PrimaryButton type="submit" disabled={!!existing}>
             Create lead
           </PrimaryButton>
         </div>
@@ -3640,6 +3677,8 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
   const isCustomer = lead.stage === "Won";
   const [tab, setTab] = useState(initialTab || "overview");
   const [menu, setMenu] = useState(null); // { type, anchor, outcome? }
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dealOpen, setDealOpen] = useState(false);
   const [note, setNote] = useState("");
   const [addNote, setAddNote] = useState(0);
   const fileRef = useRef(null);
@@ -3801,7 +3840,7 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
   };
   const saveCustomer = (d) => {
     const ph = mobileDigits(d.phone);
-    const patch = { hospital: d.hospital || null, babies: +d.babies, phone: `+91 ${ph.slice(0, 5)} ${ph.slice(5)}`, zone: d.zone || null, address: d.address.trim() || null };
+    const patch = { hospital: d.hospital || null, babies: +d.babies, phone: ph, zone: d.zone || null, address: d.address.trim() || null };
     if (born) patch.babyDob = fromDateInput(d.babyDob) || lead.babyDob;
     else patch.dueDate = fromDateInput(d.dueDate) || lead.dueDate;
     edit(patch, born ? "Customer and baby details" : "Customer and pregnancy details");
@@ -4119,11 +4158,43 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
               <MenuItem onClick={() => { closeMenu(); onRequestStage(lead.id, "Lost"); }}><CircleX className="h-3.5 w-3.5 text-ink-4" /> Mark lost</MenuItem>
               <MenuItem onClick={() => { closeMenu(); onRequestStage(lead.id, "Deferred"); }}><PauseCircle className="h-3.5 w-3.5 text-ink-4" /> Defer</MenuItem>
               <MenuItem onClick={() => { closeMenu(); actions.copyPhone(); }}><Copy className="h-3.5 w-3.5 text-ink-4" /> Copy phone</MenuItem>
+              {isCustomer && <MenuItem onClick={() => { closeMenu(); setDealOpen(true); }}><Plus className="h-3.5 w-3.5 text-ink-4" /> Record a deal</MenuItem>}
               <MenuSep />
-              <MenuItem onClick={() => { closeMenu(); onDelete?.(lead.id); }}><Trash2 className="h-3.5 w-3.5 text-red-500" /> <span className="text-red-700">Delete</span></MenuItem>
+              <MenuItem onClick={() => { closeMenu(); setConfirmDelete(true); }}><Trash2 className="h-3.5 w-3.5 text-red-500" /> <span className="text-red-700">Delete</span></MenuItem>
             </>
           )}
         </FixedMenu>
+      )}
+      {dealOpen && (
+        <WonForm
+          lead={lead}
+          count={1}
+          newDeal
+          onCancel={() => setDealOpen(false)}
+          onConfirm={(deal) => {
+            // A renewal, an extension, or a customer whose first deal was never entered.
+            // The new deal is added to the customer's totals, as on the server.
+            recordWin(lead.id, deal);
+            onUpdate(lead.id, {
+              package: deal.package || lead.package,
+              dealValue: (lead.dealValue || 0) + deal.dealValue,
+              amountPaid: (lead.amountPaid || 0) + (deal.amountPaid || 0),
+              paymentMethod: deal.paymentMethod || lead.paymentMethod || null,
+            });
+            onEvent?.(lead.id, { id: uid(), type: "edit", by: ME, at: new Date(), text: `Deal recorded · ${deal.package} · ${fmtINR(deal.dealValue)}${deal.amountPaid ? ` · ${fmtINR(deal.amountPaid)} received` : ""}` });
+            setDealOpen(false);
+            showToast(`Deal recorded for ${lead.name}`);
+          }}
+        />
+      )}
+      {confirmDelete && (
+        <DeleteLeadModal
+          lead={lead}
+          followups={followups}
+          consults={consults}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => { setConfirmDelete(false); onDelete?.(lead.id); }}
+        />
       )}
     </div>
   );
@@ -4663,11 +4734,11 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
           followups={followups}
           setFollowups={setFollowups}
           onDelete={(id) => {
-            const snapshot = leads;
-            const l = leads.find((x) => x.id === id);
+            const at = leads.findIndex((x) => x.id === id);
+            const l = leads[at];
             setRecordId(null);
             setLeads((prev) => prev.filter((x) => x.id !== id));
-            showToast(`Deleted ${l?.name || "lead"}`, () => { setLeads(snapshot); dismissToast(); });
+            showToast(`Deleted ${l?.name || "lead"}`, () => { setLeads((prev) => restoreLead(prev, l, at)); dismissToast(); });
           }}
           view={recordView}
           setView={setRecordView}
@@ -4834,7 +4905,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
         ) : (
           <>
           {/* Phones: a card list instead of a squeezed table */}
-          <div className="md:hidden h-full overflow-y-auto px-4 pb-28">
+          <div className="lg:hidden h-full overflow-y-auto px-4 md:px-8 pb-28">
             {rows.length === 0 ? (
               <div className="py-16 text-center">
                 <div className="text-body font-medium">{leads.some((l) => l.stage !== "Won") ? "No leads match" : "No leads yet"}</div>
@@ -4845,8 +4916,8 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                 {rows.slice(0, rowLimit).map((l) => {
                   const p = leadPriority(l);
                   return (
-                    <li key={l.id}>
-                      <button onClick={() => openRecord(l.id)} className="w-full min-h-[60px] py-3 flex items-start gap-3 text-left">
+                    <li key={l.id} className="flex items-center gap-2">
+                      <button onClick={() => openRecord(l.id)} className="min-w-0 flex-1 min-h-[60px] py-3 flex items-start gap-3 text-left">
                         <span className={`mt-[7px] h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[p]}`} aria-hidden="true" />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-3">
@@ -4859,8 +4930,14 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                             <span aria-hidden="true">·</span>
                             <span className="truncate">Next: <FollowUp lead={l} now={now} /></span>
                           </span>
+                          {l.phone && <span className="mt-0.5 block text-small text-ink-4 tabular-nums">{l.phone}</span>}
                         </span>
                       </button>
+                      {l.phone && (
+                        <a href={telHref(l.phone)} aria-label={`Call ${l.name}`} className="h-11 w-11 shrink-0 rounded-full border border-line-control flex items-center justify-center text-ink-2 active:bg-surface-hover">
+                          <Phone className="h-4 w-4" />
+                        </a>
+                      )}
                     </li>
                   );
                 })}
@@ -4870,7 +4947,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
               <button onClick={() => setRowLimit((n) => n + ROW_PAGE)} className={`mt-3 w-full ${btn("secondary", "md")}`}>Show {Math.min(ROW_PAGE, rows.length - rowLimit)} more</button>
             )}
           </div>
-          <div className="hidden md:block h-full overflow-auto" onScroll={(e) => setScrolledX(e.currentTarget.scrollLeft > 0)}>
+          <div className="hidden lg:block h-full overflow-auto" onScroll={(e) => setScrolledX(e.currentTarget.scrollLeft > 0)}>
             <div className="inline-block min-w-full align-top pl-5 md:pl-8 pr-5 md:pr-8 pb-28">
               <table className="border-separate border-spacing-0 text-body table-fixed" style={{ width: tableWidth, minWidth: "100%" }}>
                 <colgroup>
@@ -7153,7 +7230,16 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
   const [bookOpen, setBookOpen] = useState(null); // {} or { date }
   const [panel, setPanel] = useState("notes"); // notes | call | outcome
   const [call, setCall] = useState(null); // { startedAt, notes }
+  // The in-call timer ticks every second on the real clock; the page's `now`
+  // only moves every 30 s and can lag behind the call start (which showed -1:-19).
+  const [, setCallTick] = useState(0);
+  useEffect(() => {
+    if (!call) return;
+    const t = setInterval(() => setCallTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [call]);
   const [confirmNoShow, setConfirmNoShow] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [resAnchor, setResAnchor] = useState(null);
   const closeRes = useCallback(() => setResAnchor(null), []);
 
@@ -7182,7 +7268,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
   };
   useEffect(() => {
     const k = (e) => {
-      if (e.key === "Escape" && drawerOpen && !confirmNoShow && !bookOpen) setDrawerOpen(false);
+      if (e.key === "Escape" && drawerOpen && !confirmNoShow && !confirmCancel && !bookOpen) setDrawerOpen(false);
     };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
@@ -7260,20 +7346,49 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
     });
   };
 
+  // With no consult left on the calendar, "Consult booked" is no longer true:
+  // the lead goes back to Qualified so it shows up for a rebook.
+  const releaseBooking = (c, l, at) => {
+    const another = consults.some((x) => x.id !== c.id && x.leadId === l.id && x.status === "scheduled");
+    if (another || l.stage !== "Consult booked") return [];
+    return [{ id: uid(), type: "stage", from: "Consult booked", to: "Qualified", by: ME, at: new Date(at.getTime() + 1) }];
+  };
+
   const markNoShow = () => {
     const c = sel;
     const l = selLead;
+    if (!c || !l || c.start > Date.now()) return; // a consult that hasn't started can't be missed
     patchConsult(c.id, { status: "noshow" });
     const at = new Date();
-    logEvents(l.id, [
-      { id: uid(), type: "whatsapp", by: ME, at: new Date(at.getTime() + 1000), messages: [{ from: "agent", text: `Hi ${firstName(l)}, we missed you for the consult today. No worries at all — would you like to pick a new time? Reply with a day that suits you.`, at }] },
-      { id: uid(), type: "edit", by: ME, at, text: `Consult marked no-show · ${fmtTime(c.start)}` },
-    ]);
+    const stageEvs = releaseBooking(c, l, at);
+    logEvents(l.id, [...stageEvs, { id: uid(), type: "edit", by: ME, at, text: `Consult marked no-show · ${fmtTime(c.start)}` }]);
     const due = workHours(roundQuarter(new Date(Date.now() + 4 * 3600000)));
     setFollowups((fs) => [...fs, { id: uid(), leadId: l.id, type: "Call", action: "Call to rebook consult", due, owner: ME, status: "open", auto: "Consult no-show", createdAt: at }]);
-    updateLead(l.id, { nextFollowUp: due, nextAction: "Call to rebook consult", tag: "Not responding" });
+    updateLead(l.id, { ...(stageEvs.length ? { stage: "Qualified" } : {}), nextFollowUp: due, nextAction: "Call to rebook consult", tag: "Not responding" });
     setConfirmNoShow(false);
     showToast(`Marked no-show · rebook call set for ${dayDiff(due, now) === 0 ? "today" : "tomorrow"}, ${fmtTime(due)}`);
+  };
+
+  const cancelConsult = (reason, rebook) => {
+    const c = sel;
+    const l = selLead;
+    if (!c || !l || c.status !== "scheduled") return;
+    const snapshot = { consults, lead: l };
+    patchConsult(c.id, { status: "cancelled", cancelReason: reason, cancelledAt: new Date() });
+    const at = new Date();
+    const stageEvs = releaseBooking(c, l, at);
+    logEvents(l.id, [...stageEvs, { id: uid(), type: "edit", by: ME, at, text: `Consult on ${fmtDay(c.start)}, ${fmtTime(c.start)} cancelled · ${reason}` }]);
+    const due = rebook ? workHours(roundQuarter(new Date(Date.now() + DAY))) : null;
+    const fuId = rebook ? uid() : null;
+    if (rebook) setFollowups((fs) => [...fs, { id: fuId, leadId: l.id, type: "Call", action: "Call to rebook consult", due, owner: ME, status: "open", auto: "Consult cancelled", createdAt: at }]);
+    updateLead(l.id, { ...(stageEvs.length ? { stage: "Qualified" } : {}), nextFollowUp: due, nextAction: rebook ? "Call to rebook consult" : null });
+    setConfirmCancel(false);
+    showToast(`Consult cancelled${rebook ? " · rebook call set for tomorrow" : ""}`, () => {
+      setConsults(snapshot.consults);
+      updateLead(l.id, { stage: snapshot.lead.stage, nextFollowUp: snapshot.lead.nextFollowUp, nextAction: snapshot.lead.nextAction });
+      if (fuId) setFollowups((fs) => fs.filter((f) => f.id !== fuId));
+      dismissToast();
+    });
   };
 
   const saveOutcome = (o) => {
@@ -7331,7 +7446,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
         {children}
       </div>
     );
-    const elapsed = call ? Math.floor((now - call.startedAt) / 1000) : 0;
+    const elapsed = call ? Math.max(0, Math.floor((Date.now() - call.startedAt) / 1000)) : 0;
     return (
       <div className="p-4">
         <div className="flex items-center gap-1.5 text-caption text-ink-4">
@@ -7373,7 +7488,22 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
                 </div>
               )
             ) : sel.status === "noshow" ? (
-              section("No-show", <div className="text-body text-ink-3">A call to rebook is in Follow-ups.</div>)
+              section(
+                "No-show",
+                <div className="text-body text-ink-3">
+                  A call to rebook is in Follow-ups.
+                  {l.phone && (
+                    <button
+                      onClick={() => openWhatsApp(l.phone, `Hi ${firstName(l)}, we missed you for the consult today. No worries at all — would you like to pick a new time? Reply with a day that suits you.`)}
+                      className="mt-2 flex items-center gap-1.5 text-body text-ink-2 hover:text-ink underline underline-offset-2"
+                    >
+                      <WhatsAppIcon className="h-3.5 w-3.5" /> Send a rebook message on WhatsApp
+                    </button>
+                  )}
+                </div>
+              )
+            ) : sel.status === "cancelled" ? (
+              section("Cancelled", <div className="text-body text-ink-3">{sel.cancelReason || "Cancelled"}</div>)
             ) : null}
             {section("Key notes", <KeyNotes notes={l.keyNotes || seedKeyNotes(l)} onChange={(list) => updateLead(l.id, { keyNotes: list })} />)}
             {section(
@@ -7395,7 +7525,16 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
                   <PrimaryButton onClick={() => { setCall({ startedAt: Date.now(), notes: "" }); setPanel("call"); }} className="flex-1 flex items-center justify-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Start call</PrimaryButton>
                 )}
                 <button onClick={(e) => setResAnchor(resAnchor ? null : e.currentTarget)} title="Reschedule" aria-label="Reschedule" className="h-8 w-8 rounded-md border border-line-control flex items-center justify-center text-ink-3 hover:bg-surface-subtle hover:text-ink"><CalendarClock className="h-4 w-4" /></button>
-                <button onClick={() => setConfirmNoShow(true)} title="Mark no-show" aria-label="Mark no-show" className="h-8 w-8 rounded-md border border-line-control flex items-center justify-center text-ink-3 hover:bg-red-50 hover:text-red-700 hover:border-red-200"><UserX className="h-4 w-4" /></button>
+                <button
+                  onClick={() => setConfirmNoShow(true)}
+                  disabled={sel.start > now}
+                  title={sel.start > now ? "No-show can be marked once the consult time has passed" : "Mark no-show"}
+                  aria-label="Mark no-show"
+                  className="h-8 w-8 rounded-md border border-line-control flex items-center justify-center text-ink-3 hover:bg-red-50 hover:text-red-700 hover:border-red-200 disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <UserX className="h-4 w-4" />
+                </button>
+                <button onClick={() => setConfirmCancel(true)} title="Cancel consult" aria-label="Cancel consult" className="h-8 w-8 rounded-md border border-line-control flex items-center justify-center text-ink-3 hover:bg-surface-subtle hover:text-ink"><CircleX className="h-4 w-4" /></button>
               </div>
             )}
           </>
@@ -7587,7 +7726,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
       {confirmNoShow && sel && (
         <Modal title="Mark as no-show?" onClose={() => setConfirmNoShow(false)} width={400}>
           <div className="p-5 text-body leading-relaxed text-ink-2">
-            {selLead?.name} didn't join the {fmtTime(sel.start)} consult. A friendly reschedule message goes out on WhatsApp, and a call to rebook is added to your follow-ups in about 4 hours.
+            {selLead?.name} didn&apos;t join the {fmtTime(sel.start)} consult. A call to rebook is added to your follow-ups in about 4 hours{selLead?.stage === "Consult booked" ? ", and the lead moves back to Qualified" : ""}. You can send them a WhatsApp from the consult afterwards.
           </div>
           <div className="flex justify-end gap-2 px-5 pb-5">
             <SecondaryButton onClick={() => setConfirmNoShow(false)}>Cancel</SecondaryButton>
@@ -7596,8 +7735,44 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
         </Modal>
       )}
 
+      {confirmCancel && sel && <CancelConsultModal consult={sel} lead={selLead} onClose={() => setConfirmCancel(false)} onConfirm={cancelConsult} />}
+
       {bookOpen && <BookConsultModal leads={leads} consults={consults} now={now} initial={bookOpen} onClose={() => setBookOpen(null)} onBook={book} />}
     </div>
+  );
+}
+
+const CANCEL_REASONS = ["Family asked to cancel", "Family will rebook later", "Booked by mistake", "Other"];
+
+function CancelConsultModal({ consult, lead, onClose, onConfirm }) {
+  const [reason, setReason] = useState(CANCEL_REASONS[0]);
+  const [rebook, setRebook] = useState(true);
+  return (
+    <Modal title="Cancel this consult?" onClose={onClose} width={400}>
+      <div className="p-5 text-body text-ink-2">
+        <p>
+          {lead?.name}, {fmtDay(consult.start)} at {fmtTime(consult.start)}.
+          {lead?.stage === "Consult booked" ? " The lead moves back to Qualified." : ""}
+        </p>
+        <div className="mt-4 mb-2 text-small leading-4 text-ink-4">Reason</div>
+        <div className="space-y-0.5">
+          {CANCEL_REASONS.map((r) => (
+            <label key={r} className="flex items-center gap-2.5 h-8 px-2 -mx-2 rounded-md text-body cursor-pointer hover:bg-surface-sidebar">
+              <input type="radio" name="cancel-reason" checked={reason === r} onChange={() => setReason(r)} className="accent-ink" />
+              {r}
+            </label>
+          ))}
+        </div>
+        <label className="mt-3 flex items-center gap-2.5 text-body cursor-pointer">
+          <input type="checkbox" checked={rebook} onChange={(e) => setRebook(e.target.checked)} className="accent-ink" />
+          Add a call to rebook tomorrow
+        </label>
+      </div>
+      <div className="flex justify-end gap-2 px-5 pb-5">
+        <SecondaryButton onClick={onClose}>Keep consult</SecondaryButton>
+        <PrimaryButton onClick={() => onConfirm(reason, rebook)} className="bg-red-600 hover:bg-red-700">Cancel consult</PrimaryButton>
+      </div>
+    </Modal>
   );
 }
 
@@ -8909,11 +9084,10 @@ const SETTINGS_MENU = [
   {
     group: "Sales setup",
     items: [
+      // Lead fields, packages, hospitals/zones and defer reasons are fixed in
+      // this version of the CRM; their pages changed nothing, so they're hidden.
       ["stages", "Pipeline stages", CircleDot],
-      ["reasons", "Lost and defer reasons", CircleX],
-      ["fields", "Lead fields", Rows3],
-      ["packages", "Packages and services", Package],
-      ["places", "Hospitals and zones", Building2],
+      ["reasons", "Lost reasons", CircleX],
       ["targets", "Targets", BarChart3],
     ],
   },
@@ -9187,7 +9361,7 @@ function StageSettings({ s, upd, patch, remove }) {
   const close = useCallback(() => setColorFor(null), []);
   return (
     <>
-      <SHeader title="Pipeline stages" desc="Drag to reorder. A lead is flagged as stuck once it sits in a stage longer than the limit." action={<NewButton onClick={() => upd("stages", (st) => { const i = st.findIndex((x) => x.name === "Won"); const c = [...st]; c.splice(i < 0 ? c.length : i, 0, { id: sid(), name: "New stage", color: "#0EA5E9", stuck: 2 }); return c; })} />} />
+      <SHeader title="Pipeline stages" desc="The stages are fixed. Set a colour, and how long a lead can sit in a stage before it's flagged as stuck." />
       <div className="border-t border-line">
         {s.stages.map((st, i) => {
           const terminal = ["Won", "Lost", "Deferred"].includes(st.name);
@@ -9197,7 +9371,7 @@ function StageSettings({ s, upd, patch, remove }) {
               <button onClick={(e) => setColorFor({ id: st.id, anchor: e.currentTarget })} className="h-5 w-5 rounded-md flex items-center justify-center hover:bg-surface-active" aria-label="Stage colour">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: st.color }} />
               </button>
-              <InlineInput value={st.name} onChange={(v) => patch("stages", st.id, { name: v })} className="w-56 font-medium" />
+              <span className="w-56 font-medium text-body">{st.name}</span>
               <div className="ml-auto flex items-center gap-2 text-body text-ink-3">
                 {terminal ? (
                   <span className="text-ink-4 text-small leading-4">{st.name === "Won" ? "Closed stage" : "Off-pipeline"}</span>
@@ -9206,13 +9380,13 @@ function StageSettings({ s, upd, patch, remove }) {
                 ) : (
                   <>
                     <span>Stuck after</span>
-                    <InlineInput type="number" min={1} value={st.stuck} onChange={(v) => patch("stages", st.id, { stuck: Math.max(1, +v || 1) })} className="w-12 text-right tabular-nums" />
+                    <InlineInput type="number" min={1} value={st.stuck} onChange={(v) => patch("stages", st.id, { stuck: Math.max(1, +v || 1) })} aria-label={`Days in ${st.name} before it's stuck`} className="w-12 text-right tabular-nums" />
                     <span>{st.stuck === 1 ? "day" : "days"}</span>
                     <button onClick={() => patch("stages", st.id, { stuck: null })} className="h-6 w-6 rounded flex items-center justify-center text-ink-4 hover:text-ink" aria-label="Remove limit"><X className="h-3.5 w-3.5" /></button>
                   </>
                 )}
               </div>
-              <div className="w-8">{!terminal && <RowDelete onClick={() => remove("stages", st.id, `${st.name} stage removed`)} />}</div>
+              <div className="w-8" />
             </div>
           );
         })}
@@ -9243,7 +9417,7 @@ function ReasonList({ title, keyName, list, upd, patch, remove }) {
         {list.map((r, i) => (
           <div key={r.id} {...rowProps(i)} className={`group flex items-center gap-3 h-11 border-b border-line-subtle hover:bg-surface-subtle ${rowCls(i)}`}>
             {grip(i)}
-            <InlineInput autoFocus={!r.name} placeholder="Reason name" value={r.name} onChange={(v) => patch(keyName, r.id, { name: v })} className="flex-1" />
+            <InlineInput autoFocus={!r.name} placeholder="Reason name" aria-label="Reason name" value={r.name} onChange={(v) => patch(keyName, r.id, { name: v })} className="flex-1" />
             <RowDelete onClick={() => remove(keyName, r.id, "Reason removed")} />
           </div>
         ))}
@@ -9255,10 +9429,9 @@ function ReasonSettings(props) {
   const { s, upd } = props;
   return (
     <>
-      <SHeader title="Lost and defer reasons" desc="The choices shown when someone marks a lead lost or deferred. Order here is the order in the picker." action={<NewButton onClick={() => upd("lostReasons", (l) => [...l, { id: sid(), name: "" }])} />} />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-8">
+      <SHeader title="Lost reasons" desc="The choices shown when someone marks a lead lost. Order here is the order in the picker." action={<NewButton onClick={() => upd("lostReasons", (l) => [...l, { id: sid(), name: "" }])} />} />
+      <div className="max-w-[480px]">
         <ReasonList title="Lost reasons" keyName="lostReasons" list={s.lostReasons} {...props} />
-        <ReasonList title="Defer reasons" keyName="deferReasons" list={s.deferReasons} {...props} />
       </div>
     </>
   );
@@ -10330,10 +10503,11 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
           followups={followups}
           setFollowups={setFollowups}
           onDelete={(id) => {
-            const snapshot = leads;
+            const at = leads.findIndex((x) => x.id === id);
+            const l = leads[at];
             setRecordId(null);
             setLeads((prev) => prev.filter((x) => x.id !== id));
-            showToast(`Deleted ${recordLead.name}`, () => { setLeads(snapshot); dismissToast(); });
+            showToast(`Deleted ${recordLead.name}`, () => { setLeads((prev) => restoreLead(prev, l, at)); dismissToast(); });
           }}
           view={recordView}
           setView={setRecordView}
@@ -10400,8 +10574,8 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
           <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full border border-line-strong" /> not yet</span>
         </div>}
         {/* Phones: one card per customer */}
-        {!rows.length && <div className="md:hidden py-16 text-center text-body text-ink-4">No customers match these filters</div>}
-        <ul className="md:hidden mt-3 divide-y divide-line-subtle border-y border-line-subtle" aria-label="Paid customers">
+        {!rows.length && <div className="lg:hidden py-16 text-center text-body text-ink-4">No customers match these filters</div>}
+        <ul className="lg:hidden mt-3 divide-y divide-line-subtle border-y border-line-subtle" aria-label="Paid customers">
           {rows.map((l) => {
             const I = info[l.id];
             return (
@@ -10422,8 +10596,8 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
             );
           })}
         </ul>
-        <div className="hidden md:block mt-3 overflow-x-auto">
-          <table className="w-full min-w-[1080px] text-body border-separate border-spacing-0">
+        <div className="hidden lg:block mt-3 overflow-x-auto">
+          <table className={`w-full ${SELL_EXPERTS ? "min-w-[1080px]" : "min-w-[868px]"} text-body border-separate border-spacing-0`}>
             <thead>
               <tr className="text-small leading-4 text-ink-4">
                 {[["Customer", "w-[220px]"], ["Care plan", "w-[210px]"], ...(SELL_EXPERTS ? [["Experts", "w-[150px]"], ["Next session", "w-[190px]"]] : []), ["Suggested next", "w-[210px]"], ["Paid", "text-right w-[110px]"], ["", "w-[118px]"]].map(([h, c]) => (
@@ -10498,9 +10672,15 @@ function CustomersPage({ leads, setLeads, now, showToast, dismissToast, timeline
 export default function CradlewellCRM() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [unsaved, setUnsaved] = useState(0);
   const load = useCallback(() => {
     setError(null);
-    loadCRM()
+    // Changes a previous visit couldn't save (offline, or the session ran out)
+    // are sent first, so the data loaded afterwards already includes them.
+    restoreStash();
+    retryStash()
+      .catch(() => {})
+      .then(() => loadCRM())
       .then((d) => {
         Object.assign(SEED_TIMELINES, d.seededTimelines);
         setData(d);
@@ -10508,6 +10688,18 @@ export default function CradlewellCRM() {
       .catch((e) => setError(e.message || "Could not load the CRM"));
   }, []);
   useEffect(load, [load]);
+  // Kept changes are retried when the connection returns and every 30 s
+  useEffect(() => {
+    setSaveStatusHandler(setUnsaved);
+    const retry = () => retryStash().catch(() => {});
+    window.addEventListener("online", retry);
+    const t = setInterval(() => navigator.onLine && retry(), 30000);
+    return () => {
+      window.removeEventListener("online", retry);
+      clearInterval(t);
+      setSaveStatusHandler(null);
+    };
+  }, []);
   // Don't lose queued writes when the tab closes
   useEffect(() => {
     const warn = (e) => {
@@ -10538,7 +10730,21 @@ export default function CradlewellCRM() {
         </div>
       </div>
     );
-  return <CRMApp initial={data} />;
+  return (
+    <>
+      <CRMApp initial={data} />
+      {unsaved > 0 && (
+        <div role="status" className="fixed bottom-4 left-4 z-[80] flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-body text-amber-900 shadow-sm">
+          <span>
+            {unsaved} change{unsaved > 1 ? "s" : ""} not saved yet · kept on this device
+          </span>
+          <button onClick={() => retryStash().catch(() => {})} className="font-medium underline underline-offset-2">
+            Try now
+          </button>
+        </div>
+      )}
+    </>
+  );
 }
 
 // My day "needs your attention" queue, built from live leads and follow-ups
@@ -10657,7 +10863,7 @@ function CRMApp({ initial }) {
     const prev = prevStages.current;
     prevStages.current = Object.fromEntries(leads.map((l) => [l.id, l.stage]));
     if (!prev) return;
-    const changed = leads.filter((l) => prev[l.id] && prev[l.id] !== l.stage && (!l.stageSince || Date.now() - l.stageSince > 2000));
+    const changed = leads.filter((l) => prev[l.id] && prev[l.id] !== l.stage && !isRemote(l) && (!l.stageSince || Date.now() - l.stageSince > 2000));
     if (changed.length) {
       const ids = new Set(changed.map((l) => l.id));
       setLeads((ls) => ls.map((l) => (ids.has(l.id) ? { ...l, stageSince: new Date() } : l)));
@@ -10713,16 +10919,28 @@ function CRMApp({ initial }) {
   };
   const needsReplyCount = chats.filter(needsHumanReply).length;
   const [followups, setFollowups] = useState(() => initial.followups);
+  // Won, Lost and Deferred settle the lead's open tasks wherever the stage was
+  // changed from (record, list, pipeline, bulk edit), so it's watched here.
+  const stageSeen = useRef(null);
+  useEffect(() => {
+    const before = stageSeen.current;
+    stageSeen.current = new Map(leads.map((l) => [l.id, { key: stageKey(l), stage: l.stage }]));
+    if (!before) return;
+    const moved = leads.filter((l) => before.has(l.id) && before.get(l.id).key !== stageKey(l) && !isRemote(l));
+    if (moved.length) setFollowups((fs) => settleTasks(fs, moved, new Map([...before].map(([id, v]) => [id, v.stage]))));
+  }, [leads]);
   const [consults, setConsults] = useState(() => initial.consults);
   // Booking from a stage change (Leads, Pipeline, lead record) — same shape as the Consultations page
   const bookConsult = (b) => setConsults((cs) => [...cs, { id: uid(), duration: 30, status: "scheduled", ...b }]);
 
   /* ---------- Saving: every change to leads / follow-ups / consults / timelines / settings is diffed and queued ---------- */
   const saved = useRef({ leads, followups, consults, timelines, settings, customViews });
+  const deletedLeads = useRef(new Map()); // id → the lead object as it was when deleted
+  const remoteGone = useRef(new Set()); // "coll:id" a refresh removed because it was deleted elsewhere
   useEffect(() => {
     const prev = saved.current;
     const ops = [];
-    if (prev.leads !== leads) ops.push(...diffById(prev.leads, leads, "leads", (l) => uiLeadToDb(l, { packageValue, serviceDays })));
+    if (prev.leads !== leads) ops.push(...diffById(prev.leads, leads, "leads", (l) => uiLeadToDb(l, { packageValue, serviceDays }), { patch: leadPatch }));
     if (prev.followups !== followups) ops.push(...diffById(prev.followups, followups, "followups", (f) => (f.leadId ? uiFollowupToDb(f) : null)));
     if (prev.consults !== consults)
       ops.push(...diffById(prev.consults, consults, "consults", (c) => (c.leadId ? { lead_id: c.leadId, data: pack(c) } : null)));
@@ -10733,8 +10951,70 @@ function CRMApp({ initial }) {
     // Leads must exist before rows that point at them; deletes go last
     const order = { leads: 0, followups: 1, consults: 1, timelines: 1, settings: 2 };
     ops.sort((a, b) => (a.op === "delete") - (b.op === "delete") || order[a.coll] - order[b.coll]);
-    if (ops.length) enqueue(ops);
+    // A lead delete is held until the Undo toast has gone, because the server
+    // cascades it to the lead's follow-ups, consultations, history and payments.
+    // Undo cancels it, and a lead put back unchanged needs no write at all.
+    const out = [];
+    for (const o of ops) {
+      if (o.op === "delete" && remoteGone.current.delete(`${o.coll}:${o.id}`)) continue; // removed by a refresh, not by this tab
+      if (o.coll === "leads" && o.op === "delete") {
+        deletedLeads.current.set(o.id, prev.leads.find((l) => l.id === o.id));
+        enqueueLater(o, LEAD_DELETE_DELAY);
+        continue;
+      }
+      if (o.coll === "leads" && o.op === "upsert" && deletedLeads.current.has(o.id)) {
+        const was = deletedLeads.current.get(o.id);
+        deletedLeads.current.delete(o.id);
+        if (cancelLater("leads", o.id) && leads.find((l) => l.id === o.id) === was) continue;
+      }
+      out.push(o);
+    }
+    if (out.length) enqueue(out);
   }, [leads, followups, consults, timelines, settings, customViews]);
+
+  // Pick up new website/WhatsApp leads and other people's edits without a
+  // reload: when the tab is opened again after a minute away, and every 3
+  // minutes while it's visible. Anything this tab is still saving keeps its
+  // local version; the rest takes the server's.
+  const lastRefresh = useRef(Date.now());
+  useEffect(() => {
+    let busy = false;
+    const refresh = async () => {
+      if (busy || document.hidden) return;
+      busy = true;
+      const since = Date.now();
+      try {
+        const d = await loadCRM({ quiet: true });
+        lastRefresh.current = Date.now();
+        Object.assign(SEED_TIMELINES, d.seededTimelines);
+        const take = (coll) => (id) => !isBusy(coll, id, since);
+        const gone = (coll) => (id) => remoteGone.current.add(`${coll}:${id}`);
+        const fresh = d.leads.map((l) => (l.stage === "Won" && !l.customerSince ? asCustomer(l, l.stageSince || l.createdAt) : l));
+        setLeads((cur) => mergeRemote(cur, fresh, take("leads"), gone("leads")));
+        setFollowups((cur) => mergeRemote(cur, d.followups, take("followups"), gone("followups")));
+        setConsults((cur) => mergeRemote(cur, d.consults, take("consults"), gone("consults")));
+        setTimelines((cur) => mergeRemoteMap(cur, d.timelines, take("timelines")));
+      } catch {
+        // offline or signed out: the next attempt picks it up
+      } finally {
+        busy = false;
+      }
+    };
+    const onFocus = () => {
+      if (Date.now() - lastRefresh.current > 60000) refresh();
+    };
+    const onVisible = () => {
+      if (!document.hidden) onFocus();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    const t = setInterval(refresh, 3 * 60000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(t);
+    };
+  }, []);
 
   // Live data → My day queue, today's schedule, this month's revenue, report rows
   const minuteKey = Math.floor(now / 60000);

@@ -18,7 +18,7 @@ const authClient = createClient(
 
 export async function POST(req: NextRequest) {
   // Cap password attempts per IP to blunt credential brute-force.
-  const limited = rateLimit(`crm-login:${clientIp(req)}`, 10, 15 * 60_000);
+  const limited = await rateLimit(`crm-login:${clientIp(req)}`, 10, 15 * 60_000);
   if (limited) return limited;
 
   const { email, password } = await req.json();

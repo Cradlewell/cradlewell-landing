@@ -17,7 +17,7 @@ const authClient = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  const limited = rateLimit(`ops-login:${clientIp(req)}`, 10, 15 * 60_000);
+  const limited = await rateLimit(`ops-login:${clientIp(req)}`, 10, 15 * 60_000);
   if (limited) return limited;
 
   const { email, password } = await req.json();

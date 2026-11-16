@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase-server";
 
-// Lightweight fixed-window rate limiter.
+// Fixed-window rate limiter.
 //
-// State lives in a module-level Map, so it is per-instance: it throttles a burst
-// against one warm serverless instance but is not a global counter across many.
-// That is enough to blunt password brute-force and form spam; for a hard global
-// limit, back this with Upstash/Redis. It is a mitigation, not a guarantee.
+// The count is kept in the database (migrations/rate-limits.sql), so it adds up
+// across every server instance. Each instance also keeps its own count in
+// memory: it answers a burst without a database call, and it is the fallback
+// when the database can't be reached or the migration hasn't been run.
 
 interface Window { count: number; resetAt: number; }
 const buckets = new Map<string, Window>();
@@ -31,7 +32,27 @@ export function clientIp(req: NextRequest): string {
  * @param limit max requests allowed per window
  * @param windowMs window length in milliseconds
  */
-export function rateLimit(key: string, limit: number, windowMs: number): NextResponse | null {
+export async function rateLimit(key: string, limit: number, windowMs: number): Promise<NextResponse | null> {
+  const local = localLimit(key, limit, windowMs);
+  if (local) return local;
+  try {
+    const { data, error } = await supabase.rpc("hit_rate_limit", { p_key: key, p_limit: limit, p_window_ms: windowMs });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || !row) return null; // shared count unavailable: the local limit above still applies
+    return row.allowed ? null : tooMany(row.retry_after);
+  } catch {
+    return null;
+  }
+}
+
+function tooMany(retryAfter: number) {
+  return NextResponse.json(
+    { error: "Too many requests. Please slow down." },
+    { status: 429, headers: { "Retry-After": String(Math.max(1, retryAfter)) } }
+  );
+}
+
+function localLimit(key: string, limit: number, windowMs: number): NextResponse | null {
   const now = Date.now();
   sweep(now);
   const w = buckets.get(key);
@@ -39,13 +60,7 @@ export function rateLimit(key: string, limit: number, windowMs: number): NextRes
     buckets.set(key, { count: 1, resetAt: now + windowMs });
     return null;
   }
-  if (w.count >= limit) {
-    const retryAfter = Math.ceil((w.resetAt - now) / 1000);
-    return NextResponse.json(
-      { error: "Too many requests. Please slow down." },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } }
-    );
-  }
+  if (w.count >= limit) return tooMany(Math.ceil((w.resetAt - now) / 1000));
   w.count++;
   return null;
 }

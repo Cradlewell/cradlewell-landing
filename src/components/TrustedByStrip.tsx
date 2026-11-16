@@ -197,7 +197,7 @@ const TrustedByStrip = () => {
                 <div>
                   <div style={{ width: "32px", height: "2px", background: "rgba(255,255,255,0.5)", marginBottom: "16px", borderRadius: "2px" }} />
                   <p style={{ fontSize: "18px", fontWeight: "600", color: "#ffffff", margin: "0 0 10px 0", lineHeight: "1.55", maxWidth: "480px" }}>
-                    "Proud to bring professional postnatal care to every family in India"
+                    &ldquo;Proud to bring professional postnatal care to every family in India&rdquo;
                   </p>
                   <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)", margin: 0, letterSpacing: "0.4px" }}>
                     — Lokesh, CEO &amp; Co-Founder, Cradlewell
@@ -227,7 +227,7 @@ const TrustedByStrip = () => {
           }}>
             <div style={{ width: "24px", height: "2px", background: "rgba(255,255,255,0.45)", borderRadius: "2px", marginBottom: "14px" }} />
             <p style={{ fontSize: "14px", fontWeight: "600", color: "#ffffff", margin: "0 0 8px 0", lineHeight: "1.55" }}>
-              "Proud to bring professional postnatal care to every family in India"
+              &ldquo;Proud to bring professional postnatal care to every family in India&rdquo;
             </p>
             <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.55)", margin: "0 0 18px 0" }}>
               — Lokesh, CEO &amp; Co-Founder, Cradlewell

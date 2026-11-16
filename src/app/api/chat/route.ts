@@ -154,7 +154,7 @@ function getGreetingReply(lastUserMsg: string): string {
 
 export async function POST(req: NextRequest) {
     try {
-        const limited = rateLimit(`chat:${clientIp(req)}`, 40, 5 * 60_000);
+        const limited = await rateLimit(`chat:${clientIp(req)}`, 40, 5 * 60_000);
         if (limited) return limited;
 
         const json = await req.json();

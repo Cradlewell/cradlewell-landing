@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CRMLoginPage() {
@@ -9,6 +9,11 @@ export default function CRMLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Sent here by the CRM when the session ran out mid-edit
+  const [expired, setExpired] = useState(false);
+  useEffect(() => {
+    setExpired(new URLSearchParams(window.location.search).get("expired") === "1");
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,7 +94,9 @@ export default function CRMLoginPage() {
         }}>
           <h1 style={{ fontSize: 20, fontWeight: 500, letterSpacing: "-0.01em", margin: 0 }}>Sign in</h1>
           <p style={{ fontSize: 13, color: "rgb(112 112 112)", margin: "4px 0 20px" }}>
-            Sales team access only.
+            {expired
+              ? "Your session ran out. Sign in again and your unsaved changes will be saved."
+              : "Sales team access only."}
           </p>
 
           <form onSubmit={handleSubmit}>

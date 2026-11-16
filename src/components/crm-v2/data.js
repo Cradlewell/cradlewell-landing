@@ -203,8 +203,8 @@ export function uiLeadToDb(l, { packageValue, serviceDays }) {
   return {
     id: l.id,
     name: l.name || "Unnamed",
-    phone: l.phone || "",
-    whatsapp: l.phone || "",
+    phone: phoneDigits(l.phone),
+    whatsapp: phoneDigits(l.phone),
     source: l.source || "Website",
     stage: l.stage,
     hospital_name: l.hospital || null,
@@ -237,14 +237,16 @@ export function dbFollowupToUi(r) {
     type: m.type || FU_TYPE[r.type] || "Call",
     action: m.action || r.note || r.type || "Follow-up",
     due: toDate(r.due_at) || new Date(),
-    status: r.completed ? "done" : m.status && m.status !== "done" ? m.status : "open",
+    // "cancelled" is stored as completed so other readers of the table never
+    // treat it as open; it stays out of the done counts in the CRM.
+    status: m.status === "cancelled" ? "cancelled" : r.completed ? "done" : m.status && m.status !== "done" ? m.status : "open",
     completedAt: toDate(r.completed_at) || m.completedAt || null,
     createdAt: toDate(r.created_at) || m.createdAt || new Date(),
   };
 }
 
 export function uiFollowupToDb(f) {
-  const done = f.status === "done";
+  const done = f.status === "done" || f.status === "cancelled";
   return {
     id: f.id,
     lead_id: f.leadId,
@@ -256,6 +258,75 @@ export function uiFollowupToDb(f) {
     created_at: (f.createdAt instanceof Date ? f.createdAt : new Date()).toISOString(),
     meta: pack(f),
   };
+}
+
+/* ---------- Phone numbers ---------- */
+
+// Leads are stored with the bare 10-digit mobile, the form the website form and
+// WhatsApp use and match duplicates on. "+91 98450 12345", "919845012345" and
+// "09845012345" all become "9845012345"; anything shorter is kept as typed.
+export function phoneDigits(raw) {
+  const d = String(raw || "").replace(/\D/g, "");
+  return d.length >= 10 ? d.slice(-10) : String(raw || "").trim();
+}
+
+/* ---------- Tasks that follow a lead's stage ---------- */
+
+// Stages where the lead needs no more calls. Deferred pauses it instead: its
+// tasks are replaced by one reconnect call on the chosen date.
+const CLOSED_STAGES = ["Won", "Lost"];
+const UNDO_REOPEN_MS = 10 * 60000;
+
+// What settleTasks compares: the stage, plus the reconnect date while deferred
+// so that re-deferring to a new date moves the task too.
+export const stageKey = (l) => `${l.stage}|${l.stage === "Deferred" && l.deferredUntil ? new Date(l.deferredUntil).getTime() : ""}`;
+
+// moved: leads whose stageKey changed; before: id → previous stage.
+// Open tasks are cancelled when a lead is won, lost or deferred (a won lead
+// keeps its payment tasks). Deferring adds a reconnect call on the date.
+// Moving back to an active stage soon after (an undo) reopens what was
+// cancelled and drops the reconnect call.
+export function settleTasks(followups, moved, before, now = new Date()) {
+  let out = followups;
+  for (const l of moved) {
+    const from = before.get(l.id);
+    const to = l.stage;
+    const pausing = CLOSED_STAGES.includes(to) || to === "Deferred";
+    if (pausing) {
+      out = out.map((f) =>
+        f.leadId === l.id && f.status === "open" && f.type !== "Payment"
+          ? { ...f, status: "cancelled", closedBy: to, completedAt: now }
+          : f,
+      );
+      if (to === "Deferred" && l.deferredUntil) {
+        out = [
+          {
+            id: `fu-def-${l.id}-${now.getTime()}`,
+            leadId: l.id,
+            type: "Call",
+            action: `Reconnect after deferral${l.deferNote ? ` · ${l.deferNote}` : ""}`,
+            due: new Date(l.deferredUntil),
+            owner: l.owner || "You",
+            status: "open",
+            auto: "Deferred",
+            sakhiStatus: null,
+            summary: null,
+            createdAt: now,
+          },
+          ...out,
+        ];
+      }
+    } else if (CLOSED_STAGES.includes(from) || from === "Deferred") {
+      out = out.map((f) => {
+        if (f.leadId !== l.id) return f;
+        if (f.status === "open" && f.auto === "Deferred") return { ...f, status: "cancelled", closedBy: to, completedAt: now };
+        if (f.status === "cancelled" && f.closedBy === from && f.auto !== "Deferred" && now - new Date(f.completedAt) < UNDO_REOPEN_MS)
+          return { ...f, status: "open", closedBy: null, completedAt: null };
+        return f;
+      });
+    }
+  }
+  return out;
 }
 
 /* ---------- Timelines (old activity log → events) ---------- */
@@ -275,10 +346,10 @@ function activityToEvent(a) {
 
 /* ---------- Load everything ---------- */
 
-export async function loadCRM() {
+export async function loadCRM({ quiet = false } = {}) {
   const res = await fetch("/api/crm/v2", { cache: "no-store" });
   if (res.status === 401) {
-    window.location.href = "/crm/login";
+    if (!quiet) window.location.href = "/crm/login";
     throw new Error("Signed out");
   }
   if (!res.ok) throw new Error(`Could not load CRM data (${res.status})`);
@@ -379,10 +450,183 @@ export function recordWin(leadId, deal) {
 }
 
 export function enqueue(ops) {
-  for (const o of ops) queue.set(`${o.coll}:${o.id}`, o);
+  for (const o of ops) {
+    const key = `${o.coll}:${o.id}`;
+    queue.set(key, mergeOp(queue.get(key), o));
+  }
   clearTimeout(timer);
   timer = setTimeout(flush, 600);
 }
+
+/* ---------- Partial lead updates ---------- */
+
+// A lead edit sends only what changed: the changed columns, plus the meta keys
+// set or removed. The server merges that into the stored row, so two people
+// editing different things on the same lead no longer overwrite each other.
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+export function leadPatch(prevRow, nextRow) {
+  const row = {};
+  for (const k of Object.keys(nextRow)) if (k !== "meta" && k !== "id" && !same(nextRow[k], prevRow[k])) row[k] = nextRow[k];
+  const a = prevRow.meta || {};
+  const b = nextRow.meta || {};
+  const set = {};
+  for (const k of Object.keys(b)) if (!same(b[k], a[k])) set[k] = b[k];
+  const unset = Object.keys(a).filter((k) => !(k in b));
+  if (!Object.keys(row).length && !Object.keys(set).length && !unset.length) return null;
+  return { row, meta: { set, unset } };
+}
+
+export function applyMetaPatch(meta, patch) {
+  const out = { ...(meta || {}), ...(patch?.set || {}) };
+  for (const k of patch?.unset || []) delete out[k];
+  return out;
+}
+
+// Two queued writes for the same record become one. A patch on top of a patch
+// keeps both sets of changes; a patch on a not-yet-sent full row is folded in.
+export function mergeOp(prev, next) {
+  if (!prev || next.op !== "patch") return next;
+  if (prev.op === "patch") {
+    const set = { ...prev.meta.set, ...next.meta.set };
+    for (const k of next.meta.unset) delete set[k];
+    const unset = [...new Set([...prev.meta.unset.filter((k) => !(k in next.meta.set)), ...next.meta.unset])];
+    return { ...next, row: { ...prev.row, ...next.row }, meta: { set, unset } };
+  }
+  if (prev.op === "upsert") return { ...prev, row: { ...prev.row, ...next.row, meta: applyMetaPatch(prev.row.meta, next.meta) } };
+  return next;
+}
+
+/* ---------- What a background refresh may overwrite ---------- */
+
+// Objects that came from a refresh: the save step skips them, so pulling in
+// someone else's change never echoes it back to the server.
+const REMOTE = new WeakSet();
+export const isRemote = (x) => !!x && typeof x === "object" && REMOTE.has(x);
+
+const sending = new Map(); // key → requests in flight
+const answeredAt = new Map(); // key → when the server last answered a write for it
+function markSending(ops, delta) {
+  for (const o of ops) {
+    const key = `${o.coll}:${o.id}`;
+    const n = (sending.get(key) || 0) + delta;
+    if (n > 0) sending.set(key, n);
+    else sending.delete(key);
+    if (delta < 0) answeredAt.set(key, Date.now());
+  }
+}
+
+// True while this tab has a write for the record that the server may not have
+// seen when a refresh started at `since`: queued, held (a pending delete),
+// in flight, or answered after the refresh began. Then the local copy wins.
+export function isBusy(coll, id, since) {
+  const key = `${coll}:${id}`;
+  return queue.has(key) || later.has(key) || sending.has(key) || (answeredAt.get(key) || 0) >= since;
+}
+
+// Merge a refreshed list into the local one. Records this tab is still saving
+// keep their local version (or stay absent, for a pending delete); everything
+// else takes the server's. Unchanged records keep their identity, and when
+// nothing changed the same array comes back so nothing re-renders.
+export function mergeRemote(local, remote, canTake, onGone) {
+  const localById = new Map(local.map((x) => [x.id, x]));
+  const remoteIds = new Set(remote.map((x) => x.id));
+  const out = [];
+  for (const x of local) {
+    if (remoteIds.has(x.id)) continue;
+    if (!canTake(x.id)) out.push(x); // created here, not saved yet
+    else onGone?.(x.id); // deleted elsewhere
+  }
+  for (const r of remote) {
+    const l = localById.get(r.id);
+    if (!canTake(r.id)) {
+      if (l) out.push(l);
+      continue;
+    }
+    if (l && same(l, r)) {
+      out.push(l);
+      continue;
+    }
+    REMOTE.add(r);
+    out.push(r);
+  }
+  return out.length === local.length && out.every((x, i) => x === local[i]) ? local : out;
+}
+
+// Same for the timelines map (lead id → events).
+export function mergeRemoteMap(local, remote, canTake) {
+  let changed = false;
+  const out = { ...local };
+  for (const [id, evs] of Object.entries(remote || {})) {
+    if (!canTake(id) || same(local[id], evs)) continue;
+    REMOTE.add(evs);
+    out[id] = evs;
+    changed = true;
+  }
+  return changed ? out : local;
+}
+
+/* ---------- Changes that couldn't be saved yet ---------- */
+
+// A write that fails is never dropped silently. It's kept here and in the
+// browser's storage, and tried again when the connection returns, every 30 s,
+// and the next time the CRM opens (after signing in again if the session ran
+// out). Only a write the server keeps rejecting is given up, after 5 rounds,
+// and the user is told.
+const STASH_KEY = "cw-crm-unsaved";
+const MAX_ROUNDS = 5;
+const stash = new Map(); // key coll:id → { op, rounds }
+let onStatus = null;
+export const setSaveStatusHandler = (fn) => {
+  onStatus = fn;
+  fn?.(stash.size);
+};
+
+function persistStash() {
+  try {
+    if (stash.size) localStorage.setItem(STASH_KEY, JSON.stringify([...stash.values()]));
+    else localStorage.removeItem(STASH_KEY);
+  } catch {
+    // storage blocked: the in-memory copy still retries while the tab is open
+  }
+  onStatus?.(stash.size);
+}
+
+function keep(ops, countRound) {
+  for (const o of ops) {
+    const key = `${o.coll}:${o.id}`;
+    const cur = stash.get(key);
+    stash.set(key, { op: cur ? mergeOp(cur.op, o) : o, rounds: (cur?.rounds || 0) + (countRound ? 1 : 0) });
+  }
+  persistStash();
+}
+
+// Called once when the CRM opens: picks up what a previous visit couldn't save.
+export function restoreStash() {
+  try {
+    for (const e of JSON.parse(localStorage.getItem(STASH_KEY) || "[]")) {
+      if (e?.op?.coll && e.op.id) stash.set(`${e.op.coll}:${e.op.id}`, { op: e.op, rounds: e.rounds || 0 });
+    }
+  } catch {
+    // unreadable: nothing to restore
+  }
+  onStatus?.(stash.size);
+  return stash.size;
+}
+
+// Put kept writes back in the queue (under any newer edit of the same record) and send them.
+export function retryStash() {
+  if (!stash.size) return inflight;
+  for (const [key, { op }] of stash) {
+    const newer = queue.get(key);
+    queue.set(key, newer ? mergeOp(op, newer) : op);
+    roundsOf.set(key, stash.get(key).rounds);
+  }
+  stash.clear();
+  persistStash();
+  return flush();
+}
+const roundsOf = new Map(); // rounds a retried write had already used
 
 async function send(ops, attempt = 0) {
   try {
@@ -393,7 +637,14 @@ async function send(ops, attempt = 0) {
       keepalive: JSON.stringify(ops).length < 60000,
     });
     if (res.status === 401) {
-      window.location.href = "/crm/login";
+      // Signed out: keep this batch and everything still waiting, then sign in again.
+      // The next visit saves them before loading.
+      keep(ops, false);
+      keep([...queue.values(), ...[...later.values()].map((h) => h.op)], false);
+      queue = new Map();
+      for (const h of later.values()) clearTimeout(h.timer);
+      later.clear();
+      window.location.href = "/crm/login?expired=1";
       return;
     }
     const body = await res.json().catch(() => ({}));
@@ -407,41 +658,96 @@ async function send(ops, attempt = 0) {
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         return send(retry, attempt + 1);
       }
-      onError?.(`Couldn't save ${body.failed.length} change${body.failed.length > 1 ? "s" : ""}. Please refresh.`);
+      // Keep the rejected writes for another round; give up on one after MAX_ROUNDS.
+      const giveUp = [];
+      for (const o of retry) {
+        const key = `${o.coll}:${o.id}`;
+        const rounds = (roundsOf.get(key) || 0) + 1;
+        if (rounds >= MAX_ROUNDS) {
+          giveUp.push(o);
+          continue;
+        }
+        const newer = stash.get(key); // a later edit that failed to send meanwhile
+        stash.set(key, { op: newer ? mergeOp(o, newer.op) : o, rounds });
+      }
+      persistStash();
+      if (giveUp.length) onError?.(`The server keeps refusing ${giveUp.length} change${giveUp.length > 1 ? "s" : ""}, so ${giveUp.length > 1 ? "they were" : "it was"} not saved. Reload the CRM and try again.`);
+      else onError?.(`Couldn't save ${retry.length} change${retry.length > 1 ? "s" : ""} yet. They're kept and will be tried again.`);
     }
+    for (const o of ops) roundsOf.delete(`${o.coll}:${o.id}`);
   } catch (e) {
     if (attempt < 2) {
       await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
       return send(ops, attempt + 1);
     }
-    onError?.("Couldn't reach the server — your last changes may not be saved.");
+    keep(ops, false);
+    onError?.("Couldn't reach the server. Your changes are kept and will be saved when the connection is back.");
   }
 }
 
+// Writes held back for a while before they join the queue. A lead delete
+// cascades on the server (follow-ups, consultations, history, payments), so it
+// waits out the Undo window: Undo then just cancels it and nothing was lost.
+// flush() releases them early, so logging out or closing the tab still deletes.
+const later = new Map(); // key coll:id → { op, timer }
+
+export function enqueueLater(op, ms) {
+  const key = `${op.coll}:${op.id}`;
+  clearTimeout(later.get(key)?.timer);
+  later.set(key, {
+    op,
+    timer: setTimeout(() => {
+      later.delete(key);
+      enqueue([op]);
+    }, ms),
+  });
+}
+
+// True when a held write was cancelled before it reached the server.
+export function cancelLater(coll, id) {
+  const key = `${coll}:${id}`;
+  const held = later.get(key);
+  if (!held) return false;
+  clearTimeout(held.timer);
+  later.delete(key);
+  return true;
+}
+
 export function flush() {
+  for (const [key, held] of later) {
+    clearTimeout(held.timer);
+    queue.set(key, held.op);
+  }
+  later.clear();
   if (!queue.size) return inflight;
   const ops = [...queue.values()];
   queue = new Map();
   for (let i = 0; i < ops.length; i += 200) {
     const chunk = ops.slice(i, i + 200);
-    inflight = inflight.then(() => send(chunk));
+    markSending(chunk, 1);
+    inflight = inflight.then(() => send(chunk)).finally(() => markSending(chunk, -1));
   }
   return inflight;
 }
 
-export const hasPending = () => queue.size > 0;
+export const hasPending = () => queue.size > 0 || later.size > 0 || stash.size > 0;
 
 /* ---------- Diffing (state → write ops) ---------- */
 
-export function diffById(prev, next, coll, toRow) {
+export function diffById(prev, next, coll, toRow, { patch } = {}) {
   const ops = [];
   const before = new Map((prev || []).map((x) => [x.id, x]));
   const seen = new Set();
   for (const x of next || []) {
     seen.add(x.id);
-    if (before.get(x.id) !== x) {
+    const was = before.get(x.id);
+    if (was !== x && !isRemote(x)) {
       const row = toRow(x);
-      if (row) ops.push({ coll, op: "upsert", id: x.id, row });
+      if (!row) continue;
+      if (patch && was) {
+        const p = patch(toRow(was) || {}, row);
+        if (p) ops.push({ coll, op: "patch", id: x.id, ...p });
+      } else ops.push({ coll, op: "upsert", id: x.id, row });
     }
   }
   for (const id of before.keys()) if (!seen.has(id)) ops.push({ coll, op: "delete", id });
@@ -451,8 +757,11 @@ export function diffById(prev, next, coll, toRow) {
 export function diffTimelines(prev, next, leadIds) {
   const ops = [];
   for (const [id, evs] of Object.entries(next || {})) {
-    if (prev?.[id] === evs || !leadIds.has(id)) continue;
-    ops.push({ coll: "timelines", op: "upsert", id, row: { events: pack((evs || []).slice(0, 500)) } });
+    if (prev?.[id] === evs || !leadIds.has(id) || isRemote(evs)) continue;
+    // The server merges by event id, so name the ones deleted here
+    const kept = new Set((evs || []).map((e) => e.id));
+    const removed = (prev?.[id] || []).map((e) => e.id).filter((e) => !kept.has(e));
+    ops.push({ coll: "timelines", op: "upsert", id, row: { events: pack((evs || []).slice(0, 500)), removed } });
   }
   return ops;
 }

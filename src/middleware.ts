@@ -64,13 +64,69 @@ async function verifyHs256(token: string, secret: string): Promise<boolean> {
   }
 }
 
+// This project signs tokens with ES256 and publishes the public keys, so they
+// can be checked locally instead of asking Supabase on every request (that
+// round trip made each CRM page and save slower). Keys are cached for 10
+// minutes per server instance; an unknown key id triggers a refetch, at most
+// once a minute.
+const JWKS_TTL = 10 * 60_000;
+let jwks: { at: number; keys: Map<string, CryptoKey> } | null = null;
+
+async function loadJwks(): Promise<void> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`);
+    if (!res.ok) return;
+    const body = (await res.json()) as { keys?: (JsonWebKey & { kid?: string })[] };
+    const keys = new Map<string, CryptoKey>();
+    for (const k of body.keys ?? []) {
+      if (k.kty !== "EC" || k.crv !== "P-256" || !k.kid) continue;
+      const jwk: JsonWebKey = { kty: k.kty, crv: k.crv, x: k.x, y: k.y };
+      keys.set(k.kid, await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]));
+    }
+    jwks = { at: Date.now(), keys };
+  } catch {
+    // keep any keys already cached; the caller falls back to the network check
+  }
+}
+
+// true / false when the token could be checked locally; null to fall back.
+async function verifyEs256(token: string): Promise<boolean | null> {
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  let header: { alg?: string; kid?: string };
+  try {
+    header = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0])));
+  } catch {
+    return false;
+  }
+  if (header.alg !== "ES256" || !header.kid) return null;
+  const stale = !jwks || Date.now() - jwks.at > JWKS_TTL;
+  const unknown = !jwks?.keys.has(header.kid) && (!jwks || Date.now() - jwks.at > 60_000);
+  if (stale || unknown) await loadJwks();
+  const key = jwks?.keys.get(header.kid);
+  if (!key) return null;
+  try {
+    // JWS ES256 signatures are raw r||s, the format WebCrypto expects
+    return await crypto.subtle.verify(
+      { name: "ECDSA", hash: "SHA-256" },
+      key,
+      b64urlToBytes(parts[2]),
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+    );
+  } catch {
+    return null;
+  }
+}
+
 // A token is valid only if it is unexpired AND its signature verifies. The old
 // code checked expiry alone, so any self-made string with a future `exp` was
 // accepted — a full authentication bypass. Signature is now mandatory.
 async function tokenValid(token: string): Promise<boolean> {
   if (tokenExpired(token)) return false;
   if (SUPABASE_JWT_SECRET && (await verifyHs256(token, SUPABASE_JWT_SECRET))) return true;
-  // No local secret, or a non-HS256 (asymmetric) token: verify with Supabase.
+  const local = await verifyEs256(token);
+  if (local !== null) return local;
+  // Keys unavailable or another algorithm: verify with Supabase.
   return verifyToken(token);
 }
 

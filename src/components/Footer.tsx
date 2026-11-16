@@ -66,10 +66,10 @@ const Footer = () => {
           <div className="cw-footer-col">
             <h4 className="cw-footer-heading">Explore</h4>
             <ul className="cw-footer-links">
-              <li><a href="/#whychoose">Why Cradlewell</a></li>
-              <li><a href="/#howitworks">How it works</a></li>
-              <li><a href="/#ourplans">Care plans</a></li>
-              <li><a href="/#testimonials">Reviews</a></li>
+              <li><Link href="/#whychoose">Why Cradlewell</Link></li>
+              <li><Link href="/#howitworks">How it works</Link></li>
+              <li><Link href="/#ourplans">Care plans</Link></li>
+              <li><Link href="/#testimonials">Reviews</Link></li>
               <li><Link href="/blog">Blog</Link></li>
             </ul>
           </div>
