@@ -110,71 +110,29 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const lead = LeadSchema.parse(body);
 
-        const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL;
-        if (!webhookUrl) {
-            console.error("GOOGLE_SHEET_WEBHOOK_URL is not set");
-            return NextResponse.json({ success: false, error: "Webhook not configured" }, { status: 500 });
-        }
-
-        // Compute date / time / day in IST
         const now = new Date();
 
-        const lead_generated_date = new Intl.DateTimeFormat("en-IN", {
-            timeZone: "Asia/Kolkata",
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        }).format(now);
-
-        const lead_generated_time = new Intl.DateTimeFormat("en-US", {
-            timeZone: "Asia/Kolkata",
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-        }).format(now);
-
-        const lead_generated_day = new Intl.DateTimeFormat("en-IN", {
-            timeZone: "Asia/Kolkata",
-            weekday: "long",
-        }).format(now);
-
-        const payload = {
-            name: lead.name,
-            phone_number: lead.phone,
-            lead_generated_date,
-            lead_generated_time,
-            lead_generated_day,
-            service: lead.service,
-            baby_born_or_expecting: lead.babyStatus,
-            hospital_name: lead.hospitalName,
-            baby_birth_stage_status: lead.birthStageStatus,
-            baby_age: lead.babyAge,
-            current_weight: lead.currentWeight,
-            address: lead.address,
-            shift_type: lead.shiftType,
-            shift_hours: lead.shiftHours,
-            shift_time: lead.shiftTime,
-            care_start_date: lead.careStartDate,
-            service_days: lead.serviceDays,
-        };
-
-        // ── Write to Supabase CRM (never fails the form) ──────────────────────
-        // Runs ahead of the Google Sheets write on purpose: a webhook outage
-        // returns 500 below, and while this block sat after that return every
-        // lead submitted during the outage was missing from the CRM entirely.
+        // ── Write to Supabase CRM ─────────────────────────────────────────────
+        // The CRM is the only place an enquiry is stored, so the form reports
+        // success only once the lead row is written. A failed write returns an
+        // error so the visitor retries instead of the enquiry vanishing.
         // Normalize the phone to the last 10 digits so it matches WhatsApp-sourced
         // leads, and upsert on it so one number = one record (no duplicates).
         const dbPhone = lead.phone.replace(/\D/g, "").slice(-10);
         // Set to the row that still needs coordinates; geocoded after the
         // response is sent. Left null when the row already has a pin.
         let geocodeTargetId: string | null = null;
+        let saved = false;
         try {
-            const { data: matches } = await supabase
+            const { data: matches, error: lookupError } = await supabase
                 .from("leads")
                 .select("id, stage, home_lat, home_lng")
                 .eq("phone", dbPhone)
                 .order("created_at", { ascending: true })
                 .limit(1);
+            // A failed lookup would otherwise read as "new number" and insert a
+            // duplicate of a lead that already exists.
+            if (lookupError) throw new Error(lookupError.message);
             const existing = matches?.[0];
 
             if (existing) {
@@ -207,7 +165,8 @@ export async function POST(req: NextRequest) {
                 if (lead.serviceDays)      patch.service_days = parseInt(lead.serviceDays) || null;
                 const { error } = await supabase.from("leads").update(patch).eq("id", existing.id);
                 if (error) console.error("Supabase lead update error:", error.message);
-                else await logActivity(existing.id, "note", `Website form submitted — ${lead.service || "enquiry"}`, now);
+                else saved = true;
+                if (!error) await logActivity(existing.id, "note", `Website form submitted — ${lead.service || "enquiry"}`, now);
                 // A WhatsApp GPS share is an exact pin; a geocoded street address
                 // is an approximation, so never let one overwrite the other.
                 if (!error && existing.home_lat == null && existing.home_lng == null) geocodeTargetId = existing.id;
@@ -240,13 +199,16 @@ export async function POST(req: NextRequest) {
                 });
                 // Race safety: concurrent insert already created it → update instead.
                 if (error?.code === "23505") {
-                    await supabase
+                    const { error: raceError } = await supabase
                         .from("leads")
                         .update({ last_activity_at: now.toISOString(), lead_date: now.toISOString() })
                         .eq("phone", dbPhone);
+                    if (raceError) console.error("Supabase lead update error:", raceError.message);
+                    else saved = true;
                 } else if (error) {
                     console.error("Supabase lead insert error:", error.message);
                 } else {
+                    saved = true;
                     await logActivity(newId, "created", `Lead created from website form — ${lead.service || "enquiry"}`, now);
                     geocodeTargetId = newId;
                 }
@@ -255,12 +217,14 @@ export async function POST(req: NextRequest) {
             console.error("Supabase lead upsert failed:", err);
         }
 
+        if (!saved) {
+            return NextResponse.json({ success: false, error: "Could not save your enquiry" }, { status: 500 });
+        }
+
         // ── Locate the lead for the Nearby Staff board ────────────────────────
         // Deferred until the response has been sent: Nominatim regularly takes a
         // second or more, and that is latency the person waiting on the form
-        // should not pay for a field they cannot see. Registered here rather than
-        // at the end of the handler so a Google Sheets failure — which returns
-        // below — still leaves the lead located.
+        // should not pay for a field they cannot see.
         if (geocodeTargetId && lead.address) {
             const targetId = geocodeTargetId;
             const address = lead.address;
@@ -274,19 +238,6 @@ export async function POST(req: NextRequest) {
                     .eq("id", targetId);
                 if (error) console.error("Supabase lead geocode update error:", error.message);
             });
-        }
-
-        // ── Write to Google Sheets (primary) ──────────────────────────────────
-        const response = await fetch(webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            console.error("Google Sheet webhook error:", text);
-            return NextResponse.json({ success: false, error: text }, { status: 500 });
         }
 
         // ── Facebook Conversions API (server-side) ────────────────────────────
