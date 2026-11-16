@@ -1017,11 +1017,13 @@ const StatusText = ({ dot, tone, children, pulse }) => (
   </span>
 );
 
-function MyDay({ now, items, onOpen, showToast, md }) {
+function MyDay({ now, items, leads = [], onOpen, showToast, md }) {
   const { daySections, toggleDaySection, selectedId, setSelectedId, rowMenu, setRowMenu, actions, scheduleOutcomes, logScheduleOutcome, opps, oppTotal, onSellOpp, onCallOpp, dismissOpp, attnFilter, setAttnFilter, jumpTo, flash, onViewAllOpps, onCalendar } = md;
   const open = items.filter((i) => i.status === "open" || i.status === "leaving");
   const count = (sections) => items.filter((i) => i.status === "open" && sections.includes(i.section));
   const newItems = count(["new"]);
+  // Leads created today (any stage)
+  const newToday = leads.filter((l) => l.createdAt && dayDiff(l.createdAt, now) === 0);
   const overdue = count(["overdue"]);
   const followups = count(["overdue", "due"]);
   const payments = count(["payment"]);
@@ -1090,7 +1092,7 @@ function MyDay({ now, items, onOpen, showToast, md }) {
       {/* Stat cards */}
       {/* Phones: one swipeable row so "Needs your attention" is on the first screen */}
       <div className="mt-5 sm:mt-8 -mx-5 px-5 sm:mx-0 sm:px-0 flex sm:grid overflow-x-auto sm:overflow-visible snap-x snap-mandatory scroll-px-5 [scrollbar-width:none] sm:grid-cols-3 lg:grid-cols-5 gap-2 [&>*]:shrink-0 [&>*]:w-[148px] sm:[&>*]:w-auto [&>*]:snap-start">
-        <StatCard index={0} label="New leads" icon={UserPlus} value={newItems.length} sub={[...new Set(newItems.map((i) => i.source.replace(" ad", "").replace(" form", "")))].join(", ") || "None yet today"} onClick={() => { setAttnFilter("new"); jumpTo("sec-attention", []); }} />
+        <StatCard index={0} label="New leads today" icon={UserPlus} value={newToday.length} sub={[...new Set(newToday.map((l) => (l.source || "").replace(" ad", "").replace(" form", "")).filter(Boolean))].join(", ") || "None yet today"} onClick={() => { setAttnFilter("new"); jumpTo("sec-attention", []); }} />
         <StatCard index={1} label="Consultations" icon={CalendarDays} value={consults.length} sub={nextConsult ? `Next ${fmtTime(nextConsult.at)}` : pendingOutcomes ? `${pendingOutcomes} outcome${pendingOutcomes > 1 ? "s" : ""} to log` : "All done"} onClick={() => jumpTo("sec-consults", [])} />
         <StatCard
           index={2}
@@ -1247,9 +1249,8 @@ function MyDay({ now, items, onOpen, showToast, md }) {
             );
           })}
         </DaySection>
-      </div>
 
-      <ShortcutBar />
+      </div>
     </div>
   );
 }
@@ -10966,6 +10967,7 @@ function CRMApp({ initial }) {
             <MyDay
               now={now}
               items={items}
+              leads={leads}
               onOpen={actions.open}
               showToast={showToast}
               md={{
