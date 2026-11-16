@@ -6,6 +6,28 @@ import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { geocodeAddress } from "@/lib/geocode";
 import { nearestZone } from "@/lib/zones";
 
+// The only sources the public form may claim. Anything else is recorded as
+// "Website", so a crafted request can't mislabel where a lead came from.
+const ALLOWED_SOURCES = ["Website", "Aria Chat"];
+
+// Form field → CRM column, with the label used in the submission note.
+const FORM_FIELDS = [
+    ["service", "service_required", "Service"],
+    ["babyStatus", "baby_status", "Baby status"],
+    ["hospitalName", "hospital_name", "Hospital"],
+    ["birthStageStatus", "baby_birth_stage_status", "Birth stage"],
+    ["babyAge", "baby_age", "Baby age"],
+    ["currentWeight", "current_weight", "Weight"],
+    ["address", "address", "Address"],
+    ["shiftType", "preferred_shift", "Shift"],
+    ["shiftHours", "shift_hours_count", "Shift hours"],
+    ["shiftTime", "shift_time", "Shift time"],
+    ["careStartDate", "care_start_date", "Care start"],
+    ["serviceDays", "service_days", "Service days"],
+] as const;
+const NUMERIC_COLUMNS = new Set<string>(["shift_hours_count", "service_days"]);
+const isEmpty = (v: unknown) => v == null || v === "" || v === "Unknown";
+
 function sha256(value: string): string {
     return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
 }
@@ -126,50 +148,49 @@ export async function POST(req: NextRequest) {
         try {
             const { data: matches, error: lookupError } = await supabase
                 .from("leads")
-                .select("id, stage, home_lat, home_lng")
+                .select(`id, stage, name, home_lat, home_lng, ${FORM_FIELDS.map((f) => f[1]).join(", ")}`)
                 .eq("phone", dbPhone)
                 .order("created_at", { ascending: true })
                 .limit(1);
             // A failed lookup would otherwise read as "new number" and insert a
             // duplicate of a lead that already exists.
             if (lookupError) throw new Error(lookupError.message);
-            const existing = matches?.[0];
+            const existing = matches?.[0] as unknown as (Record<string, unknown> & { id: string; stage: string }) | undefined;
 
             if (existing) {
-                // Fill in details from the form without clobbering an existing
-                // record's identity (keep original source/owner).
+                // Anyone can submit the public form with any phone number, so it
+                // never overwrites what is already on a known lead: it only fills
+                // fields that are still empty. Everything submitted is kept in a
+                // note on the lead's timeline for the rep to review.
                 const patch: Record<string, unknown> = {
                     last_activity_at: now.toISOString(),
-                    // A known number filling the form is a fresh enquiry, not a
-                    // touch on the old record. Leaving lead_date at its original
-                    // value kept the row sitting at its months-old position in the
-                    // Leads list, which is indistinguishable from the submission
-                    // never having reached the CRM.
+                    // A known number filling the form is a fresh enquiry, so it moves
+                    // to the top of the Leads list.
                     lead_date: now.toISOString(),
                 };
                 // Bring a lead back from a dead stage. Active pipeline stages are
                 // left alone so a re-submission cannot walk back a rep's work.
                 if (DEAD_STAGES.includes(existing.stage)) patch.stage = "New";
-                if (lead.name)             patch.name = lead.name;
-                if (lead.service)          patch.service_required = lead.service;
-                if (lead.babyStatus)       patch.baby_status = lead.babyStatus;
-                if (lead.hospitalName)     patch.hospital_name = lead.hospitalName;
-                if (lead.birthStageStatus) patch.baby_birth_stage_status = lead.birthStageStatus;
-                if (lead.babyAge)          patch.baby_age = lead.babyAge;
-                if (lead.currentWeight)    patch.current_weight = lead.currentWeight;
-                if (lead.address)          patch.address = lead.address;
-                if (lead.shiftType)        patch.preferred_shift = lead.shiftType;
-                if (lead.shiftHours)       patch.shift_hours_count = parseInt(lead.shiftHours) || null;
-                if (lead.shiftTime)        patch.shift_time = lead.shiftTime;
-                if (lead.careStartDate)    patch.care_start_date = lead.careStartDate;
-                if (lead.serviceDays)      patch.service_days = parseInt(lead.serviceDays) || null;
+                if (isEmpty(existing.name)) patch.name = lead.name;
+                const submitted: string[] = [];
+                for (const [field, column, label] of FORM_FIELDS) {
+                    const value = lead[field];
+                    if (!value) continue;
+                    submitted.push(`${label}: ${value}`);
+                    if (!isEmpty(existing[column])) continue;
+                    patch[column] = NUMERIC_COLUMNS.has(column) ? parseInt(value) || null : value;
+                }
                 const { error } = await supabase.from("leads").update(patch).eq("id", existing.id);
                 if (error) console.error("Supabase lead update error:", error.message);
                 else saved = true;
-                if (!error) await logActivity(existing.id, "note", `Website form submitted — ${lead.service || "enquiry"}`, now);
+                if (!error) {
+                    const details = [`Name given: ${lead.name}`, ...submitted].join(" · ");
+                    await logActivity(existing.id, "note", `Website form submitted again — ${details}`.slice(0, 2000), now);
+                }
                 // A WhatsApp GPS share is an exact pin; a geocoded street address
                 // is an approximation, so never let one overwrite the other.
-                if (!error && existing.home_lat == null && existing.home_lng == null) geocodeTargetId = existing.id;
+                // Only geocode an address this submission actually filled in.
+                if (!error && existing.home_lat == null && existing.home_lng == null && patch.address) geocodeTargetId = existing.id;
             } else {
                 const newId = crypto.randomUUID();
                 const { error } = await supabase.from("leads").insert({
@@ -177,7 +198,7 @@ export async function POST(req: NextRequest) {
                     name: lead.name,
                     phone: dbPhone,
                     whatsapp: dbPhone,
-                    source: lead.source || "Website",
+                    source: ALLOWED_SOURCES.includes(lead.source) ? lead.source : "Website",
                     lead_date: now.toISOString(),
                     service_required: lead.service,
                     baby_status: lead.babyStatus || "Unknown",

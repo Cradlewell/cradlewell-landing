@@ -36,7 +36,7 @@ export default function StickyMobileCTA() {
         <div style={{
           fontSize: '0.72rem',
           color: '#94A3B8',
-          fontFamily: "'Lexend', system-ui, sans-serif",
+          fontFamily: "var(--font-lexend), system-ui, sans-serif",
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.07em',
@@ -47,7 +47,7 @@ export default function StickyMobileCTA() {
         <div style={{
           fontSize: '0.92rem',
           color: '#0F172A',
-          fontFamily: "'Lexend', system-ui, sans-serif",
+          fontFamily: "var(--font-lexend), system-ui, sans-serif",
           fontWeight: 700,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -64,7 +64,7 @@ export default function StickyMobileCTA() {
           background: '#5F47FF',
           border: 'none',
           color: '#fff',
-          fontFamily: "'Lexend', system-ui, sans-serif",
+          fontFamily: "var(--font-lexend), system-ui, sans-serif",
           fontWeight: 700,
           fontSize: '0.9rem',
           padding: '12px 22px',

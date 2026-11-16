@@ -82,7 +82,7 @@ const HeroHeader1 = () => {
               style={{
                 fontSize: "0.8rem",
                 color: "var(--cw-text-muted)",
-                fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                fontFamily: "var(--font-source-sans), system-ui, sans-serif",
               }}
             >
               No hidden charges · Background-verified nurses · Same-day availability

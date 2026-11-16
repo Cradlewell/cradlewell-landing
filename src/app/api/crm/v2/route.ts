@@ -11,10 +11,6 @@ import { requireAuth } from "@/lib/auth-guard";
    Only whitelisted columns are written, so the client cannot touch anything else.
    ========================================================================== */
 
-// Run next to the database (Supabase, AWS Mumbai). From Vercel's default US
-// region every query crossed the world, which was most of the CRM's load time.
-export const preferredRegion = "bom1";
-
 type Row = Record<string, unknown>;
 
 const LEAD_COLS = new Set([
@@ -35,7 +31,7 @@ async function all(table: string, order = "id") {
 }
 
 export async function GET(req: NextRequest) {
-  const authErr = requireAuth(req);
+  const authErr = await requireAuth(req);
   if (authErr) return authErr;
   try {
     const [leads, followups, closures, activity, consults, timelines, settings] = await Promise.all([
@@ -93,7 +89,7 @@ async function recordWin(leadId: string, r: Row) {
   return error;
 }
 
-// When a lead becomes Won, make sure Operations (which reads `closures`) sees it.
+// When a lead becomes Won, make sure it has a Won entry in `closures` (revenue records).
 async function ensureWonClosure(lead: Row) {
   const meta = (lead.meta ?? {}) as Row;
   const { data: existing } = await supabase
@@ -132,7 +128,7 @@ async function ensureWonClosure(lead: Row) {
 }
 
 export async function POST(req: NextRequest) {
-  const authErr = requireAuth(req);
+  const authErr = await requireAuth(req);
   if (authErr) return authErr;
 
   let body: { ops?: { coll: string; op: string; id: string; row?: Row; meta?: { set?: Row; unset?: string[] } }[] };

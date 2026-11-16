@@ -190,7 +190,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
         <Modal.Header closeButton style={{ borderBottom: 'none', padding: '20px 24px 0' }}>
           <div style={{ width: '100%' }}>
             <Modal.Title style={{
-              fontFamily: "'Lexend', system-ui, sans-serif",
+              fontFamily: "var(--font-lexend), system-ui, sans-serif",
               fontSize: '1.25rem',
               fontWeight: 700,
               letterSpacing: '-0.01em',
@@ -212,7 +212,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                 <Check size={28} strokeWidth={2.5} color="#16A34A" />
               </div>
               <h3 style={{
-                fontFamily: "'Lexend', system-ui, sans-serif",
+                fontFamily: "var(--font-lexend), system-ui, sans-serif",
                 fontSize: '1.2rem', fontWeight: 700,
                 color: 'var(--cw-text-primary)', marginBottom: 8,
               }}>
@@ -249,7 +249,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
               {/* Step heading */}
               <div style={{ marginBottom: 20 }}>
                 <h4 style={{
-                  fontFamily: "'Lexend', system-ui, sans-serif",
+                  fontFamily: "var(--font-lexend), system-ui, sans-serif",
                   fontSize: '1.05rem', fontWeight: 700,
                   letterSpacing: '-0.01em',
                   color: 'var(--cw-text-primary)',

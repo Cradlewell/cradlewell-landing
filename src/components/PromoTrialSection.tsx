@@ -62,7 +62,7 @@ const PromoTrialSection = () => {
               borderRadius: '100px',
               padding: '5px 16px',
               fontSize: '0.75rem',
-              fontFamily: "'Lexend', system-ui, sans-serif",
+              fontFamily: "var(--font-lexend), system-ui, sans-serif",
               fontWeight: 700,
               letterSpacing: '0.1em',
               textTransform: 'uppercase' as const,
@@ -75,7 +75,7 @@ const PromoTrialSection = () => {
 
         <h2
           style={{
-            fontFamily: "'Lexend', system-ui, sans-serif",
+            fontFamily: "var(--font-lexend), system-ui, sans-serif",
             fontWeight: 800,
             fontSize: 'clamp(1.6rem, 4vw, 2.4rem)',
             letterSpacing: '-0.03em',
@@ -87,7 +87,7 @@ const PromoTrialSection = () => {
         </h2>
         <p
           style={{
-            fontFamily: "'Source Sans 3', system-ui, sans-serif",
+            fontFamily: "var(--font-source-sans), system-ui, sans-serif",
             color: 'rgba(255,255,255,0.75)',
             fontSize: '1.05rem',
             marginBottom: '36px',
@@ -108,7 +108,7 @@ const PromoTrialSection = () => {
               background: '#F97316',
               border: 'none',
               color: '#fff',
-              fontFamily: "'Lexend', system-ui, sans-serif",
+              fontFamily: "var(--font-lexend), system-ui, sans-serif",
               fontWeight: 700,
               fontSize: '1rem',
               padding: '14px 36px',
@@ -125,7 +125,7 @@ const PromoTrialSection = () => {
               background: 'rgba(255,255,255,0.12)',
               border: '1.5px solid rgba(255,255,255,0.35)',
               color: '#fff',
-              fontFamily: "'Lexend', system-ui, sans-serif",
+              fontFamily: "var(--font-lexend), system-ui, sans-serif",
               fontWeight: 600,
               fontSize: '0.95rem',
               padding: '13px 28px',
@@ -144,7 +144,7 @@ const PromoTrialSection = () => {
           style={{
             color: 'rgba(255,255,255,0.5)',
             fontSize: '0.82rem',
-            fontFamily: "'Source Sans 3', system-ui, sans-serif",
+            fontFamily: "var(--font-source-sans), system-ui, sans-serif",
           }}
         >
           <span>· No hidden charges</span>

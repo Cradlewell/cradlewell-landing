@@ -1,26 +1,11 @@
 import { MetadataRoute } from 'next';
+import { BLOG_POSTS } from '@/content/blog-posts';
+import { BASE_URL } from '@/lib/seo';
 
-const BASE_URL = 'https://www.cradlewell.com';
-const WP_API = 'https://blog.cradlewell.com/wp-json/wp/v2';
-
-async function getBlogPosts(): Promise<{ slug: string; modified: string }[]> {
-  try {
-    const res = await fetch(`${WP_API}/posts?per_page=50&_fields=slug,modified`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
-}
-
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const posts = await getBlogPosts();
-
-  const blogUrls: MetadataRoute.Sitemap = posts.map((post) => ({
+export default function sitemap(): MetadataRoute.Sitemap {
+  const blogUrls: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
     url: `${BASE_URL}/blog/${post.slug}`,
-    lastModified: new Date(post.modified),
+    lastModified: new Date(post.updated),
     changeFrequency: 'monthly',
     priority: 0.7,
   }));
@@ -34,7 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${BASE_URL}/blog`,
-      lastModified: new Date(),
+      lastModified: new Date(BLOG_POSTS[0]?.updated ?? Date.now()),
       changeFrequency: 'weekly',
       priority: 0.8,
     },

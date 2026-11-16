@@ -1,20 +1,13 @@
 "use client";
-import { usePathname } from "next/navigation";
 import { ModalProvider } from "@/components/ModalContext";
 import LayoutClient from "@/components/LayoutClient";
 import Footer from "@/components/Footer";
 import AIChatWidget from "@/components/AIChatWidget";
 import MouseEffects from "@/components/MouseEffects";
 
+// The public site's shell (header, footer, chat, booking modal). Used only by
+// the (site) layout, so the CRM never renders it.
 export default function LandingShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isCRM = pathname.startsWith("/crm");
-  const isOps = pathname.startsWith("/operations");
-
-  if (isCRM || isOps) {
-    return <>{children}</>;
-  }
-
   return (
     <ModalProvider>
       <LayoutClient />

@@ -80,7 +80,7 @@ const StepsSection = () => {
                   top: 20,
                   right: 24,
                   fontSize: '2.4rem',
-                  fontFamily: "'Lexend', system-ui, sans-serif",
+                  fontFamily: "var(--font-lexend), system-ui, sans-serif",
                   fontWeight: 800,
                   color: 'rgba(95,71,255,0.10)',
                   lineHeight: 1,
@@ -104,7 +104,7 @@ const StepsSection = () => {
                 </div>
 
                 <h3 style={{
-                  fontFamily: "'Lexend', system-ui, sans-serif",
+                  fontFamily: "var(--font-lexend), system-ui, sans-serif",
                   fontWeight: 700,
                   fontSize: '1.05rem',
                   color: '#0F172A',
@@ -118,7 +118,7 @@ const StepsSection = () => {
                   fontSize: '0.94rem',
                   lineHeight: 1.65,
                   margin: 0,
-                  fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                  fontFamily: "var(--font-source-sans), system-ui, sans-serif",
                 }}>
                   {step.desc}
                 </p>

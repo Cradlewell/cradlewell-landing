@@ -119,7 +119,7 @@ const PricingSection = () => {
                   </div>
                   <div>
                     <h3 style={{
-                      fontFamily: "'Lexend', system-ui, sans-serif",
+                      fontFamily: "var(--font-lexend), system-ui, sans-serif",
                       fontWeight: 700,
                       fontSize: '1.25rem',
                       color: 'var(--cw-text-primary)',
@@ -129,7 +129,7 @@ const PricingSection = () => {
                       {plan.name}
                     </h3>
                     <div style={{
-                      fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                      fontFamily: "var(--font-source-sans), system-ui, sans-serif",
                       fontSize: '0.86rem',
                       color: 'var(--cw-text-secondary)',
                       marginTop: 2,
@@ -143,7 +143,7 @@ const PricingSection = () => {
                 <div style={{ marginBottom: 28 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                     <span style={{
-                      fontFamily: "'Lexend', system-ui, sans-serif",
+                      fontFamily: "var(--font-lexend), system-ui, sans-serif",
                       fontSize: 'clamp(2.4rem, 5vw, 3.25rem)',
                       fontWeight: 800,
                       lineHeight: 1,
@@ -154,7 +154,7 @@ const PricingSection = () => {
                       ₹{plan.price}
                     </span>
                     <span style={{
-                      fontFamily: "'Lexend', system-ui, sans-serif",
+                      fontFamily: "var(--font-lexend), system-ui, sans-serif",
                       fontSize: '0.92rem',
                       fontWeight: 600,
                       color: 'var(--cw-text-secondary)',
@@ -163,7 +163,7 @@ const PricingSection = () => {
                     </span>
                   </div>
                   <div style={{
-                    fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                    fontFamily: "var(--font-source-sans), system-ui, sans-serif",
                     fontSize: '0.78rem',
                     color: 'var(--cw-text-muted)',
                     marginTop: 6,
@@ -214,7 +214,7 @@ const PricingSection = () => {
           </button>
           <p style={{
             marginTop: 8,
-            fontFamily: "'Source Sans 3', system-ui, sans-serif",
+            fontFamily: "var(--font-source-sans), system-ui, sans-serif",
             color: 'var(--cw-text-muted)',
             fontSize: '0.84rem',
           }}>

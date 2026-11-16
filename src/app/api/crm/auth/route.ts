@@ -10,20 +10,27 @@ const cookieOpts = {
   path: "/",
 };
 
-// Auth sign-in must use anon key — service role key cannot authenticate users
-const authClient = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-);
+// Auth must use the anon key (the service role key cannot sign users in). A
+// fresh client per request: these clients hold the signed-in session, and a
+// shared one would mix up concurrent logins and logouts on the same instance.
+const authClient = () =>
+  createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
 export async function POST(req: NextRequest) {
   // Cap password attempts per IP to blunt credential brute-force.
   const limited = await rateLimit(`crm-login:${clientIp(req)}`, 10, 15 * 60_000);
   if (limited) return limited;
 
-  const { email, password } = await req.json();
+  const body = await req.json().catch(() => null);
+  const email = typeof body?.email === "string" ? body.email.trim() : "";
+  const password = typeof body?.password === "string" ? body.password : "";
+  if (!email || !password) {
+    return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
+  }
 
-  const { data, error } = await authClient.auth.signInWithPassword({ email, password });
+  const { data, error } = await authClient().auth.signInWithPassword({ email, password });
   if (error || !data.session) {
     return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
   }
@@ -46,8 +53,9 @@ export async function DELETE(req: NextRequest) {
 
   if (accessToken && refreshToken) {
     try {
-      await authClient.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-      await authClient.auth.signOut();
+      const client = authClient();
+      await client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      await client.auth.signOut({ scope: "local" });
     } catch {
       // best-effort server-side revocation
     }

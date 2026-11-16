@@ -64,7 +64,7 @@ html {
 }
 
 body {
-  font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-source-sans), 'Segoe UI', system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.65;
   color: var(--cw-text-primary);
@@ -75,12 +75,12 @@ body {
 }
 
 :root {
-  --bs-body-font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --bs-body-font-family: var(--font-source-sans), 'Segoe UI', system-ui, sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6,
 .fw-bold, .fw-semibold {
-  font-family: 'Lexend', 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-lexend), var(--font-source-sans), system-ui, sans-serif;
   letter-spacing: -0.02em;
 }
 
@@ -90,7 +90,7 @@ h3 { font-size: var(--cw-fs-h3); font-weight: 600; line-height: var(--cw-lh-snug
 h4 { font-size: var(--cw-fs-h4); font-weight: 600; line-height: var(--cw-lh-snug); }
 
 p {
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   color: var(--cw-text-secondary);
   line-height: 1.7;
 }
@@ -102,7 +102,7 @@ p {
 
 /* ─── Buttons ─────────────────────────────────────────────────── */
 .btn {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: 0.01em;
   border-radius: 12px;
@@ -140,37 +140,8 @@ p {
 .btn-primary:active { transform: scale(0.97); }
 
 /* CTA conversion button — warm orange, solid */
-.btn-cta {
-  background: var(--cw-cta);
-  border: none;
-  color: #fff !important;
-  padding: 14px 36px;
-  font-size: 1.05rem;
-  box-shadow: 0 4px 16px rgba(249,115,22,0.28);
-}
-
-.btn-cta:hover {
-  background: var(--cw-cta-hover);
-  box-shadow: 0 6px 24px rgba(249,115,22,0.35);
-  transform: translateY(-1px);
-  color: #fff !important;
-}
 
 /* Outline light — for dark bg contexts */
-.btn-outline-light {
-  border: 1.5px solid rgba(255,255,255,0.55);
-  color: #fff !important;
-  backdrop-filter: blur(4px);
-  background: rgba(255,255,255,0.08);
-  transition: background-color var(--cw-duration) var(--cw-ease),
-              border-color var(--cw-duration) var(--cw-ease);
-}
-
-.btn-outline-light:hover {
-  background: rgba(255,255,255,0.18);
-  border-color: rgba(255,255,255,0.85);
-  color: #fff !important;
-}
 
 /* ─── Hero Section ────────────────────────────────────────────── */
 .ezy__header1 {
@@ -195,7 +166,7 @@ p {
 }
 
 .ezy__header1-heading {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 800;
   font-size: var(--cw-fs-display);
   line-height: var(--cw-lh-tight);
@@ -205,7 +176,7 @@ p {
 
 .ezy__header1-sub-heading {
   color: var(--cw-text-secondary);
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: clamp(1rem, 2vw, 1.2rem);
   line-height: 1.65;
   opacity: 1;
@@ -213,29 +184,6 @@ p {
 }
 
 /* Trust bar in hero */
-.hero-trust-bar {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255,255,255,0.84);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(95,71,255,0.18);
-  border-radius: 100px;
-  padding: 7px 16px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--cw-text-primary);
-  font-family: 'Lexend', system-ui, sans-serif;
-  box-shadow: var(--cw-shadow-xs);
-  white-space: nowrap;
-}
-
-.hero-trust-bar .divider {
-  width: 1px;
-  height: 14px;
-  background: rgba(17,17,16,0.15);
-  flex-shrink: 0;
-}
 
 /* ─── Navigation (cw-nav) ────────────────────────────────────── */
 .cw-nav {
@@ -287,7 +235,7 @@ p {
 .cw-nav-link {
   position: relative;
   display: inline-block;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--cw-text-secondary);
@@ -316,7 +264,7 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: 0.86rem;
   font-weight: 500;
   color: var(--cw-text-secondary);
@@ -337,7 +285,7 @@ p {
   background: var(--cw-cta);
   color: #fff;
   border: none;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.88rem;
   letter-spacing: -0.005em;
@@ -417,7 +365,7 @@ p {
 }
 
 .cw-nav-sheet-link {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: 1.05rem;
   font-weight: 500;
   color: var(--cw-text-primary);
@@ -441,7 +389,7 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--cw-text-secondary);
@@ -462,7 +410,7 @@ p {
   background: var(--cw-cta);
   color: #fff;
   border: none;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
   padding: 14px 22px;
@@ -558,7 +506,7 @@ p {
   top: -12px;
   left: 24px;
   color: #fff;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -591,7 +539,7 @@ p {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: 0.94rem;
   line-height: 1.5;
   color: var(--cw-text-primary);
@@ -615,7 +563,7 @@ p {
   gap: 8px;
   border: none;
   color: #fff;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: -0.005em;
@@ -649,7 +597,7 @@ p {
   gap: 6px;
   background: none;
   border: none;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--cw-brand-primary);
@@ -696,12 +644,6 @@ p {
   border-radius: 4px;
 }
 
-.testimonial-stars {
-  color: #F59E0B;
-  font-size: 1rem;
-  letter-spacing: 1px;
-}
-
 /* ─── FAQ Section ────────────────────────────────────────────── */
 .custom-accordion .accordion-item {
   border-radius: var(--cw-radius-md) !important;
@@ -718,7 +660,7 @@ p {
 }
 
 .custom-accordion .accordion-button {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 500;
   font-size: 1rem;
   padding: 1.1rem 1.4rem;
@@ -744,7 +686,7 @@ p {
 .custom-accordion .accordion-body {
   background-color: rgba(95,71,255,0.04);
   padding: 1rem 1.4rem 1.25rem;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   color: var(--cw-text-secondary);
   font-size: 0.97rem;
   line-height: 1.7;
@@ -756,21 +698,10 @@ p {
 }
 
 /* ─── Steps Section ──────────────────────────────────────────── */
-.steps-card {
-  background-color: rgba(95, 71, 255, 0.04);
-  border-radius: var(--cw-radius-lg);
-  transition: box-shadow var(--cw-duration) var(--cw-ease),
-              transform var(--cw-duration) var(--cw-ease);
-}
-
-.steps-card:hover {
-  box-shadow: var(--cw-shadow-sm);
-  transform: translateY(-3px);
-}
 
 /* ─── Stats Row ──────────────────────────────────────────────── */
 .stat-number {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 800;
   letter-spacing: -0.04em;
   color: var(--cw-text-primary);
@@ -779,7 +710,7 @@ p {
 }
 
 .stat-label {
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: 0.82rem;
   color: var(--cw-text-muted);
   font-weight: 500;
@@ -788,18 +719,12 @@ p {
   margin-top: 6px;
 }
 
-.stat-divider {
-  width: 1px;
-  background: rgba(17,17,16,0.10);
-  align-self: stretch;
-}
-
 /* ─── Section Labels ─────────────────────────────────────────── */
 .section-eyebrow {
   display: inline-block;
   background: var(--cw-brand-light);
   color: var(--cw-brand-primary);
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: var(--cw-fs-eyebrow);
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -816,19 +741,6 @@ body.modal-open .sticky-mobile-cta {
 }
 
 /* ─── Reels / Video ──────────────────────────────────────────── */
-.ratio-reel {
-  position: relative;
-  width: 100%;
-  padding-top: 177.78%;
-}
-
-.ratio-reel iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
 
 /* ─── Blog list ──────────────────────────────────────────────── */
 .cw-blog-grid {
@@ -880,7 +792,7 @@ body.modal-open .sticky-mobile-cta {
 }
 
 .cw-blog-card-title {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.01em;
@@ -890,7 +802,7 @@ body.modal-open .sticky-mobile-cta {
 }
 
 .cw-blog-card-excerpt {
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: 0.92rem;
   line-height: 1.6;
   color: var(--cw-text-secondary);
@@ -900,7 +812,7 @@ body.modal-open .sticky-mobile-cta {
 .cw-blog-card-excerpt p { margin: 0; }
 
 .cw-blog-card-cta {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--cw-brand-primary);
@@ -914,14 +826,14 @@ body.modal-open .sticky-mobile-cta {
 
 /* ─── Blog Content ───────────────────────────────────────────── */
 .blog-content p {
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   line-height: 1.85;
   margin-bottom: 1.25rem;
   color: #444;
 }
 
 .blog-content h2 {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   margin-top: 2rem;
   margin-bottom: 1rem;
   font-weight: 700;
@@ -929,15 +841,37 @@ body.modal-open .sticky-mobile-cta {
 }
 
 .blog-content h3 {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   margin-top: 1.5rem;
   margin-bottom: 0.8rem;
   font-weight: 600;
 }
 
-.blog-content ul {
+.blog-content ul,
+.blog-content ol {
   padding-left: 1.2rem;
   margin-bottom: 1.2rem;
+}
+
+.blog-content li {
+  font-family: var(--font-source-sans), system-ui, sans-serif;
+  line-height: 1.75;
+  color: #444;
+  margin-bottom: 0.35rem;
+}
+
+.blog-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+.blog-content td,
+.blog-content th {
+  border: 1px solid rgba(17,17,16,0.10);
+  padding: 10px 12px;
+  vertical-align: top;
 }
 
 .blog-content img {
@@ -951,7 +885,7 @@ body.modal-open .sticky-mobile-cta {
 .form-control {
   border-radius: 10px;
   border: 1.5px solid rgba(17,17,16,0.12);
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: 0.97rem;
   padding: 11px 14px;
   transition: border-color var(--cw-duration) var(--cw-ease),
@@ -978,39 +912,12 @@ body.modal-open .sticky-mobile-cta {
   width: 100%;
 }
 
-.hero-badge {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255,255,255,0.94);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(17,17,16,0.08);
-  border-radius: 12px;
-  padding: 9px 14px;
-  box-shadow: 0 4px 20px rgba(17,17,16,0.10);
-  font-family: 'Lexend', system-ui, sans-serif;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.hero-badge-br {
-  bottom: 32px;
-  right: -12px;
-  animation: badge-float 3.8s ease-in-out infinite 0.6s;
-}
-
 @keyframes badge-float {
   0%, 100% { transform: translateY(0);   }
   50%       { transform: translateY(-6px); }
 }
 
 /* Hide badges on very small screens */
-@media (max-width: 575px) {
-  .hero-badge { display: none; }
-}
 
 /* ─── Hero Entry Animations (stagger reveal) ──────────────────── */
 /* Trust bar -> headline -> body -> CTAs -> microcopy: 70ms stagger */
@@ -1018,7 +925,6 @@ body.modal-open .sticky-mobile-cta {
   animation: cw-hero-in 0.72s var(--ease-out-strong) both;
 }
 
-.hero-enter-d1 { animation-delay: 0ms;   }
 .hero-enter-d2 { animation-delay: 70ms;  }
 .hero-enter-d3 { animation-delay: 150ms; }
 .hero-enter-d4 { animation-delay: 230ms; }
@@ -1052,50 +958,6 @@ body.modal-open .sticky-mobile-cta {
 }
 
 /* ─── Testimonials ───────────────────────────────────────────── */
-.cw-testimonial-card {
-  position: relative;
-  background: #fff;
-  border-radius: 20px;
-  padding: 32px 28px 28px;
-  box-shadow: var(--cw-shadow-sm);
-  border: 1px solid rgba(17,17,16,0.06);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: box-shadow 220ms var(--cw-ease), transform 220ms var(--cw-ease);
-}
-
-.cw-testimonial-card:hover {
-  box-shadow: var(--cw-shadow-md);
-  transform: translateY(-4px);
-}
-
-.cw-testimonial-glyph {
-  position: absolute;
-  top: -12px;
-  right: 16px;
-  font-family: 'Lexend', system-ui, sans-serif;
-  font-size: 7rem;
-  font-weight: 800;
-  color: var(--cw-brand-light);
-  line-height: 1;
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
-}
-
-.cw-testimonial-quote {
-  position: relative;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
-  font-size: 0.97rem;
-  line-height: 1.7;
-  color: var(--cw-text-primary);
-  font-weight: 500;
-  flex: 1;
-  margin-bottom: 22px;
-  z-index: 1;
-}
 
 /* ─── Footer ─────────────────────────────────────────────────── */
 .cw-footer {
@@ -1134,7 +996,7 @@ body.modal-open .sticky-mobile-cta {
 }
 
 .cw-footer-tagline {
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: 0.94rem;
   line-height: 1.6;
   color: rgba(255,255,255,0.62);
@@ -1149,7 +1011,7 @@ body.modal-open .sticky-mobile-cta {
   background: var(--cw-cta);
   color: #fff;
   border: none;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.92rem;
   letter-spacing: -0.005em;
@@ -1170,7 +1032,7 @@ body.modal-open .sticky-mobile-cta {
 .cw-footer-cta:active { transform: scale(0.97); }
 
 .cw-footer-heading {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.10em;
@@ -1193,7 +1055,7 @@ body.modal-open .sticky-mobile-cta {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: 0.92rem;
   line-height: 1.55;
   color: rgba(255,255,255,0.68);
@@ -1214,7 +1076,7 @@ body.modal-open .sticky-mobile-cta {
 .cw-footer-list a:hover { color: #fff; }
 
 .cw-footer-links a {
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: 0.92rem;
   color: rgba(255,255,255,0.68);
   text-decoration: none;
@@ -1264,7 +1126,7 @@ body.modal-open .sticky-mobile-cta {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   font-size: 0.82rem;
   color: rgba(255,255,255,0.42);
 }
@@ -1302,7 +1164,7 @@ body.modal-open .sticky-mobile-cta {
   background: var(--cw-cta);
   color: #fff;
   border: none;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.005em;
@@ -1348,7 +1210,7 @@ body.modal-open .sticky-mobile-cta {
   background: none;
   border: none;
   color: var(--cw-text-secondary);
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 500;
   font-size: 0.92rem;
   text-decoration: none;
@@ -1387,7 +1249,7 @@ body.modal-open .sticky-mobile-cta {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: 0.78rem;
   font-weight: 700;
   border: 1.5px solid transparent;
@@ -1433,7 +1295,7 @@ body.modal-open .sticky-mobile-cta {
 
 .cw-field-label {
   display: block;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-size: var(--cw-fs-small);
   font-weight: 600;
   color: var(--cw-text-primary);
@@ -1464,7 +1326,7 @@ body.modal-open .sticky-mobile-cta {
   border-radius: 12px;
   text-align: left;
   cursor: pointer;
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   transition: border-color 0.18s var(--cw-ease),
               background-color 0.18s var(--cw-ease),
               transform 0.12s ease-out;
@@ -1484,7 +1346,7 @@ body.modal-open .sticky-mobile-cta {
 }
 
 .cw-choice-title {
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--cw-text-primary);
@@ -1513,7 +1375,7 @@ body.modal-open .sticky-mobile-cta {
   background: transparent;
   border: none;
   color: var(--cw-text-secondary);
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 500;
   font-size: 0.92rem;
   padding: 10px 14px;
@@ -1534,7 +1396,7 @@ body.modal-open .sticky-mobile-cta {
   background: var(--cw-brand-primary);
   border: none;
   color: #fff;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: var(--font-lexend), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
   padding: 12px 22px;
@@ -1573,14 +1435,14 @@ body.modal-open .sticky-mobile-cta {
   text-align: center;
   font-size: 0.78rem;
   color: var(--cw-text-muted);
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
   margin: 14px 0 0;
 }
 
 /* Modal body input alignment */
 .modal-body .cw-field .form-control,
 .modal-body .cw-field .form-select {
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: var(--font-source-sans), system-ui, sans-serif;
 }
 
 /* ─── Misc ───────────────────────────────────────────────────── */

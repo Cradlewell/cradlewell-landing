@@ -1,5 +1,5 @@
-import Head from 'next/head'
 import { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Nurse-led Newborn & Postnatal Home Care Bangalore – Cradlewell",
@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://www.cradlewell.com/privacy-policy",
   },
+  openGraph: pageOpenGraph("/privacy-policy", { title: "Privacy Policy | Cradlewell" }),
   other: {
     keywords: `
       Cradlewell Privacy Policy,
@@ -25,9 +26,6 @@ export const metadata: Metadata = {
 export default function PrivacyPolicy() {
   return (
     <>
-      <Head>
-        <title>Privacy Policy | Cradlewell</title>
-      </Head>
       <div className="container py-5">
         <div className="card shadow-sm p-4">
           <h1 className="mb-4 text-center">Privacy Policy</h1>

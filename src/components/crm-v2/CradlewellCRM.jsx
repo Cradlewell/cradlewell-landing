@@ -8,8 +8,8 @@ import {
   SquareKanban, ArrowUp, ArrowDown, ExternalLink, AlertTriangle, CircleDot, Baby, Package, Megaphone, Building2, MapPin, Hash,
   EyeOff, Globe, Infinity as InfinityIcon, CalendarClock, UserRound, Zap, Weight, SunMoon, Timer, CircleX, CalendarCheck, CalendarPlus,
   HandHeart, Wallet, IdCard, CalendarRange, StickyNote, FileText, MoreHorizontal, Copy, ChevronLeft, Send, Paperclip, PhoneCall, Slash, ArrowRightLeft, Pencil, CheckCheck, PhoneMissed, Image as ImageIcon,
-  ArrowLeft, CircleCheck, Info, Rows3, Video, PhoneOff, UserX, Sprout, List,
-  LogOut, Bell, Flag, ChevronUp, CreditCard, Webhook, Workflow, Trash2, GripVertical, HeartHandshake, ArrowUpRight,
+  ArrowLeft, CircleCheck, Rows3, Video, PhoneOff, UserX, Sprout, List,
+  LogOut, Flag, ChevronUp, Trash2, GripVertical, HeartHandshake, ArrowUpRight,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import { FOLLOWUP_CUTOFF, loadCRM, enqueue, enqueueLater, cancelLater, flush, hasPending, restoreStash, retryStash, setSaveStatusHandler, settleTasks, stageKey, leadPatch, mergeRemote, mergeRemoteMap, isBusy, isRemote, setSaveErrorHandler, setAssignedHandler, recordWin, diffById, diffTimelines, uiLeadToDb, uiFollowupToDb, pack } from "./data";
@@ -20,7 +20,6 @@ import { FOLLOWUP_CUTOFF, loadCRM, enqueue, enqueueLater, cancelLater, flush, ha
    this month's revenue are derived from that data in the root component.
    ========================================================================== */
 
-
 const QUEUE_SECTIONS = [
   { id: "respond", title: "Respond now", icon: MessageCircle, tone: "amber" },
   { id: "new", title: "New leads, not yet contacted", icon: UserPlus, tone: "sky" },
@@ -29,10 +28,6 @@ const QUEUE_SECTIONS = [
   { id: "payment", title: "Payment pending", icon: IndianRupee, tone: "green" },
 ];
 
-// section: which queue section · stage: care-stage context · note: extra context line
-// reason: plain "why it is here" line shown on My day · waitingMins: unanswered WhatsApp wait at page load · createdMins: lead age at page load
-const QUEUE_ITEMS = []; // filled from live data (see buildQueueItems)
-
 // Today's consultations, placed relative to page load so the demo always looks live
 // Today's consultations — refilled from live consultations on every render of the app root
 const SCHEDULE = [];
@@ -40,7 +35,6 @@ const SCHEDULE = [];
 // Revenue this month (mock): care plans + expert services vs monthly target
 // Revenue this month — recomputed from paid leads; target comes from Settings (revenueTarget)
 const REVENUE_MONTH = { care: 0, experts: 0, target: 500000 };
-
 
 // Placeholder activity history for the lead drawer, by section
 const ACTIVITY_TEMPLATES = {
@@ -52,20 +46,13 @@ const ACTIVITY_TEMPLATES = {
   schedule: ["Slot booked for today", "Call · 4 min", "Lead created"],
 };
 
-
 // Stat deltas and the "My leads" filter options (mock)
-
 
 /* ==========================================================================
    Design tokens
    ========================================================================== */
 
 const ACCENT = "#B4436C";
-const INK = "#1F1F1F";
-const MUTED = "#6B6B6B";
-const FAINT = "#707070";
-const DIVIDER = "#EEEDEA";
-const HOVER = "#F7F6F3";
 
 // Status tags get a 6px coloured dot; package names are plain grey text.
 // Packages the team actually sells (names used on real closures). Free text is still allowed in the Won dialog.
@@ -120,13 +107,6 @@ const greetingFor = (d) => {
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   return "Good evening";
-};
-
-const todayAt = (hhmm) => {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d;
 };
 
 // A slot counts as "past" 30 min after it starts; the first non-past slot is "next".
@@ -260,24 +240,6 @@ function MenuItem({ onClick, hint, children }) {
   );
 }
 
-function SectionLabel({ children, count, countClass = "", onClick, collapsed, collapsible }) {
-  const Comp = collapsible ? "button" : "div";
-  return (
-    <Comp
-      onClick={onClick}
-      className="group/label flex items-center gap-1.5 h-7 text-xs font-medium text-ink-4 select-none"
-    >
-      <span className="transition-colors duration-150 group-hover/label:text-ink">{children}</span>
-      {count != null && <span className={`tabular-nums ${countClass}`}>{count}</span>}
-      {collapsible && (
-        <ChevronDown
-          className={`h-3 w-3 text-ink-4 transition-transform duration-150 ${collapsed ? "-rotate-90" : ""}`}
-        />
-      )}
-    </Comp>
-  );
-}
-
 /* ==========================================================================
    Sidebar
    ========================================================================== */
@@ -315,34 +277,6 @@ function NavItem({ item, active, onClick }) {
         </span>
       )}
     </button>
-  );
-}
-
-function SavedViewItem({ view, active, onOpen, onDelete }) {
-  const Icon = view.icon;
-  return (
-    <div className="group relative">
-      <button
-        onClick={onOpen}
-        title={view.title}
-        className={`w-full flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-lg leading-5 border transition-colors ${
-          active ? "bg-white border-line-control text-ink font-medium" : "border-transparent text-ink-2 hover:bg-black/[0.04]"
-        }`}
-      >
-        <Icon className={`h-4 w-4 shrink-0 ${active ? "text-ink" : "text-ink-3"}`} strokeWidth={1.75} />
-        <span className="flex-1 text-left truncate">{view.label}</span>
-        <span className={`text-caption tabular-nums font-normal text-ink-4 ${view.custom ? "group-hover:opacity-0" : ""}`}>{view.count}</span>
-      </button>
-      {view.custom && (
-        <button
-          onClick={onDelete}
-          aria-label={`Delete view ${view.label}`}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md flex items-center justify-center text-ink-4 opacity-0 [@media(hover:none)]:opacity-100 group-hover:opacity-100 hover:bg-black/[0.06] hover:text-ink transition"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      )}
-    </div>
   );
 }
 
@@ -589,7 +523,7 @@ function CommandPalette({ open, onClose, leads, onSelect }) {
         </div>
         <div className="max-h-[320px] overflow-y-auto p-1.5">
           {results.length === 0 ? (
-            <div className="px-3 py-6 text-center text-body-lg leading-5 text-ink-4">No leads match "{q}"</div>
+            <div className="px-3 py-6 text-center text-body-lg leading-5 text-ink-4">No leads match &quot;{q}&quot;</div>
           ) : (
             <>
               <div className="px-2.5 pt-1 pb-1.5 text-small leading-4 text-ink-4">Leads</div>
@@ -615,7 +549,6 @@ function CommandPalette({ open, onClose, leads, onSelect }) {
     </div>
   );
 }
-
 
 /* ==========================================================================
    Queue: menus, rows, sections
@@ -703,145 +636,9 @@ function OutcomeMenu({ onPick }) {
   );
 }
 
-const Dot = () => <span className="text-ink-faint">·</span>;
-
-function ShortcutBar() {
-  const items = [
-    [["J", "K"], "navigate"],
-    [["C"], "call"],
-    [["W"], "WhatsApp"],
-    [["S"], "snooze"],
-    [["E"], "done"],
-    [["↵"], "open"],
-  ];
-  return (
-    <div className="hidden md:flex sticky bottom-0 z-10 mt-10 -mx-3 px-3 h-9 items-center gap-4 border-t border-line bg-white text-caption text-ink-4">
-      {items.map(([keys, label]) => (
-        <span key={label} className="flex items-center gap-1">
-          {keys.map((k) => (
-            <Kbd key={k}>{k}</Kbd>
-          ))}
-          <span className="ml-0.5">{label}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 /* ==========================================================================
    Right column: timeline
    ========================================================================== */
-
-function TimelineItem({ e, now, next, last, outcome, onOpen, onLog, onCall }) {
-  const [menu, setMenu] = useState(false);
-  const ref = useRef(null);
-  const close = useCallback(() => setMenu(false), []);
-  useOutsideClick(ref, close, menu);
-
-  const past = isPastSlot(e, now);
-  const pending = e.type === "Consult" && past && !outcome;
-  const done = past && !pending;
-
-  // hollow = upcoming, filled grey = done, amber = needs outcome, accent = next
-  const dot = pending ? (
-    <span className="h-2.5 w-2.5 rounded-full bg-amber-500 ring-4 ring-white" />
-  ) : next ? (
-    <span className="h-2.5 w-2.5 rounded-full ring-4 ring-white" style={{ backgroundColor: ACCENT, boxShadow: `0 0 0 6px rgba(180,67,108,0.12)` }} />
-  ) : done ? (
-    <span className="h-2.5 w-2.5 rounded-full bg-line-heavy ring-4 ring-white" />
-  ) : (
-    <span className="h-2.5 w-2.5 rounded-full border border-line-heavy bg-white ring-4 ring-white" />
-  );
-
-  return (
-    <li className="relative flex gap-4 pb-6 last:pb-0">
-      {!last && <span className="absolute left-[4.5px] top-3 bottom-0 w-px bg-line-control" />}
-      <div className="relative z-[1] pt-1 flex h-fit">{dot}</div>
-      <div className="min-w-0 flex-1">
-        <div className={`flex items-center gap-2 text-small leading-4 tabular-nums ${next ? "text-brand font-medium" : "text-ink-4"}`}>
-          {fmtTime(e.at)}
-          {next && <span>· Next</span>}
-        </div>
-        <div className="mt-0.5 flex items-start gap-2">
-          <div className={`min-w-0 flex-1 text-body transition-opacity duration-150 ${done ? "opacity-50" : ""}`}>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-ink-3">{e.type}</span>
-              <Dot />
-              <button
-                onClick={() => onOpen({ ...e, section: "schedule", tag: outcome || e.type })}
-                className="font-medium text-ink hover:underline underline-offset-2 decoration-line-heavy"
-              >
-                {e.name}
-              </button>
-            </div>
-            <div className="text-ink-4 text-small leading-4 mt-0.5 truncate">
-              {[e.stage, e.note].filter(Boolean).join(" · ")}
-            </div>
-            {outcome && <Tag label={outcome} className="text-small leading-4 mt-1" />}
-          </div>
-
-          <div ref={ref} className="relative shrink-0">
-            {pending && (
-              <button
-                onClick={() => setMenu((m) => !m)}
-                className="h-7 rounded-md border border-amber-200 bg-amber-50 px-2 text-small font-medium text-amber-700 transition-colors duration-150 hover:bg-amber-100"
-              >
-                Log outcome
-              </button>
-            )}
-            {next && !pending && (
-              <SmallButton onClick={() => onCall(e)}>
-                <Phone className="h-3 w-3" /> Call
-              </SmallButton>
-            )}
-            {menu && (
-              <OutcomeMenu
-                onPick={(o) => {
-                  close();
-                  onLog(e, o);
-                }}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function Timeline({ now, onOpen, outcomes, onLog, onCall }) {
-  const entries = SCHEDULE.map((s) => ({ ...s, at: todayAt(s.time) }));
-  const nextId = entries.find((e) => !isPastSlot(e, now))?.id;
-  const pendingCount = entries.filter((e) => needsOutcome(e, now, outcomes)).length;
-
-  return (
-    <section id="today-schedule" className="scroll-mt-16">
-      <div className="flex items-center justify-between">
-        <SectionLabel count={entries.length}>Today's schedule</SectionLabel>
-        {pendingCount > 0 && (
-          <span className="text-caption text-amber-600 tabular-nums">
-            {pendingCount} to log
-          </span>
-        )}
-      </div>
-      <ol className="mt-3">
-        {entries.map((e, i) => (
-          <TimelineItem
-            key={e.id}
-            e={e}
-            now={now}
-            next={e.id === nextId}
-            last={i === entries.length - 1}
-            outcome={outcomes[e.id]}
-            onOpen={onOpen}
-            onLog={onLog}
-            onCall={onCall}
-          />
-        ))}
-      </ol>
-    </section>
-  );
-}
 
 /* ==========================================================================
    Pages
@@ -858,22 +655,6 @@ function PlaceholderPage({ item }) {
         <div className="text-small leading-4 text-ink-4 mt-1">This screen is a placeholder in the prototype.</div>
       </div>
     </div>
-  );
-}
-
-function Stat({ label, value, suffix, delta, extra, onClick, className }) {
-  return (
-    <button onClick={onClick} className={`group text-left border-line ${className}`}>
-      <div className="text-small leading-4 text-ink-4 transition-colors duration-150 group-hover:text-ink">{label}</div>
-      <div className="mt-1.5 flex items-baseline gap-1.5">
-        <span className="text-stat leading-none font-medium tracking-[-0.02em] tabular-nums text-ink">{value}</span>
-        {suffix && <span className="text-body text-ink-4 tabular-nums">{suffix}</span>}
-      </div>
-      <div className="mt-2 text-small leading-4 text-ink-4 tabular-nums">
-        {delta}
-        {extra}
-      </div>
-    </button>
   );
 }
 
@@ -1145,7 +926,7 @@ function MyDay({ now, items, leads = [], onOpen, showToast, md }) {
             ) : "by urgency"
           }
         >
-          {attnRows.length === 0 && <div className="py-10 text-center text-body text-ink-4">You're all caught up here</div>}
+          {attnRows.length === 0 && <div className="py-10 text-center text-body text-ink-4">You&apos;re all caught up here</div>}
           {attnRows.map((item, rowI) => {
             const Icon = ATTN_ICON[item.section];
             const m = menuFor(item.id);
@@ -1259,37 +1040,29 @@ function MyDay({ now, items, leads = [], onOpen, showToast, md }) {
   );
 }
 
-
 /* ==========================================================================
    LEADS PAGE — mock data
    ========================================================================== */
 
 // Single-user CRM: every action is done by "you"
 const ME = "You";
-const LEADS_TOTAL = 248;
 const HOSPITALS = ["Cloudnine", "Motherhood", "Rainbow", "Manipal", "Apollo Cradle", "Other"];
 const ZONES = ["Whitefield", "Marathahalli", "HSR Layout", "Bellandur", "Sarjapur Road", "Koramangala", "Indiranagar", "Jayanagar", "JP Nagar", "Hebbal", "Yelahanka", "Electronic City"];
 const SOURCES = ["WhatsApp", "Website", "Aria Chat", "Walk-in", "Meta ad", "Instagram", "Hospital referral", "Referral"];
 const SERVICES = ["Nurse care", "Moba / Japa care", "Newborn care", "Mother care", "Night care", "Lactation support", "Massage"];
 const SHIFT_TYPES = ["Day", "Night", "24 hrs"];
-const SHIFT_HOURS = [8, 10, 12, 24];
 const PAYMENT_STATUSES = ["Not sent", "Link sent", "Partial", "Paid", "Refunded"];
 const BOOKING_STATUSES = ["Not booked", "Tentative", "Confirmed", "Cancelled"];
 const PAYMENT_DOT = { "Not sent": "bg-stone-300", "Link sent": "bg-amber-500", Partial: "bg-blue-500", Paid: "bg-emerald-500", Refunded: "bg-red-400" };
 const BOOKING_DOT = { "Not booked": "bg-stone-300", Tentative: "bg-amber-500", Confirmed: "bg-emerald-500", Cancelled: "bg-red-400" };
 
-// Unread WhatsApp messages per lead (mock)
-const UNREAD_WHATSAPP = {};
-
 const PACKAGE_OPTIONS = REAL_PACKAGES;
-const OPS_REQUIREMENTS = ["Nurse", "Moba"];
 const LOST_REASONS = ["Price", "Not responding", "Chose competitor", "Family will manage", "Not needed", "Invalid lead", "Other"];
 const OUTCOME_TAGS = ["Interested", "Price concern", "Not responding", "Deferred", "Converted", "Lost"];
 const WA_TEMPLATES = ["Welcome & brochure", "Consult reminder", "Payment link reminder", "Gentle check-in"];
 
 // Mock per-day rates used to make amounts realistic (not final package pricing)
 const DAY_RATE = { "Day-8": 3000, "Day-10": 3500, "Day-12": 4000, "Night-10": 4000, "Night-12": 4500, "24 hrs-24": 7000 };
-const TWIN_MULTIPLIER = 1.4;
 
 const STAGES = [
   { id: "New", dot: "bg-stone-400" },
@@ -1311,14 +1084,6 @@ const STAGE_DOT = Object.fromEntries(STAGES.map((s) => [s.id, s.dot]));
 
 // Days each lead has been in its current stage (drives the Pipeline "Stuck" rule)
 
-// Defaults for pregnancy leads, by package
-const PACKAGE_DEFAULTS = {
-  Essential: { services: ["Newborn care", "Mother care"], shift: ["Day", 8], days: 14 },
-  Together: { services: ["Newborn care", "Night care", "Lactation support"], shift: ["Night", 12], days: 28 },
-  Complete: { services: ["Newborn care", "Mother care", "Night care", "Lactation support"], shift: ["24 hrs", 24], days: 42 },
-  none: { services: ["Newborn care"], shift: ["Day", 8], days: 14 },
-};
-
 // Earlier history shown in the lead panel, by stage (newest first, after the last activity)
 
 /* ==========================================================================
@@ -1338,7 +1103,6 @@ const atTen = (offsetDays) => {
   d.setHours(10, 0, 0, 0);
   return d;
 };
-const dayOffset = (offsetDays) => startOfDay(new Date(Date.now() + offsetDays * DAY));
 const roundQuarter = (d) => {
   const x = new Date(d);
   x.setMinutes(Math.round(x.getMinutes() / 15) * 15, 0, 0);
@@ -1382,7 +1146,6 @@ const babyAge = (l, now) => {
   return `${Math.floor(d / 30)} mo`;
 };
 
-
 const careStage = (l, now) => {
   // Many real leads have no due date / birth date yet: show the plain care stage then
   if (l.careKind === "P") {
@@ -1425,7 +1188,6 @@ const fmtFollowUp = (l, now) => {
   if (diff === 1) return { text: `Tomorrow, ${fmtTime(d)}`, late: false };
   return { text: `${fmtDay(d)}, ${fmtTime(d)}`, late: false };
 };
-
 
 // get() may return an array (e.g. services); a filter matches if any value is selected
 const FILTER_FIELDS = [
@@ -1738,7 +1500,7 @@ const PACKAGE_SUGGESTIONS = REAL_PACKAGES;
 const PAYMENT_METHODS = ["UPI", "Bank transfer", "Cash", "Card", "Razorpay link"];
 const inr = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
 
-// Everything a Won lead needs so revenue and Operations get real numbers
+// Everything a Won lead needs so revenue reports get real numbers
 function wonFields(extra) {
   return { package: extra.package, dealValue: extra.dealValue, amountPaid: extra.amountPaid, paymentMethod: extra.paymentMethod || null, customerSince: null, lastWin: { at: new Date(), paid: extra.amountPaid || 0 } };
 }
@@ -2040,7 +1802,7 @@ function NewLeadModal({ leads, onClose, onCreate, onOpenExisting }) {
                   {d.length ? `Enter a 10-digit mobile number starting with 6–9 (${d.length} digits so far).` : "Enter the mobile number to create the lead."}
                 </div>
               ) : (
-                !d.length && <div className="mt-1.5 text-small text-ink-4">We'll check it against existing leads</div>
+                !d.length && <div className="mt-1.5 text-small text-ink-4">We&apos;ll check it against existing leads</div>
               )
             )}
           </Field>
@@ -2662,10 +2424,7 @@ const WA_TEMPLATE_TEXT = {
 };
 
 const firstName = (l) => l.name.split(" ")[0];
-// Latest unanswered WhatsApp per lead (mock), shown as the reason to reply
-const UNREAD_TEXT = {};
 const uid = () => `e${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
-const ago = (mins) => new Date(Date.now() - mins * 60000);
 const toLocalInput = (d) => {
   const x = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
   return x.toISOString().slice(0, 16);
@@ -3245,8 +3004,6 @@ function DetailRow({ icon: Icon, label, auto, top, children }) {
     </div>
   );
 }
-
-const Placeholder = ({ field }) => <span className="text-ink-4">Set {field.toLowerCase()}</span>;
 
 /* ---------- Overview pieces ---------- */
 
@@ -3854,15 +3611,13 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
     { key: "duration", label: "Duration", auto: true, view: days ? `${days} days` : null },
     { key: "value", label: "Package value", view: value ? fmtINR(value) : null },
     { key: "services", label: "Required services", full: true, divider: true, view: lead.services?.join(", "), edit: { type: "multi", value: lead.services || [], options: SERVICES } },
-    // Shows the lead on the Operations board's Requirements tab (was the "Nurse/Moba Required" stage)
-    { key: "opsRequirement", label: "Operations needs", view: lead.opsRequirement ? `${lead.opsRequirement} — on Operations board` : "Not sent to Operations", edit: { type: "select", value: lead.opsRequirement || "", options: OPS_REQUIREMENTS, allowEmpty: true } },
   ];
   const validateCare = (d) => ({
     careEnd: d.careStart && d.careEnd && fromDateInput(d.careEnd) <= fromDateInput(d.careStart) ? "Care end must be after care start." : d.careEnd && !d.careStart ? "Add a care start date first." : null,
   });
   const saveCare = (d) => {
     const [st, sh] = d.shift ? d.shift.split("|") : [null, null];
-    edit({ package: d.package || null, shiftType: st, shiftHours: sh ? +sh : null, careStart: fromDateInput(d.careStart), careEnd: fromDateInput(d.careEnd), services: d.services, opsRequirement: d.opsRequirement || null }, "Care requirements");
+    edit({ package: d.package || null, shiftType: st, shiftHours: sh ? +sh : null, careStart: fromDateInput(d.careStart), careEnd: fromDateInput(d.careEnd), services: d.services }, "Care requirements");
     showToast("Care requirements saved");
   };
   const payFields = [
@@ -5420,10 +5175,8 @@ const CHAT_TAG_STYLES = {
   Callback: "bg-surface-hover text-ink-3",
 };
 
-
 const chatName = (c, leads) => (c.leadId ? leads.find((l) => l.id === c.leadId)?.name : c.contact?.name) || "Unknown";
 const lastMessage = (c) => [...c.messages].reverse().find((m) => m.from !== "event");
-
 
 const waitTone = (ms) => {
   const m = ms / 60000;
@@ -5947,19 +5700,9 @@ const FU_TYPE_COLOR = {
   Consult: { block: "bg-brand/[0.07] border-brand text-brand-strong", dot: "bg-brand" },
 };
 
-const AUTO_RULES = [
-  "Consult done without payment → Payment call in 24h",
-  "Payment link not opened → WhatsApp reminder in 24h",
-  "2 messages without reply → Call in 48h",
-  "Deferred until date → Call on that date",
-  "Expecting lead reaches 36 weeks → Pre-delivery check-in call",
-  "Baby born detected → Call within 2 hours",
-];
-
 // due: ["d", days, hour, minute] relative to today, or ["t", minutes from now] for later today
 
 // [lead, type, action, days ago, hour, outcome, completed by, extra]
-
 
 /* ---------- Helpers ---------- */
 
@@ -6669,13 +6412,6 @@ const NICU_DAYS = {};
 const CONSULT_HISTORY = { shows: 0, noShows: 0, paid: 0 };
 const OUTCOME_DOT = { Interested: "bg-blue-500", "Needs time": "bg-stone-400", "Price concern": "bg-amber-500", "Not interested": "bg-red-500", "Paid on call": "bg-emerald-500" };
 
-// Demo data is seeded by name. If a demo record is missing (renamed, deleted, real data), skip the
-// demo set instead of taking the whole app down. These builders go away once Supabase is connected.
-const seedSafely = (label, fn, fallback = []) => {
-  try { return fn(); } catch (e) { console.warn(`Demo ${label} skipped:`, e.message); return fallback; }
-};
-
-
 /* ---------- Helpers ---------- */
 
 const consultStatus = (c, now, nextId) => {
@@ -7003,7 +6739,7 @@ function ConsultCalendar({ consults, leads, now, nextId, onMove, onSelect, onJoi
     if (mode === "month" || !scrollRef.current) return;
     const h = Math.max(CC_START, Math.min(new Date().getHours() - 1, CC_END - 4));
     scrollRef.current.scrollTop = (h - CC_START) * CC_HOUR;
-  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   const minsFromY = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -7783,8 +7519,6 @@ function CancelConsultModal({ consult, lead, onClose, onConfirm }) {
 const PIPE_COLUMNS = ["New", "Qualified", "Consult booked", "Consult done", "Payment pending"];
 // Days in stage before a card counts as stuck (Consult booked is measured from the consult time)
 const STUCK_LIMITS = { Qualified: 3, "Consult booked": 1, "Consult done": 2, "Payment pending": 2 };
-// Average ticket used to value leads without a package yet (planning figure, not a price)
-const EST_TICKET = 40000;
 
 const leadValue = (l) => packageValue(l);
 const fmtLakh = (n) => fmtShortINR(n);
@@ -8453,31 +8187,7 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
    ========================================================================== */
 
 const FUNNEL_STAGES = ["New", "Qualified", "Consult booked", "Consult done", "Payment pending", "Won"];
-const CHART_INK = "#3A3A3A";
 const CHART_TRACK = "#F1EFEA";
-
-function mulberry32(a) {
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-const pickW = (rng, entries) => {
-  const total = entries.reduce((s, [, w]) => s + w, 0);
-  let r = rng() * total;
-  for (const [v, w] of entries) {
-    if ((r -= w) <= 0) return v;
-  }
-  return entries[entries.length - 1][0];
-};
-
-const SOURCE_MULT = { "Meta ad": 0.82, Instagram: 0.75, WhatsApp: 1, Website: 1, "Hospital referral": 1.55, Referral: 1.4 };
-const EARLY_LOSS = [["Not responding", 45], ["Not needed", 15], ["Family will manage", 15], ["Price", 10], ["Chose competitor", 5], ["Other", 10]];
-const OBJECTION_W = [["Price", 40], ["Family help available", 25], ["Caregiver preference", 15], ["Timing", 20], ["Trust", 10]];
-const PKG_PRICE = { Essential: 42000, Together: 126000, Complete: 252000 };
 
 // Report rows built from real leads: one row per lead, with the time it entered each stage
 // (from its timeline), its outcome, consult and revenue. The app root sets REPORT_INPUT.
@@ -9069,7 +8779,7 @@ function ReportsPage({ onOpenLeads, followups }) {
           </div>
         )}
 
-        <div className="mt-12 text-small text-ink-4">Reports are built from your live leads: stage dates come from each lead's history (older leads only have the stage changes the previous CRM recorded). Conversion = payments in the period ÷ leads in the period.</div>
+        <div className="mt-12 text-small text-ink-4">Reports are built from your live leads: stage dates come from each lead&apos;s history (older leads only have the stage changes the previous CRM recorded). Conversion = payments in the period ÷ leads in the period.</div>
       </div>
 
     </div>
@@ -9121,30 +8831,6 @@ const moveItem = (arr, a, b) => {
   c.splice(b, 0, x);
   return c;
 };
-
-/* ---------- Rule vocabulary ---------- */
-const RULE_TRIGGERS = {
-  "Consult done": ["No payment", "Payment pending", "Any outcome"],
-  "Payment link sent": ["Link not opened", "Opened, not paid"],
-  "Messages sent": ["2 messages, no reply", "3 messages, no reply"],
-  "Deferred date reached": ["Any reason"],
-  "Expecting reaches": ["34 weeks", "36 weeks", "38 weeks"],
-  "Baby born detected": ["From WhatsApp", "Any source"],
-  "Consult no-show": ["Any consult"],
-  "Lead stuck in": ["Qualified 3 days", "Consult done 2 days", "Payment pending 2 days"],
-  "New lead created": ["Any source", "Hospital referral", "Meta ad"],
-};
-const RULE_ACTIONS = {
-  call: { label: "Call task" },
-  whatsapp: { label: "WhatsApp task" },
-  autowa: { label: "Send WhatsApp template" },
-  payment: { label: "Payment task" },
-  notify: { label: "Notify me" },
-};
-const DELAY_KINDS = [["now", "Immediately"], ["after", "After"], ["within", "Within"], ["sameday", "Same day"]];
-const fmtDelay = (d) => (d.kind === "now" ? "immediately" : d.kind === "sameday" ? "that day" : `${d.kind === "within" ? "within " : "+"}${d.n}${d.u === "min" ? " min" : d.u === "days" ? (d.n === 1 ? " day" : " days") : "h"}`);
-// Lowercase a condition for sentence flow, but keep stage names capitalised
-const condText = (r) => (r.trigger === "Lead stuck in" ? r.condition : r.condition.charAt(0).toLowerCase() + r.condition.slice(1));
 
 /* ---------- Seed ---------- */
 function buildSettings() {
@@ -9240,16 +8926,6 @@ const inlineCls =
 function InlineInput({ value, onChange, className = "", ...rest }) {
   return <input value={value} onChange={(e) => onChange(e.target.value)} className={`${inlineCls} ${className}`} {...rest} />;
 }
-function InlineSelect({ value, onChange, options, className = "" }) {
-  return (
-    <span className="relative inline-flex items-center">
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={`${inlineCls} appearance-none pr-6 cursor-pointer ${className}`}>
-        {options.map((o) => (Array.isArray(o) ? <option key={o[0]} value={o[0]}>{o[1]}</option> : <option key={o} value={o}>{o}</option>))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute -right-0.5 h-3 w-3 text-ink-4" />
-    </span>
-  );
-}
 
 function SHeader({ title, desc, action }) {
   return (
@@ -9267,8 +8943,6 @@ const NewButton = ({ children = "New", ...p }) => (
     <Plus className="h-3.5 w-3.5" /> {children}
   </PrimaryButton>
 );
-const STh = ({ children, className = "" }) => <th className={`h-8 px-3 first:pl-0 border-b border-line text-left text-small leading-4 font-medium text-ink-4 whitespace-nowrap ${className}`}>{children}</th>;
-const STd = ({ children, className = "" }) => <td className={`h-11 px-3 first:pl-0 border-b border-line-subtle text-body ${className}`}>{children}</td>;
 const RowDelete = ({ onClick, label = "Delete" }) => (
   <button onClick={onClick} aria-label={label} className="h-7 w-7 rounded-md flex items-center justify-center text-ink-4 opacity-0 [@media(hover:none)]:opacity-100 group-hover:opacity-100 hover:bg-surface-hover hover:text-red-700 transition">
     <Trash2 className="h-3.5 w-3.5" />
@@ -9314,46 +8988,9 @@ function useReorder(onMove) {
   return { rowProps, grip, rowCls };
 }
 
-async function copyText(text, showToast) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const t = document.createElement("textarea");
-    t.value = text;
-    document.body.appendChild(t);
-    t.select();
-    document.execCommand("copy");
-    t.remove();
-  }
-  showToast("Copied to clipboard");
-}
-
 const STAGE_COLORS = ["#A8A29E", "#14B8A6", "#3B82F6", "#0EA5E9", "#F59E0B", "#10B981", "#065F46", "#B4436C", "#EF4444"];
 
 /* ---------- Pages ---------- */
-
-function NotificationSettings({ s, upd, patch, remove }) {
-  const cols = [["app", "In-app"], ["wa", "WhatsApp"], ["mail", "Email"]];
-  return (
-    <>
-      <SHeader title="Notifications" desc="What pings you, and where." action={<NewButton onClick={() => upd("notifications", (n) => [...n, { id: sid(), name: "New notification", app: true, wa: false, mail: false }])} />} />
-      <table className="w-full border-separate border-spacing-0">
-        <thead><tr><STh>Event</STh>{cols.map(([k, l]) => <STh key={k} className="text-center w-24">{l}</STh>)}<STh className="w-8" /></tr></thead>
-        <tbody>
-          {s.notifications.map((n) => (
-            <tr key={n.id} className="group hover:bg-surface-subtle">
-              <STd><InlineInput value={n.name} onChange={(v) => patch("notifications", n.id, { name: v })} className="w-full max-w-[360px]" /></STd>
-              {cols.map(([k]) => (
-                <STd key={k} className="text-center"><div className="inline-flex"><Checkbox checked={n[k]} onChange={() => patch("notifications", n.id, { [k]: !n[k] })} /></div></STd>
-              ))}
-              <STd><RowDelete onClick={() => remove("notifications", n.id, "Notification removed")} /></STd>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
-  );
-}
 
 function StageSettings({ s, upd, patch, remove }) {
   const { rowProps, grip, rowCls } = useReorder((a, b) => upd("stages", (st) => moveItem(st, a, b)));
@@ -9437,507 +9074,7 @@ function ReasonSettings(props) {
   );
 }
 
-const FIELD_TYPES = ["Text", "Long text", "Number", "Currency", "Date", "Date & time", "Phone", "Select", "Multi-select", "Status", "Formula", "Auto ID"];
-function FieldSettings({ s, upd, patch, remove }) {
-  const { rowProps, grip, rowCls } = useReorder((a, b) => upd("fields", (f) => moveItem(f, a, b)));
-  const [adding, setAdding] = useState(null);
-  return (
-    <>
-      <SHeader title="Lead fields" desc={`${s.fields.length} fields on every lead. Drag to set the column order in the Leads table.`} action={<NewButton onClick={() => setAdding({ label: "", type: "Text" })}>New field</NewButton>} />
-      <table className="w-full border-separate border-spacing-0">
-        <thead><tr><STh className="w-6" /><STh>Field</STh><STh>Type</STh><STh className="text-center">Shown in table</STh><STh className="text-center">Required</STh><STh className="text-center">Auto</STh><STh className="w-8" /></tr></thead>
-        <tbody>
-          {s.fields.map((f, i) => {
-            const Icon = f.icon || Hash;
-            const locked = f.id === "customerId" || f.id === "name";
-            return (
-              <tr key={f.id} {...rowProps(i)} className={`group hover:bg-surface-subtle ${rowCls(i)}`}>
-                <STd>{grip(i)}</STd>
-                <STd>
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-3.5 w-3.5 text-ink-4 shrink-0" />
-                    <InlineInput value={f.label} onChange={(v) => patch("fields", f.id, { label: v })} className="w-52" />
-                  </div>
-                </STd>
-                <STd>{f.auto || locked ? <span className="text-ink-3">{f.type}</span> : <InlineSelect value={f.type} onChange={(v) => patch("fields", f.id, { type: v })} options={FIELD_TYPES.filter((t) => t !== "Auto ID" && t !== "Formula")} />}</STd>
-                <STd className="text-center"><div className="inline-flex">{locked ? <Check className="h-3.5 w-3.5 text-ink-4" /> : <SToggle on={f.shown} onChange={(v) => patch("fields", f.id, { shown: v })} label={`Show ${f.label}`} />}</div></STd>
-                <STd className="text-center"><div className="inline-flex">{f.auto || locked ? <span className="text-ink-4">—</span> : <Checkbox checked={f.required} onChange={() => patch("fields", f.id, { required: !f.required })} />}</div></STd>
-                <STd className="text-center">{f.auto ? <span className="text-small text-ink-4">From dates</span> : <span className="text-ink-faint">—</span>}</STd>
-                <STd>{!locked && <RowDelete onClick={() => remove("fields", f.id, `${f.label} field removed`)} />}</STd>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="mt-4 text-small leading-4 text-ink-4">Auto fields are calculated from dates on the lead and can't be required.</div>
-      {adding && (
-        <Modal title="New field" onClose={() => setAdding(null)}>
-          <div className="p-5 space-y-4">
-            <Field label="Field name" required><input autoFocus className={inputCls} value={adding.label} placeholder="e.g. Preferred caregiver language" onChange={(e) => setAdding({ ...adding, label: e.target.value })} /></Field>
-            <Field label="Type"><select className={inputCls} value={adding.type} onChange={(e) => setAdding({ ...adding, type: e.target.value })}>{FIELD_TYPES.slice(0, 9).map((t) => <option key={t}>{t}</option>)}</select></Field>
-          </div>
-          <div className="flex justify-end gap-2 px-5 pb-5">
-            <SecondaryButton onClick={() => setAdding(null)}>Cancel</SecondaryButton>
-            <PrimaryButton disabled={!adding.label.trim()} onClick={() => { upd("fields", (f) => [...f, { id: sid(), label: adding.label.trim(), type: adding.type, shown: true, required: false, auto: false, icon: Hash }]); setAdding(null); }}>Add field</PrimaryButton>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-}
-
-function PackageSettings({ s, upd, showToast }) {
-  const patchPkg = (id, p) => upd("packages", (ps) => ps.map((x) => (x.id === id ? { ...x, ...(typeof p === "function" ? p(x) : p) } : x)));
-  const patchShift = (pid, sid2, p) => patchPkg(pid, (x) => ({ shifts: x.shifts.map((sh) => (sh.id === sid2 ? { ...sh, ...p } : sh)) }));
-  const shiftOpts = Object.keys(DAY_RATE).map((k) => [k, k.replace("-", " · ") + "h"]);
-  return (
-    <>
-      <SHeader title="Packages and services" desc="Package tiers and shift prices, plus the expert services sold to paid customers." action={<NewButton onClick={() => upd("packages", (ps) => [...ps, { id: sid(), name: "New package", desc: "", durations: [3], shifts: [] }])}>New package</NewButton>} />
-      <div className="mb-6 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-small text-amber-800">
-        <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Draft prices copied from the mock per-day rates. Replace them with final pricing before quoting.
-      </div>
-      <div className="space-y-10">
-        {s.packages.map((p) => (
-          <section key={p.id} className="group/pkg">
-            <div className="flex items-center gap-3">
-              <InlineInput value={p.name} onChange={(v) => patchPkg(p.id, { name: v })} className="text-title-sm font-semibold w-48" />
-              <div className="flex items-center gap-1 ml-2">
-                {[3, 6, 12].map((m) => {
-                  const on = p.durations.includes(m);
-                  return (
-                    <button key={m} onClick={() => patchPkg(p.id, { durations: on ? p.durations.filter((d) => d !== m) : [...p.durations, m].sort((a, b) => a - b) })} className={`h-6 rounded-full px-2 text-caption transition-colors duration-150 ${on ? "bg-ink text-white" : "border border-line-control text-ink-4 hover:text-ink"}`}>{m} months</button>
-                  );
-                })}
-              </div>
-              <button onClick={() => { upd("packages", (ps) => ps.filter((x) => x.id !== p.id)); showToast(`${p.name} removed`); }} className="ml-auto text-small leading-4 text-ink-4 hover:text-red-700 opacity-0 group-hover/pkg:opacity-100 transition">Delete package</button>
-            </div>
-            <InlineInput value={p.desc} placeholder="One-line description" onChange={(v) => patchPkg(p.id, { desc: v })} className="w-full text-ink-3 mt-0.5" />
-            <table className="mt-3 w-full border-separate border-spacing-0">
-              <thead><tr><STh>Shift option</STh><STh className="text-right">Hours</STh><STh className="text-right">Price per day</STh><STh className="text-right">30-day estimate</STh><STh className="text-right">Offered</STh><STh className="w-8" /></tr></thead>
-              <tbody>
-                {p.shifts.map((sh) => (
-                  <tr key={sh.id} className={`group hover:bg-surface-subtle ${sh.on ? "" : "text-ink-4"}`}>
-                    <STd><InlineSelect value={sh.type} onChange={(v) => patchShift(p.id, sh.id, { type: v })} options={SHIFT_TYPES} /></STd>
-                    <STd className="text-right"><InlineSelect value={String(sh.hours)} onChange={(v) => patchShift(p.id, sh.id, { hours: +v })} options={SHIFT_HOURS.map(String)} className="tabular-nums" /></STd>
-                    <STd className="text-right">
-                      <span className="inline-flex items-center gap-0.5 tabular-nums">₹<InlineInput type="number" step={100} min={0} value={sh.price} onChange={(v) => patchShift(p.id, sh.id, { price: Math.max(0, +v || 0) })} className="w-20 text-right" /></span>
-                    </STd>
-                    <STd className="text-right tabular-nums text-ink-3">{fmtINR(sh.price * 30)}</STd>
-                    <STd className="text-right"><SToggle on={sh.on} onChange={(v) => patchShift(p.id, sh.id, { on: v })} label="Offered" /></STd>
-                    <STd><RowDelete onClick={() => patchPkg(p.id, (x) => ({ shifts: x.shifts.filter((y) => y.id !== sh.id) }))} /></STd>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <button onClick={() => patchPkg(p.id, (x) => ({ shifts: [...x.shifts, { id: sid(), type: "Day", hours: 8, price: DAY_RATE["Day-8"], on: true }] }))} className="mt-2 text-small text-ink-3 hover:text-ink inline-flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add shift option</button>
-          </section>
-        ))}
-      </div>
-      <ExpertServicesTable s={s} upd={upd} />
-    </>
-  );
-}
-
-function ExpertServicesTable({ s, upd }) {
-  const patch = (id, p) => upd("experts", (xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x)));
-  const price = (x, k) => (
-    <span className="inline-flex items-center gap-0.5 tabular-nums">₹<InlineInput type="number" step={100} min={0} value={x[k]} onChange={(v) => patch(x.id, { [k]: Math.max(0, +v || 0) })} className="w-[72px] text-right" /></span>
-  );
-  const chip = (on, label, onClick, disabled) => (
-    <button key={label} disabled={disabled} onClick={onClick} className={`h-6 rounded-full px-2 text-caption transition-colors duration-150 ${on ? "bg-ink text-white" : "border border-line-control text-ink-4 hover:text-ink"} disabled:opacity-60`}>{label}</button>
-  );
-  return (
-    <section className="mt-12">
-      <div className="flex items-baseline gap-2">
-        <h2 className="text-title-sm font-semibold">Expert services</h2>
-        <span className="text-small text-ink-4">Sold to paid customers from Sell a service. Included services are suggested at ₹0.</span>
-      </div>
-      <table className="mt-3 w-full border-separate border-spacing-0">
-        <thead><tr><STh>Service</STh><STh className="text-right">Single</STh><STh className="text-right">Pack of 4</STh><STh className="text-right">Pack of 8</STh><STh>Modes</STh><STh>Included in</STh></tr></thead>
-        <tbody>
-          {s.experts.map((x) => (
-            <tr key={x.id} className="hover:bg-surface-subtle">
-              <STd>
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-[18px] w-[18px] rounded-full bg-teal-600 text-white text-micro font-semibold flex items-center justify-center">{x.id}</span>
-                  {x.name}
-                </span>
-              </STd>
-              <STd className="text-right">{price(x, "single")}</STd>
-              <STd className="text-right">{price(x, "pack4")}</STd>
-              <STd className="text-right">{price(x, "pack8")}</STd>
-              <STd>
-                <div className="flex gap-1">
-                  {chip(x.home, "Home visit", () => patch(x.id, { home: !x.home }), x.home && !x.video)}
-                  {chip(x.video, "Video", () => patch(x.id, { video: !x.video }), x.video && !x.home)}
-                </div>
-              </STd>
-              <STd>
-                <div className="flex gap-1">
-                  {s.packages.map((p) => chip(x.included.includes(p.name), p.name, () => patch(x.id, { included: x.included.includes(p.name) ? x.included.filter((n) => n !== p.name) : [...x.included, p.name] })))}
-                </div>
-              </STd>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  );
-}
-
-function PlaceSettings({ s, upd, patch, remove, leads }) {
-  const count = (k, v) => leads.filter((l) => l[k] === v).length;
-  return (
-    <>
-      <SHeader title="Hospitals and zones" desc="Options for the Hospital and Area fields. Unserviceable zones are flagged on new leads." action={<NewButton onClick={() => upd("hospitals", (h) => [...h, { id: sid(), name: "", zone: ZONES[0], partner: false }])}>New hospital</NewButton>} />
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-x-10 gap-y-10">
-        <section>
-          <h2 className="text-body font-medium mb-2">Hospitals</h2>
-          <table className="w-full border-separate border-spacing-0">
-            <thead><tr><STh>Hospital</STh><STh>Zone</STh><STh className="text-center">Referral partner</STh><STh className="text-right">Leads</STh><STh className="w-8" /></tr></thead>
-            <tbody>
-              {s.hospitals.map((h) => (
-                <tr key={h.id} className="group hover:bg-surface-subtle">
-                  <STd><InlineInput autoFocus={!h.name} placeholder="Hospital name" value={h.name} onChange={(v) => patch("hospitals", h.id, { name: v })} className="w-40" /></STd>
-                  <STd><InlineSelect value={h.zone} onChange={(v) => patch("hospitals", h.id, { zone: v })} options={s.zones.map((z) => z.name)} /></STd>
-                  <STd className="text-center"><div className="inline-flex"><SToggle on={h.partner} onChange={(v) => patch("hospitals", h.id, { partner: v })} label="Referral partner" /></div></STd>
-                  <STd className="text-right tabular-nums text-ink-3">{count("hospital", h.name)}</STd>
-                  <STd><RowDelete onClick={() => remove("hospitals", h.id, "Hospital removed")} /></STd>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-        <section>
-          <div className="flex items-center mb-2">
-            <h2 className="text-body font-medium">Zones</h2>
-            <button onClick={() => upd("zones", (z) => [...z, { id: sid(), name: "", serviceable: true }])} className="ml-auto text-small text-ink-3 hover:text-ink inline-flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add zone</button>
-          </div>
-          <table className="w-full border-separate border-spacing-0">
-            <thead><tr><STh>Zone</STh><STh className="text-center">Serviceable</STh><STh className="text-right">Leads</STh><STh className="w-8" /></tr></thead>
-            <tbody>
-              {s.zones.map((z) => (
-                <tr key={z.id} className="group hover:bg-surface-subtle">
-                  <STd><InlineInput autoFocus={!z.name} placeholder="Zone name" value={z.name} onChange={(v) => patch("zones", z.id, { name: v })} className="w-40" /></STd>
-                  <STd className="text-center"><div className="inline-flex"><SToggle on={z.serviceable} onChange={(v) => patch("zones", z.id, { serviceable: v })} label="Serviceable" /></div></STd>
-                  <STd className="text-right tabular-nums text-ink-3">{count("zone", z.name)}</STd>
-                  <STd><RowDelete onClick={() => remove("zones", z.id, "Zone removed")} /></STd>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      </div>
-    </>
-  );
-}
-
 /* ----- Auto follow-ups ----- */
-
-function StepText({ st }) {
-  return (
-    <span>
-      {st.label}
-      <span className="text-ink-4"> {fmtDelay(st.delay)}</span>
-    </span>
-  );
-}
-
-function RuleBuilder({ initial, onSave, onClose, onDelete }) {
-  const [r, setR] = useState(initial);
-  const conds = RULE_TRIGGERS[r.trigger] || [];
-  const setStep = (i, p) => setR((x) => ({ ...x, steps: x.steps.map((s, j) => (j === i ? { ...s, ...p } : s)) }));
-  const selCls = `${inputCls} pr-7`;
-  return (
-    <Modal title={initial.isNew ? "New rule" : "Edit rule"} onClose={onClose} width={620}>
-      <div className="p-5 space-y-5">
-        <div>
-          <div className="text-small leading-4 font-medium text-ink-4 mb-2">When</div>
-          <div className="grid grid-cols-2 gap-2">
-            <select className={selCls} value={r.trigger} onChange={(e) => setR({ ...r, trigger: e.target.value, condition: RULE_TRIGGERS[e.target.value][0] })}>
-              {Object.keys(RULE_TRIGGERS).map((t) => <option key={t}>{t}</option>)}
-            </select>
-            <select className={selCls} value={r.condition} onChange={(e) => setR({ ...r, condition: e.target.value })}>
-              {conds.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-        </div>
-        <div>
-          <div className="text-small leading-4 font-medium text-ink-4 mb-2">Then</div>
-          <div className="space-y-2">
-            {r.steps.map((st, i) => {
-              return (
-                <div key={st.id} className="rounded-lg border border-line p-3">
-                  <div className="flex items-center gap-2 text-small leading-4 text-ink-4 mb-2">
-                    <span>{i === 0 ? "Step 1" : `Then, step ${i + 1}`}</span>
-                    {r.steps.length > 1 && <button onClick={() => setR({ ...r, steps: r.steps.filter((_, j) => j !== i) })} className="ml-auto hover:text-red-700">Remove</button>}
-                  </div>
-                  <div className="grid grid-cols-[1fr_1.3fr] gap-2">
-                    <select className={selCls} value={st.type} onChange={(e) => { const t = e.target.value; setStep(i, { type: t, label: RULE_ACTIONS[t].label }); }}>
-                      {Object.entries(RULE_ACTIONS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                    </select>
-                    <input className={inputCls} value={st.label} onChange={(e) => setStep(i, { label: e.target.value })} placeholder="Task name" />
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <select className={`${selCls} w-36`} value={st.delay.kind} onChange={(e) => setStep(i, { delay: { ...st.delay, kind: e.target.value, n: st.delay.n || 24, u: st.delay.u || "h" } })}>
-                      {DELAY_KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-                    </select>
-                    {(st.delay.kind === "after" || st.delay.kind === "within") && (
-                      <>
-                        <input type="number" min={1} className={`${inputCls} w-20 tabular-nums`} value={st.delay.n} onChange={(e) => setStep(i, { delay: { ...st.delay, n: Math.max(1, +e.target.value || 1) } })} />
-                        <select className={`${selCls} w-28`} value={st.delay.u} onChange={(e) => setStep(i, { delay: { ...st.delay, u: e.target.value } })}>
-                          <option value="min">minutes</option><option value="h">hours</option><option value="days">days</option>
-                        </select>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {r.steps.length < 3 && (
-              <button onClick={() => setR({ ...r, steps: [...r.steps, { id: sid(), type: "call", label: "Call task", delay: { kind: "after", n: 24, u: "h" } }] })} className="text-small text-ink-3 hover:text-ink inline-flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add a next step</button>
-            )}
-          </div>
-        </div>
-        <div className="rounded-lg bg-surface-subtle px-3 py-2.5 text-body leading-relaxed">
-          <span className="text-ink-4">When </span>{r.trigger.charAt(0).toLowerCase() + r.trigger.slice(1)} {condText(r)}<span className="text-ink-4"> → </span>
-          {r.steps.map((st, i) => (
-            <span key={st.id}>{i > 0 && <span className="text-ink-4">, then </span>}<StepText st={st} /></span>
-          ))}
-        </div>
-        <div className="text-small leading-4 text-ink-4">Tasks landing after 8 pm move to 10 am the next day.</div>
-      </div>
-      <div className="flex items-center gap-2 px-5 pb-5">
-        {onDelete && <button onClick={onDelete} className="text-body text-ink-4 hover:text-red-700">Delete rule</button>}
-        <SecondaryButton className="ml-auto" onClick={onClose}>Cancel</SecondaryButton>
-        <PrimaryButton disabled={r.steps.some((s) => !s.label.trim())} onClick={() => onSave(r)}>{initial.isNew ? "Create rule" : "Save rule"}</PrimaryButton>
-      </div>
-    </Modal>
-  );
-}
-
-function RuleSettings({ s, upd, patch, remove }) {
-  const [editing, setEditing] = useState(null);
-  const active = s.rules.filter((r) => r.on).length;
-  return (
-    <>
-      <SHeader
-        title="Auto follow-ups"
-        desc="Rules that create follow-ups for you automatically, so no lead goes quiet."
-        action={<NewButton onClick={() => setEditing({ isNew: true, id: sid(), trigger: "Consult done", condition: "No payment", on: true, steps: [{ id: sid(), type: "call", label: "Call task", delay: { kind: "after", n: 24, u: "h" } }] })}>New rule</NewButton>}
-      />
-      <div className="grid grid-cols-[minmax(0,1fr)_20px_minmax(0,1.25fr)_44px] items-center gap-3 h-8 border-b border-line text-small leading-4 font-medium text-ink-4">
-        <span>When</span><span /><span>Then</span><span className="text-right tabular-nums">{active} on</span>
-      </div>
-      {s.rules.map((r) => (
-        <div key={r.id} onClick={() => setEditing(r)} className={`group grid grid-cols-[minmax(0,1fr)_20px_minmax(0,1.25fr)_44px] items-center gap-3 min-h-[52px] py-2 border-b border-line-subtle cursor-pointer hover:bg-surface-subtle transition-colors duration-150 ${r.on ? "" : "[&_span]:text-ink-4 [&_div]:text-ink-4"}`}>
-          <button type="button" onClick={(e) => { e.stopPropagation(); setEditing(r); }} className="text-body text-left rounded-sm">
-            <span className="font-medium">{r.trigger}</span> <span className="text-ink-3">{condText(r)}</span>{!r.on && <span className="sr-only"> (paused)</span>}
-          </button>
-          <ArrowRight className="h-3.5 w-3.5 text-ink-faint" />
-          <div className="text-body flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-            {r.steps.map((st, i) => (
-              <React.Fragment key={st.id}>
-                {i > 0 && <span className="text-ink-4">then</span>}
-                <StepText st={st} />
-              </React.Fragment>
-            ))}
-          </div>
-          <div className="flex justify-end"><SToggle on={r.on} onChange={(v) => patch("rules", r.id, { on: v })} label="Rule on" /></div>
-        </div>
-      ))}
-      <div className="mt-4 text-small leading-4 text-ink-4">Click a rule to edit it</div>
-      {editing && (
-        <RuleBuilder
-          initial={editing}
-          onClose={() => setEditing(null)}
-          onDelete={editing.isNew ? null : () => { remove("rules", editing.id, "Rule deleted"); setEditing(null); }}
-          onSave={(r) => {
-            const { isNew, ...clean } = r;
-            if (isNew) upd("rules", (rs) => [...rs, clean]);
-            else patch("rules", clean.id, clean);
-            setEditing(null);
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-/* ----- Routing ----- */
-/* ----- Templates ----- */
-function WaBubble({ body }) {
-  const parts = body.split(/(\{\{\d+\}\})/g);
-  return (
-    <div className="rounded-xl bg-surface-active p-4">
-      <div className="max-w-[300px] rounded-lg rounded-tl-none bg-white px-3 py-2 text-body leading-relaxed shadow-sm whitespace-pre-wrap">
-        {parts.map((p, i) => (/\{\{\d+\}\}/.test(p) ? <span key={i} className="rounded bg-emerald-50 px-1 text-emerald-700">{p}</span> : p))}
-        <div className="mt-1 text-right text-micro text-ink-4">10:42</div>
-      </div>
-    </div>
-  );
-}
-function TemplateSettings({ s, upd, patch, remove, showToast }) {
-  const [edit, setEdit] = useState(null);
-  return (
-    <>
-      <SHeader title="WhatsApp templates" desc="Pre-approved messages for chats older than 24 hours. Type / and the shortcut in Inbox to insert one." action={<NewButton onClick={() => setEdit({ isNew: true, id: sid(), name: "", shortcut: "", category: "Utility", status: "Pending", body: "Hi {{1}}, " })}>New template</NewButton>} />
-      <table className="w-full border-separate border-spacing-0 table-fixed">
-        <colgroup><col className="w-[190px]" /><col className="w-[100px]" /><col className="w-[96px]" /><col className="w-[110px]" /><col /></colgroup>
-        <thead><tr><STh>Name</STh><STh>Shortcut</STh><STh>Category</STh><STh>Status</STh><STh>Preview</STh></tr></thead>
-        <tbody>
-          {s.templates.map((t) => (
-            <tr key={t.id} tabIndex={0} onClick={() => setEdit(t)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setEdit(t); } }} className="cursor-pointer hover:bg-surface-subtle">
-              <STd className="font-medium truncate">{t.name}</STd>
-              <STd><code className="rounded bg-surface-hover px-1.5 py-0.5 text-small text-ink-3">/{t.shortcut}</code></STd>
-              <STd className="text-ink-3">{t.category}</STd>
-              <STd><span className="inline-flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${t.status === "Approved" ? "bg-emerald-500" : "bg-amber-500"}`} />{t.status}</span></STd>
-              <STd className="text-ink-4 truncate">{t.body}</STd>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {edit && (
-        <Modal title={edit.isNew ? "New template" : edit.name} onClose={() => setEdit(null)} width={720}>
-          <div className="p-5 grid grid-cols-[minmax(0,1fr)_300px] gap-5">
-            <div className="space-y-4">
-              <Field label="Name" required><input autoFocus={edit.isNew} className={inputCls} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Shortcut"><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4 text-body">/</span><input className={`${inputCls} pl-6`} value={edit.shortcut} onChange={(e) => setEdit({ ...edit, shortcut: e.target.value.replace(/[^a-z0-9-]/gi, "").toLowerCase() })} /></div></Field>
-                <Field label="Category"><select className={inputCls} value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })}><option>Utility</option><option>Marketing</option></select></Field>
-              </div>
-              <Field label="Message"><textarea rows={6} className={`${inputCls} h-auto py-2 resize-none leading-relaxed`} value={edit.body} onChange={(e) => setEdit({ ...edit, body: e.target.value })} /></Field>
-              <div className="text-small leading-4 text-ink-4">Use {"{{1}}"}, {"{{2}}"} for values filled in when sending. Editing an approved template sends it back to Meta for review.</div>
-            </div>
-            <div>
-              <div className="text-small leading-4 text-ink-3 mb-1.5">Preview</div>
-              <WaBubble body={edit.body || " "} />
-            </div>
-          </div>
-          <div className="flex items-center gap-2 px-5 pb-5">
-            {!edit.isNew && <button onClick={() => { remove("templates", edit.id, "Template deleted"); setEdit(null); }} className="text-body text-ink-4 hover:text-red-700">Delete</button>}
-            <SecondaryButton className="ml-auto" onClick={() => setEdit(null)}>Cancel</SecondaryButton>
-            <PrimaryButton
-              disabled={!edit.name.trim() || !edit.shortcut || !edit.body.trim()}
-              onClick={() => {
-                const { isNew, ...t } = edit;
-                const orig = s.templates.find((x) => x.id === t.id);
-                const changed = !orig || orig.body !== t.body || orig.category !== t.category;
-                const next = { ...t, status: changed ? "Pending" : t.status };
-                if (isNew) upd("templates", (ts) => [...ts, next]);
-                else patch("templates", t.id, next);
-                if (changed) showToast("Submitted to Meta for approval");
-                setEdit(null);
-              }}
-            >
-              {edit.isNew ? "Submit for approval" : "Save"}
-            </PrimaryButton>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-}
-
-/* ----- Connections ----- */
-function CopyRow({ label, value, showToast, mask }) {
-  return (
-    <div className="mt-2">
-      <div className="text-small leading-4 text-ink-4 mb-1">{label}</div>
-      <div className="flex items-center gap-1 rounded-md border border-line bg-surface-subtle pl-2.5 pr-1 h-8">
-        <code className="flex-1 truncate text-small text-ink-2">{mask ? "•".repeat(18) + value.slice(-4) : value}</code>
-        <button onClick={() => copyText(value, showToast)} className="h-6 w-6 rounded flex items-center justify-center text-ink-4 hover:bg-white hover:text-ink" aria-label={`Copy ${label}`}><Copy className="h-3.5 w-3.5" /></button>
-      </div>
-    </div>
-  );
-}
-function ConnCard({ icon: Icon, name, sub, connected, onToggle, details = [], children }) {
-  return (
-    <div className="rounded-xl border border-line p-4">
-      <div className="flex items-start gap-3">
-        <div className="h-9 w-9 rounded-lg border border-line flex items-center justify-center text-ink-2 shrink-0"><Icon className="h-4 w-4" /></div>
-        <div className="min-w-0 flex-1">
-          <div className="text-body font-medium">{name}</div>
-          <div className="text-small leading-4 text-ink-4">{sub}</div>
-        </div>
-        <span className={`inline-flex items-center gap-1.5 text-small ${connected ? "text-emerald-700" : "text-ink-4"}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-500" : "bg-line-heavy"}`} />{connected ? "Connected" : "Not connected"}
-        </span>
-      </div>
-      {connected && details.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 gap-y-1.5 text-small">
-          {details.map(([k, v]) => (
-            <React.Fragment key={k}><span className="text-ink-4">{k}</span><span className="text-right tabular-nums">{v}</span></React.Fragment>
-          ))}
-        </div>
-      )}
-      {connected && children}
-      <div className="mt-4 flex justify-end">
-        {connected ? <SecondaryButton onClick={onToggle}>Disconnect</SecondaryButton> : <PrimaryButton onClick={onToggle}>Connect</PrimaryButton>}
-      </div>
-    </div>
-  );
-}
-function ConnectionSettings({ which, s, upd, patch, remove, showToast }) {
-  const c = s.connections;
-  const toggle = (k, name) => {
-    upd("connections", (x) => ({ ...x, [k]: !x[k] }));
-    showToast(`${name} ${c[k] ? "disconnected" : "connected"}`);
-  };
-  if (which === "wa-api")
-    return (
-      <>
-        <SHeader title="WhatsApp API" desc="The WhatsApp Business number you chat from." action={<NewButton onClick={() => showToast("Adding a second number needs Meta Business verification")}>Add number</NewButton>} />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ConnCard icon={WhatsAppIcon} name="WhatsApp Business · Cloud API" sub="Meta Business Manager" connected={c.whatsapp} onToggle={() => toggle("whatsapp", "WhatsApp")} details={[["Number", "+91 80 4718 2290"], ["Display name", "Cradlewell"], ["Quality rating", "High"], ["Messaging limit", "1K / day"]]}>
-            <CopyRow label="Webhook URL" value="https://crm.cradlewell.com/api/webhooks/whatsapp" showToast={showToast} />
-            <CopyRow label="Verify token" value="cw_wa_verify_8f3k21" mask showToast={showToast} />
-          </ConnCard>
-        </div>
-      </>
-    );
-  if (which === "payments")
-    return (
-      <>
-        <SHeader title="Payments" desc="Payment links sent from a lead, and the webhooks that mark it paid." action={<NewButton onClick={() => showToast("Pick a provider below to connect")}>New provider</NewButton>} />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ConnCard icon={CreditCard} name="Razorpay" sub="Payment links and UPI" connected={c.razorpay} onToggle={() => toggle("razorpay", "Razorpay")} details={[["Mode", "Live"], ["Link expiry", "48 hours"], ["Last payment", "Today, 4:12 pm"]]}>
-            <CopyRow label="Webhook URL" value="https://crm.cradlewell.com/api/webhooks/razorpay" showToast={showToast} />
-          </ConnCard>
-          <ConnCard icon={Wallet} name="Cashfree" sub="Backup payment gateway" connected={c.cashfree} onToggle={() => toggle("cashfree", "Cashfree")} details={[["Mode", "Live"]]}>
-            <CopyRow label="Webhook URL" value="https://crm.cradlewell.com/api/webhooks/cashfree" showToast={showToast} />
-          </ConnCard>
-        </div>
-      </>
-    );
-  return (
-    <>
-      <SHeader title="n8n and webhooks" desc="Automations running in n8n, the booking service, and events the CRM sends out." action={<NewButton onClick={() => upd("webhooks", (w) => [...w, { id: sid(), event: "lead.created", url: "https://", on: true }])}>New webhook</NewButton>} />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ConnCard icon={Workflow} name="n8n" sub="Self-hosted automations" connected={c.n8n} onToggle={() => toggle("n8n", "n8n")} details={[["Active workflows", "12"], ["Last run", "2 min ago"]]}>
-          <CopyRow label="Incoming webhook" value="https://crm.cradlewell.com/api/webhooks/n8n" showToast={showToast} />
-        </ConnCard>
-        <ConnCard icon={CalendarCheck} name="Cal.com" sub="Consult availability and booking" connected={c.calcom} onToggle={() => toggle("calcom", "Cal.com")} details={[["Event type", "Care consult · 30 min"]]}>
-          <CopyRow label="Booking webhook" value="https://crm.cradlewell.com/api/webhooks/calcom" showToast={showToast} />
-        </ConnCard>
-      </div>
-      <h2 className="mt-10 mb-2 text-body font-medium">Outgoing webhooks</h2>
-      <table className="w-full border-separate border-spacing-0">
-        <thead><tr><STh>Event</STh><STh>Sends to</STh><STh className="text-right">On</STh><STh className="w-8" /></tr></thead>
-        <tbody>
-          {s.webhooks.map((w) => (
-            <tr key={w.id} className="group hover:bg-surface-subtle">
-              <STd><InlineSelect value={w.event} onChange={(v) => patch("webhooks", w.id, { event: v })} options={["lead.created", "lead.stage_changed", "followup.overdue", "consult.booked", "consult.no_show", "payment.received"]} className="font-mono text-small" /></STd>
-              <STd><InlineInput value={w.url} onChange={(v) => patch("webhooks", w.id, { url: v })} className="w-full font-mono text-small text-ink-3" /></STd>
-              <STd className="text-right"><SToggle on={w.on} onChange={(v) => patch("webhooks", w.id, { on: v })} label="Webhook on" /></STd>
-              <STd><RowDelete onClick={() => remove("webhooks", w.id, "Webhook removed")} /></STd>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
-  );
-}
 
 /* ---------- Shell ---------- */
 
@@ -9955,7 +9092,6 @@ function SettingsPage({ settings, setSettings, showToast, leads, pageRequest }) 
     showToast(msg, () => setSettings((s) => ({ ...s, [key]: snapshot })));
   };
   const props = { s: settings, upd, patch, remove, showToast, leads };
-  const all = SETTINGS_MENU.flatMap((g) => g.items);
   return (
     <div className="h-[calc(100dvh-48px)] md:h-[100dvh] flex">
       <nav aria-label="Settings" className="hidden md:block w-[200px] shrink-0 bg-surface-sidebar border-r border-line overflow-y-auto px-1.5 py-6">
@@ -9979,17 +9115,9 @@ function SettingsPage({ settings, setSettings, showToast, leads, pageRequest }) 
           </select>
         </div>
         <div className="px-5 md:px-10 pt-8 md:pt-10 pb-16 max-w-[980px]" key={page}>
-          {page === "notifications" && <NotificationSettings {...props} />}
           {page === "stages" && <StageSettings {...props} />}
           {page === "reasons" && <ReasonSettings {...props} />}
-          {page === "fields" && <FieldSettings {...props} />}
-          {page === "packages" && <PackageSettings {...props} />}
-          {page === "places" && <PlaceSettings {...props} />}
           {page === "targets" && <TargetSettings {...props} />}
-          {page === "rules" && <RuleSettings {...props} />}
-          {page === "templates" && <TemplateSettings {...props} />}
-          {(page === "wa-api" || page === "payments" || page === "n8n") && <ConnectionSettings which={page} {...props} />}
-          {!all.some(([id]) => id === page) && null}
         </div>
       </div>
     </div>
@@ -10715,7 +9843,7 @@ export default function CradlewellCRM() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white text-ink" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
         <div className="text-center">
-          <div className="text-body-lg font-medium">Couldn't load the CRM</div>
+          <div className="text-body-lg font-medium">Couldn&apos;t load the CRM</div>
           <div className="mt-1 text-body text-ink-4">{error}</div>
           <button onClick={load} className={`mt-4 ${btn("primary", "md")}`}>Try again</button>
         </div>

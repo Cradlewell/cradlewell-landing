@@ -1,5 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions | Cradlewell – Nurse-led Newborn & Postnatal Home Care Bangalore",
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://www.cradlewell.com/terms-conditions",
   },
+  openGraph: pageOpenGraph("/terms-conditions", { title: "Terms & Conditions | Cradlewell" }),
 };
 
 const TermsOfUse: React.FC = () => {

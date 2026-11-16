@@ -1,20 +1,18 @@
 // src/app/layout.tsx
-// Bootstrap and globals.css are imported by the (site) and operations layouts,
-// not here, so the CRM is not affected by them.
-// Tracking (Google Analytics, Tag Manager, Meta Pixel), SEO schema, site fonts and the
-// site shell live in (site)/layout.tsx, so the CRM and Operations don't load them.
+// Bootstrap and globals.css are imported by the (site) layout, not here, so the
+// CRM is not affected by them. Tracking, SEO schema, site fonts and the site
+// shell also live in (site)/layout.tsx, so the CRM doesn't load them.
 import { ReactNode } from 'react';
 import { Metadata } from 'next';
+import { BASE_URL, defaultOpenGraph } from '@/lib/seo';
 
-const BASE_URL = 'https://www.cradlewell.com';
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    // Brand only, by request — the tab should read "Cradlewell" and nothing else.
-    // The descriptive positioning still reaches crawlers and social cards via the
-    // description, openGraph.title and twitter.title below.
-    default: "Cradlewell",
+    // The homepage title is what search results show, so it says what the
+    // site offers, not just the brand.
+    default: "Nurse-led Newborn & Postnatal Home Care in Bangalore | Cradlewell",
     template: "%s - Cradlewell",
   },
   description:
@@ -29,23 +27,8 @@ export const metadata: Metadata = {
       follow: true,
     },
   },
-  openGraph: {
-    type: 'website',
-    locale: 'en_IN',
-    url: BASE_URL,
-    siteName: 'Cradlewell',
-    title: 'Nurse-led Newborn & Postnatal Home Care in Bangalore | Cradlewell',
-    description:
-      'Certified nurses deliver hospital-grade postnatal and newborn care at home in Bangalore. ISO 9001 & 27001 certified. Winner, Entrepreneur India Startup Awards 2026. Trusted by 100+ families.',
-    images: [
-      {
-        url: `${BASE_URL}/images/bannerimg.png`,
-        width: 1200,
-        height: 630,
-        alt: 'Cradlewell nurse-led newborn and postnatal home care Bangalore',
-      },
-    ],
-  },
+  // Each page sets its own address; see pageOpenGraph in lib/seo.
+  openGraph: defaultOpenGraph(),
   twitter: {
     card: 'summary_large_image',
     title: 'Nurse-led Newborn & Postnatal Home Care in Bangalore | Cradlewell',

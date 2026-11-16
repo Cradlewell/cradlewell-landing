@@ -1,126 +1,91 @@
-import Blogbutton from "@/components/Blogbutton";
+import Image from "next/image";
 import type { Metadata } from "next";
-
-export const dynamic = "force-dynamic"; // 👈 ADD THIS
+import { notFound } from "next/navigation";
+import Blogbutton from "@/components/Blogbutton";
+import { BLOG_POSTS, getPost } from "@/content/blog-posts";
+import { BASE_URL } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-/* ===========================
-   🔹 Generate SEO Metadata
-=========================== */
-export async function generateMetadata(
-  { params }: Props
-): Promise<Metadata> {
+// Every article is built ahead of time from src/content/blog-posts.ts; any
+// other address under /blog/ is a 404.
+export const dynamicParams = false;
 
+export function generateStaticParams() {
+  return BLOG_POSTS.map((p) => ({ slug: p.slug }));
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-
-  // Encode the slug before putting it in the upstream URL. Raw interpolation let
-  // a crafted slug inject extra query parameters into the WordPress request.
-  const wpUrl = `https://blog.cradlewell.com/${encodeURIComponent(slug)}`;
-
-  const res = await fetch(
-    `https://blog.cradlewell.com/wp-json/rankmath/v1/getHead?url=${encodeURIComponent(wpUrl)}`,
-    { next: { revalidate: 60 } }
-  );
-
-  if (!res.ok) return {};
-
-  const seo = await res.json();
-  if (!seo?.title) return {};
-
-  // ✅ Clean title (remove blog branding if exists)
-  const cleanTitle = seo.title
-    .replace(" - blog.cradlewell.com", "")
-    .replace("| blog.cradlewell.com", "")
-    .trim();
-
-  // ✅ Handle OG image (array or string)
-  const ogImage =
-    Array.isArray(seo?.og_image)
-      ? seo.og_image[0]
-      : seo?.og_image || null;
-
+  const post = getPost(slug);
+  if (!post) return {};
+  const url = `${BASE_URL}/blog/${post.slug}`;
+  const image = `${BASE_URL}${post.image}`;
+  const title = post.title.includes("Cradlewell") ? post.title : `${post.title} | Cradlewell`;
   return {
-    title: cleanTitle,
-    description: seo.description,
-
-    alternates: {
-      canonical: `https://www.cradlewell.com/blog/${slug}`,
-    },
-
+    title: { absolute: title },
+    description: post.description,
+    alternates: { canonical: url },
     openGraph: {
-      title: cleanTitle,
-      description: seo.description,
-      url: `https://www.cradlewell.com/blog/${slug}`,
-      images: ogImage ? [{ url: ogImage }] : [],
       type: "article",
+      locale: "en_IN",
+      siteName: "Cradlewell",
+      url,
+      title,
+      description: post.description,
+      publishedTime: post.published,
+      modifiedTime: post.updated,
+      images: [{ url: image, width: post.imageWidth, height: post.imageHeight, alt: post.imageAlt }],
     },
-
     twitter: {
       card: "summary_large_image",
-      title: cleanTitle,
-      description: seo.description,
-      images: ogImage ? [ogImage] : [],
+      title,
+      description: post.description,
+      images: [image],
     },
   };
 }
 
-/* ===========================
-   🔹 Blog Page Component
-=========================== */
 export default async function BlogPost({ params }: Props) {
-
   const { slug } = await params;
+  const post = getPost(slug);
+  if (!post) notFound();
 
-  const res = await fetch(
-    `https://blog.cradlewell.com/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`,
-    { cache: "no-store" }
-  );
-
-  const post = await res.json();
-
-  if (!post.length) {
-    return <div className="container py-5">Post not found</div>;
-  }
-
-  const blog = post[0];
-
-  const featuredImage =
-    blog._embedded?.["wp:featuredmedia"]?.[0]?.source_url || null;
-
-  const blogPostingSchema = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": blog.title.rendered.replace(/<[^>]*>/g, ''),
-    "datePublished": blog.date,
-    "dateModified": blog.modified || blog.date,
-    "author": {
-      "@type": "Organization",
-      "@id": "https://www.cradlewell.com/#organization",
-      "name": "Cradlewell Care Team",
-      "url": "https://www.cradlewell.com",
-    },
-    "publisher": { "@id": "https://www.cradlewell.com/#organization" },
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": `https://www.cradlewell.com/blog/${slug}`,
-    },
-    ...(featuredImage && {
-      "image": {
-        "@type": "ImageObject",
-        "url": featuredImage,
+  const url = `${BASE_URL}/blog/${post.slug}`;
+  const schema = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      headline: post.title,
+      description: post.description,
+      datePublished: post.published,
+      dateModified: post.updated,
+      author: {
+        "@type": "Organization",
+        "@id": `${BASE_URL}/#organization`,
+        name: "Cradlewell Care Team",
+        url: BASE_URL,
       },
-    }),
-  };
+      publisher: { "@id": `${BASE_URL}/#organization` },
+      mainEntityOfPage: { "@type": "WebPage", "@id": url },
+      image: { "@type": "ImageObject", url: `${BASE_URL}${post.image}`, width: post.imageWidth, height: post.imageHeight },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${BASE_URL}/` },
+        { "@type": "ListItem", position: 2, name: "Blog", item: `${BASE_URL}/blog` },
+        { "@type": "ListItem", position: 3, name: post.title, item: url },
+      ],
+    },
+  ];
 
   return (
     <div style={{ background: "var(--cw-surface-page)" }}>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       {/* HERO */}
       <section style={{
@@ -132,28 +97,32 @@ export default async function BlogPost({ params }: Props) {
           <span className="section-eyebrow">Article</span>
           <h1
             style={{
-              fontFamily: "'Lexend', system-ui, sans-serif",
+              fontFamily: "var(--font-lexend), system-ui, sans-serif",
               fontWeight: 700,
               letterSpacing: "-0.02em",
               color: "var(--cw-text-primary)",
               marginTop: 12,
               marginBottom: 16,
             }}
-            dangerouslySetInnerHTML={{ __html: blog.title.rendered }}
-          />
+          >
+            {post.title}
+          </h1>
           <p style={{
             color: "var(--cw-text-muted)",
             fontSize: "0.92rem",
-            fontFamily: "'Lexend', system-ui, sans-serif",
+            fontFamily: "var(--font-lexend), system-ui, sans-serif",
             fontWeight: 500,
             margin: 0,
             letterSpacing: "0.01em",
           }}>
-            {new Date(blog.date).toLocaleDateString("en-IN", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            <time dateTime={post.published}>
+              {new Date(post.published).toLocaleDateString("en-IN", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                timeZone: "Asia/Kolkata",
+              })}
+            </time>
           </p>
         </div>
       </section>
@@ -171,10 +140,17 @@ export default async function BlogPost({ params }: Props) {
               padding: "40px 36px",
               boxShadow: "var(--cw-shadow-xs)",
             }}>
-              <div
-                className="blog-content"
-                dangerouslySetInnerHTML={{ __html: blog.content.rendered }}
+              <Image
+                src={post.image}
+                alt={post.imageAlt}
+                width={post.imageWidth}
+                height={post.imageHeight}
+                sizes="(max-width: 992px) 100vw, 700px"
+                priority
+                style={{ width: "100%", height: "auto", borderRadius: 12, marginBottom: 28 }}
               />
+              {/* The article body is our own HTML from src/content, not outside input. */}
+              <div className="blog-content" dangerouslySetInnerHTML={{ __html: post.html }} />
             </article>
           </div>
 
@@ -191,8 +167,8 @@ export default async function BlogPost({ params }: Props) {
                 top: "100px",
               }}
             >
-              <h4 style={{
-                fontFamily: "'Lexend', system-ui, sans-serif",
+              <h2 style={{
+                fontFamily: "var(--font-lexend), system-ui, sans-serif",
                 fontWeight: 700,
                 fontSize: "1.05rem",
                 letterSpacing: "-0.01em",
@@ -200,10 +176,10 @@ export default async function BlogPost({ params }: Props) {
                 marginBottom: 8,
               }}>
                 Need expert newborn &amp; mother care?
-              </h4>
+              </h2>
               <p style={{
                 color: "var(--cw-text-secondary)",
-                fontFamily: "'Source Sans 3', system-ui, sans-serif",
+                fontFamily: "var(--font-source-sans), system-ui, sans-serif",
                 fontSize: "0.92rem",
                 lineHeight: 1.55,
                 marginBottom: 18,

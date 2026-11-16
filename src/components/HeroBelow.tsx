@@ -61,7 +61,7 @@ const StatCounter = ({
         style={{
           fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)",
           color: color ?? "#0F172A",
-          fontFamily: "'Lexend', system-ui, sans-serif",
+          fontFamily: "var(--font-lexend), system-ui, sans-serif",
           fontWeight: 800,
           letterSpacing: "-0.03em",
           lineHeight: 1.1,
@@ -72,7 +72,7 @@ const StatCounter = ({
       <div className="stat-label" style={{
         fontSize: "0.82rem",
         color: "#94A3B8",
-        fontFamily: "'Lexend', system-ui, sans-serif",
+        fontFamily: "var(--font-lexend), system-ui, sans-serif",
         fontWeight: 600,
         letterSpacing: "0.04em",
         textTransform: "uppercase",

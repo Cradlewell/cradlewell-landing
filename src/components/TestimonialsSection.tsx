@@ -25,7 +25,7 @@ const TestimonialsSection = () => (
             borderRadius: 6,
             padding: '5px 18px',
             fontSize: '0.72rem',
-            fontFamily: "'Lexend', system-ui, sans-serif",
+            fontFamily: "var(--font-lexend), system-ui, sans-serif",
             fontWeight: 700,
             letterSpacing: '0.1em',
             textTransform: 'uppercase' as const,
@@ -50,7 +50,7 @@ const TestimonialsSection = () => (
         textAlign: 'center',
         color: '#94A3B8',
         fontSize: '0.85rem',
-        fontFamily: "'Lexend', system-ui, sans-serif",
+        fontFamily: "var(--font-lexend), system-ui, sans-serif",
         marginTop: 8,
       }}>
         Click a card to read it in full
