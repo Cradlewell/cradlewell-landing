@@ -2,7 +2,7 @@
 // Uses Node's built-in runner, so there is nothing extra to install.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { settleTasks, stageKey, phoneDigits, uiLeadToDb } from "../src/components/crm-v2/data.js";
+import { settleTasks, stageKey, phoneDigits, uiLeadToDb, dbLeadToUi } from "../src/components/crm-v2/data.js";
 
 const NOW = new Date("2026-11-16T10:00:00Z");
 const task = (id, extra = {}) => ({ id, leadId: "L1", type: "Call", action: "Call", due: NOW, status: "open", ...extra });
@@ -126,4 +126,22 @@ test("a refresh with nothing new returns the same array, and a pending delete st
   assert.deepEqual(afterDelete, []);
   const tl = { a: [{ id: "e1" }] };
   assert.equal(mergeRemoteMap(tl, { a: [{ id: "e1" }] }, () => true), tl);
+});
+
+test("A repeat website enquiry's date comes from lead_date, not the saved copy", () => {
+  const ctx = { wonClosure: new Map(), lostClosure: new Map(), nextFollowUp: new Map(), stageSince: new Map(), customerNo: new Map() };
+  const row = {
+    id: "L9",
+    name: "Asha",
+    stage: "New",
+    created_at: "2026-06-01T10:00:00Z",
+    lead_date: "2026-11-16T09:00:00Z",
+    // saved by the CRM earlier, before the person enquired again
+    meta: { stageSince: "2026-07-01T10:00:00Z", enquiredAt: "2026-07-01T10:00:00Z" },
+  };
+  const ui = dbLeadToUi(row, ctx);
+  assert.equal(new Date(ui.enquiredAt).toISOString(), "2026-11-16T09:00:00.000Z");
+  // and it is never written back into the saved copy
+  const db = uiLeadToDb(ui, { packageValue: () => 0, serviceDays: () => null });
+  assert.equal(JSON.stringify(db.meta).includes("enquiredAt"), false);
 });

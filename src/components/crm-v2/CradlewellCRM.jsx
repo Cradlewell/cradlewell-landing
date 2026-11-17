@@ -7523,6 +7523,18 @@ const STUCK_LIMITS = { Qualified: 3, "Consult booked": 1, "Consult done": 2, "Pa
 const leadValue = (l) => packageValue(l);
 const fmtLakh = (n) => fmtShortINR(n);
 
+// The New column lists the newest enquiries first: nothing in New counts as
+// stuck, so "Stuck first" put the oldest on top and pushed today's leads past
+// the first page of cards.
+const defaultPipeSort = (stage) => (stage === "New" ? "newest" : "stuck");
+// When a card entered its stage. For New that includes a repeat enquiry from
+// the website (which reopens the lead without a stage change in the CRM).
+const inStageSince = (l) => {
+  const t = (d) => (d instanceof Date ? d.getTime() : d ? new Date(d).getTime() : 0) || 0;
+  const since = t(l.stageSince) || t(l.createdAt);
+  return l.stage === "New" ? Math.max(since, t(l.enquiredAt), t(l.createdAt)) : since;
+};
+
 function stuckDays(l, consults, now) {
   const limit = STUCK_LIMITS[l.stage];
   if (!limit) return 0;
@@ -7707,9 +7719,9 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
   const columns = [...PIPE_COLUMNS, "Won"];
 
   const sortCards = (cards, stage) => {
-    const s = colSort[stage] || "stuck";
+    const s = colSort[stage] || defaultPipeSort(stage);
     const base = [...cards].sort((a, b) =>
-      s === "value" ? leadValue(b) - leadValue(a) : s === "newest" ? (b.stageSince || b.createdAt) - (a.stageSince || a.createdAt) : stuckDays(b, consults, now) - stuckDays(a, consults, now) || (a.stageSince || a.createdAt) - (b.stageSince || b.createdAt)
+      s === "value" ? leadValue(b) - leadValue(a) : s === "newest" ? inStageSince(b) - inStageSince(a) : stuckDays(b, consults, now) - stuckDays(a, consults, now) || inStageSince(a) - inStageSince(b)
     );
     if (s !== "manual" || !order[stage]) return base;
     const idx = (l) => { const i = order[stage].indexOf(l.id); return i === -1 ? 1e6 + base.indexOf(l) : i; };
@@ -8129,7 +8141,7 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
             <>
               <div className="px-2 pt-1 pb-1.5 text-caption text-ink-4">{menu.key === "sortAll" ? "Sort every column" : "Sort cards"}</div>
               {PIPE_SORTS.map(([k, label]) => {
-                const cur = menu.key === "sortAll" ? null : colSort[menu.stage] || "stuck";
+                const cur = menu.key === "sortAll" ? null : colSort[menu.stage] || defaultPipeSort(menu.stage);
                 return (
                   <MenuItem key={k} onClick={() => { if (menu.key === "sortAll") setColSort(Object.fromEntries(columns.map((c) => [c, k]))); else setColSort((s) => ({ ...s, [menu.stage]: k })); closeMenu(); }}>
                     <span className="flex-1">{label}</span>

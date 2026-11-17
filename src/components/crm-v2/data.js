@@ -171,6 +171,9 @@ export function dbLeadToUi(row, ctx) {
     address: row.address || m.address || "",
     owner: row.owner && row.owner !== "Unassigned" ? row.owner : m.owner || null,
     createdAt,
+    // When this person last enquired. The website form moves lead_date to now
+    // when a known number submits again, so a returning enquiry counts as new.
+    enquiredAt: toDate(row.lead_date) || createdAt,
     careStart,
     careEnd,
   };
@@ -191,6 +194,7 @@ export function uiLeadToDb(l, { packageValue, serviceDays }) {
   const meta = { ...l };
   LEAD_COLUMN_FIELDS.forEach((k) => delete meta[k]);
   delete meta.customerId; // recomputed from customerNo
+  delete meta.enquiredAt; // read from the lead_date column
   delete meta.customerNo; // lives in the customer_no column, assigned by the database
   delete meta.wonDeals; // read from closures
   delete meta.deals;
