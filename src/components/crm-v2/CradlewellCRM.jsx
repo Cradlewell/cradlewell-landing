@@ -4556,7 +4556,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   };
 
   const NAME_W = 210;
-  const CHECK_W = 44;
+  const CHECK_W = 0; // no selection tick boxes in the Leads table
   const ID_W = 112;
   // Every tab lists Customer ID before Name
   const idFirst = true;
@@ -4567,7 +4567,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   const frozenShadow = scrolledX ? "shadow-[6px_0_8px_-6px_rgba(0,0,0,0.10)]" : "";
   const rowBg = (isSel, active) =>
     isSel ? "bg-brand-tint" : active ? "bg-surface-sidebar" : "bg-white group-hover:bg-surface-subtle";
-  const th = "sticky top-0 z-10 bg-white h-9 border-b border-line text-left text-small leading-4 font-medium text-ink-4 whitespace-nowrap";
+  const th = "sticky top-0 z-10 bg-white h-9 border-b border-line text-left text-small leading-4 font-semibold text-ink whitespace-nowrap";
   const GRID = "border-r border-line";
 
   const recordLead = recordId ? leads.find((l) => l.id === recordId) : null;
@@ -4811,7 +4811,6 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
             <div className="inline-block min-w-full align-top pl-5 md:pl-8 pr-5 md:pr-8 pb-28">
               <table className="border-separate border-spacing-0 text-body table-fixed" style={{ width: tableWidth, minWidth: "100%" }}>
                 <colgroup>
-                  <col style={{ width: CHECK_W }} />
                   {frozenPair(<col key="n" style={{ width: NAME_W }} />, <col key="i" style={{ width: ID_W }} />)}
                   {visibleCols.map((c) => (
                     <col key={c.id} style={{ width: c.width }} />
@@ -4820,9 +4819,6 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                 </colgroup>
                 <thead>
                   <tr>
-                    <th className={`${th} left-0 z-30 pl-3 border-t`}>
-                      <Checkbox checked={allVisibleSelected} indeterminate={!allVisibleSelected && someVisibleSelected} onChange={toggleAll} label="Select all" />
-                    </th>
                     {frozenPair(
                       <th key="n" className={`${th} z-30 border-t ${GRID} ${idFirst ? frozenShadow : ""} px-2`} style={{ left: NAME_LEFT }}>
                         <ColumnHeading icon={UserRound} label="Name" />
@@ -4844,7 +4840,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                     <React.Fragment key={g.key ?? "all"}>
                       {g.key != null && (
                         <tr>
-                          <td colSpan={visibleCols.length + 4} className="h-9 pt-3 border-b border-line bg-white">
+                          <td colSpan={visibleCols.length + 3} className="h-9 pt-3 border-b border-line bg-white">
                             <span className="sticky left-3 inline-flex items-center gap-1.5 pl-3 text-small leading-4 font-medium text-ink-3">
                               {(groupBy === "stage" || groupBy === "paymentStatus") && <span className={`h-1.5 w-1.5 rounded-full ${(groupBy === "stage" ? STAGE_DOT : PAYMENT_DOT)[g.key]}`} />}
                               {g.key}
@@ -4860,9 +4856,6 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                         const cell = `h-10 border-b border-line transition-colors duration-150 ${bg}`;
                         return (
                           <tr key={l.id} onClick={() => setPanelId(l.id)} className="group cursor-default cw-row-in" style={{ animationDelay: `${80 + Math.min(rowIndex, 6) * 40}ms` }}>
-                            <td className={`${cell} sticky left-0 z-[2] pl-3`}>
-                              <Checkbox checked={isSel} onChange={() => toggleRow(l.id)} label={`Select ${l.name}`} />
-                            </td>
                             {frozenPair(
                             <td key="n" className={`${cell} sticky z-[2] px-2 ${GRID} ${idFirst ? frozenShadow : ""}`} style={{ left: NAME_LEFT }}>
                               <span className="flex items-center gap-2 min-w-0">
@@ -4903,7 +4896,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                   ))}
                   {/* folk-style "Add lead" row */}
                   <tr className="group cursor-pointer" tabIndex={0} aria-label="Add lead" onClick={() => setNewOpen(true)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setNewOpen(true); } }}>
-                    <td colSpan={visibleCols.length + 4} className="h-10 border-b border-line bg-white transition-colors duration-150 group-hover:bg-surface-subtle">
+                    <td colSpan={visibleCols.length + 3} className="h-10 border-b border-line bg-white transition-colors duration-150 group-hover:bg-surface-subtle">
                       <span className="sticky left-0 inline-flex items-center gap-2 pl-3 text-body text-ink-4 transition-colors duration-150 group-hover:text-ink">
                         <Plus className="h-3.5 w-3.5" /> Add lead
                       </span>
