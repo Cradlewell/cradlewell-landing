@@ -5,7 +5,7 @@ import {
   Home, MessageSquare, ListChecks, CalendarDays, Kanban, BarChart3, Users, Flame, Clock,
   Calendar, IndianRupee, PauseCircle, Plus, MessageCircle, Phone, Settings, Search,
   ChevronDown, ChevronRight, Menu, X, Check, AlarmClock, CornerDownLeft, ArrowRight, UserPlus, AlertCircle, Table2, ListFilter, ArrowUpDown, Layers, Upload,
-  SquareKanban, ArrowUp, ArrowDown, ExternalLink, AlertTriangle, CircleDot, Baby, Package, Megaphone, Building2, MapPin, Hash,
+  ArrowUp, ArrowDown, ExternalLink, AlertTriangle, CircleDot, Baby, Package, Megaphone, Building2, MapPin, Hash,
   EyeOff, Globe, Infinity as InfinityIcon, CalendarClock, UserRound, Zap, Weight, SunMoon, Timer, CircleX, CalendarCheck, CalendarPlus,
   HandHeart, Wallet, IdCard, CalendarRange, StickyNote, FileText, MoreHorizontal, Copy, ChevronLeft, Send, Paperclip, PhoneCall, Slash, ArrowRightLeft, Pencil, CheckCheck, PhoneMissed, Image as ImageIcon,
   ArrowLeft, CircleCheck, Rows3, Video, PhoneOff, UserX, Sprout, List,
@@ -2416,92 +2416,6 @@ function LeadPanel({ lead, now, onClose, onSnooze, onToast, onOpenRecord }) {
   );
 }
 
-/* ---------- Board ---------- */
-
-function LeadBoard({ rows, now, onOpen, onMove, panelId }) {
-  const [dragId, setDragId] = useState(null);
-  const [overStage, setOverStage] = useState(null);
-
-  return (
-    <div className="h-full overflow-x-auto px-5 md:px-8 pb-6">
-      <div className="flex gap-3 h-full min-w-max">
-        {STAGES.map((s) => {
-          const cards = rows.filter((l) => l.stage === s.id);
-          const over = overStage === s.id;
-          return (
-            <div
-              key={s.id}
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (overStage !== s.id) setOverStage(s.id);
-              }}
-              onDragLeave={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget)) setOverStage(null);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const id = e.dataTransfer.getData("text/plain");
-                setOverStage(null);
-                setDragId(null);
-                const lead = rows.find((l) => l.id === id);
-                if (lead && lead.stage !== s.id) onMove([id], s.id);
-              }}
-              className={`w-[264px] shrink-0 flex flex-col rounded-lg transition-colors duration-150 ${over ? "bg-surface-hover" : "bg-surface-subtle"}`}
-            >
-              <div className="flex items-center gap-2 h-10 px-3 text-small leading-4 font-medium text-ink-3">
-                <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-                {s.id}
-                <span className="text-ink-4 tabular-nums">{cards.length}</span>
-              </div>
-              <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
-                {cards.map((l) => (
-                  <div
-                    key={l.id}
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData("text/plain", l.id);
-                      e.dataTransfer.effectAllowed = "move";
-                      setDragId(l.id);
-                    }}
-                    onDragEnd={() => {
-                      setDragId(null);
-                      setOverStage(null);
-                    }}
-                    onClick={() => onOpen(l.id)}
-                    className={`rounded-lg border bg-white p-3 text-body cursor-grab active:cursor-grabbing transition-[border-color,opacity] duration-150 hover:border-line-strong ${
-                      dragId === l.id ? "opacity-40" : ""
-                    } ${panelId === l.id ? "border-line-heavy" : "border-line"}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Avatar name={l.name} />
-                      <span className="font-medium truncate">{l.name}</span>
-                    </div>
-                    <div className="mt-2 text-small leading-4 text-ink-3">{careStage(l, now)}</div>
-                    {(l.stage === "Lost" || l.stage === "Deferred") && (
-                      <div className="mt-0.5 text-small leading-4 text-ink-4 tabular-nums">
-                        {l.stage === "Lost" ? l.lostReason : l.deferredUntil && `Till ${fmtShortDate(l.deferredUntil)}`}
-                      </div>
-                    )}
-                    <div className="mt-2.5 flex items-center justify-between text-small leading-4">
-                      <span className="text-ink-4">{l.package || "No package"}</span>
-                      <FollowUp lead={l} now={now} />
-                    </div>
-                  </div>
-                ))}
-                {cards.length === 0 && (
-                  <div className={`h-16 rounded-lg border border-dashed flex items-center justify-center text-small leading-4 text-ink-4 ${over ? "border-line-heavy" : "border-line-control"}`}>
-                    Drop here
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 /* ---------- Table chrome: header icons, source icons, actor chips ---------- */
 
 function InstagramIcon({ className = "h-3.5 w-3.5" }) {
@@ -4160,7 +4074,6 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   const [filters, setFilters] = useState({}); // field id -> [values]
   const [sort, setSort] = useState(DEFAULT_SORT);
   const [groupBy, setGroupBy] = useState("none");
-  const [view, setView] = useState("table");
   const [colsByKey, setColsByKey] = useState(DEFAULT_COLS);
   const colKey = colKeyFor(tab);
   const cols = colsByKey[colKey];
@@ -4667,12 +4580,10 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
               <Plus className="h-3.5 w-3.5" /> New lead
             </PrimaryButton>
             <span className="mx-1 h-5 w-px bg-surface-active" />
-            {view === "table" && (
               <HeaderIconButton title="Hide columns" active={menu?.type === "columns"} onClick={(e) => openMenu("columns", e)}>
                 <EyeOff className="h-4 w-4" strokeWidth={1.75} />
                 {hiddenCount > 0 && <span aria-hidden="true">{hiddenCount} hidden</span>}
               </HeaderIconButton>
-            )}
             <HeaderIconButton title="Filter" active={menu?.type === "filter" || menu?.type === "filterValues" || Object.keys(filters).length > 0} onClick={(e) => openMenu("filter", e)}>
               <ListFilter className="h-4 w-4" strokeWidth={1.75} />
               {Object.keys(filters).length > 0 && <span>{Object.keys(filters).length}</span>}
@@ -4786,30 +4697,11 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
             {groupBy === "none" ? "Group by" : <>Group by <span className="text-ink">{GROUP_OPTIONS.find((g) => g.id === groupBy).label}</span></>}
           </Chip>
 
-          <div className="ml-auto h-7 flex items-center rounded-md border border-line-control p-0.5">
-            {[
-              ["table", Table2, "Table view"],
-              ["board", SquareKanban, "Board view"],
-            ].map(([v, Icon, label]) => (
-              <button
-                key={v}
-                title={label}
-                aria-label={label}
-                onClick={() => setView(v)}
-                className={`h-[22px] w-7 rounded flex items-center justify-center transition-colors duration-150 ${view === v ? "bg-surface-active text-ink" : "text-ink-4 hover:text-ink"}`}
-              >
-                <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 min-h-0">
-        {view === "board" ? (
-          <LeadBoard rows={rows} now={now} onOpen={setPanelId} onMove={requestStage} panelId={panelId} />
-        ) : (
           <>
           {/* Phones: a card list instead of a squeezed table */}
           <div className="lg:hidden h-full overflow-y-auto px-4 md:px-8 pb-28">
@@ -4983,7 +4875,6 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
             </div>
           </div>
           </>
-        )}
       </div>
 
       {/* Selection bar — slides up with a springy settle; count rolls as rows are ticked */}
