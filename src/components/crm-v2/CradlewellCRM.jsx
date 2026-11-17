@@ -4750,9 +4750,6 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
               </button>
             </span>
           ))}
-          <Chip onClick={(e) => openMenu("sort", e)} active={menu?.type === "sort"}>
-            <span className="text-ink-4">Sort</span> {sortField.label} {sort.dir === "asc" ? "↑" : "↓"}
-          </Chip>
           <Chip onClick={(e) => openMenu("group", e)} active={menu?.type === "group" || groupBy !== "none"}>
             <Layers className="h-3.5 w-3.5" />
             {groupBy === "none" ? "Group by" : <>Group by <span className="text-ink">{GROUP_OPTIONS.find((g) => g.id === groupBy).label}</span></>}
