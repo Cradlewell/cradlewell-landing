@@ -1260,6 +1260,8 @@ const ZONES = ["Whitefield", "Marathahalli", "HSR Layout", "Bellandur", "Sarjapu
 const SOURCES = ["WhatsApp", "Website", "Aria Chat", "Walk-in", "Meta ad", "Instagram", "Hospital referral", "Referral"];
 // Postnatal program a "Baby born" family is interested in (Leads → Baby born, lead record → Care requirements)
 const POSTNATAL_PROGRAMS = ["Nursing care", "Lactation", "Yoga", "Nutrition", "Mental therapy"];
+// Prenatal program a pregnancy lead is interested in (Leads → Pregnancy, lead record → Care requirements)
+const PRENATAL_PROGRAMS = ["Yoga", "Nutrition", "Garbha Samskara", "Labour preparation", "Childbirth education", "Mental therapy"];
 const SERVICES = ["Nurse care", "Moba / Japa care", "Newborn care", "Mother care", "Night care", "Lactation support", "Massage"];
 const SHIFT_TYPES = ["Day", "Night", "24 hrs"];
 const PAYMENT_STATUSES = ["Not sent", "Link sent", "Partial", "Paid", "Refunded"];
@@ -1359,12 +1361,18 @@ const babyAge = (l, now) => {
   return `${Math.floor(d / 30)} mo`;
 };
 
+// Current pregnancy week from the expected delivery date (40 weeks at the EDD); null without an EDD
+const pregnancyWeek = (l, now) => (l.careKind === "P" && l.dueDate ? Math.min(42, Math.max(4, 40 - Math.ceil((l.dueDate - now) / (7 * DAY)))) : null);
+// Trimesters: weeks 1–13, 14–27, 28 onwards
+const trimesterOf = (l, now) => {
+  const w = pregnancyWeek(l, now);
+  return w == null ? null : w <= 13 ? "1st" : w <= 27 ? "2nd" : "3rd";
+};
 const careStage = (l, now) => {
   // Many real leads have no due date / birth date yet: show the plain care stage then
   if (l.careKind === "P") {
-    if (!l.dueDate) return "Pregnancy";
-    const w = Math.min(42, Math.max(4, 40 - Math.ceil((l.dueDate - now) / (7 * DAY))));
-    return `Pregnancy · ${w}w`;
+    const w = pregnancyWeek(l, now);
+    return w == null ? "Pregnancy" : `Pregnancy · ${w}w`;
   }
   const age = babyAge(l, now);
   return age ? `Born · ${age}` : "Born";
@@ -1408,6 +1416,8 @@ const FILTER_FIELDS = [
   { id: "care", label: "Care stage", values: ["Pregnancy", "Born"], get: (l) => (l.careKind === "P" ? "Pregnancy" : "Born") },
   { id: "services", label: "Required service", values: SERVICES, get: (l) => l.services },
   { id: "programs", label: "Postnatal program", values: POSTNATAL_PROGRAMS, get: (l) => l.programs || [] },
+  { id: "prenatal", label: "Prenatal program", values: PRENATAL_PROGRAMS, get: (l) => l.prenatalPrograms || [] },
+  { id: "trimester", label: "Trimester", values: ["1st", "2nd", "3rd"], get: (l) => trimesterOf(l, new Date()) },
   { id: "shiftType", label: "Shift type", values: SHIFT_TYPES, get: (l) => l.shiftType },
   { id: "babies", label: "No. of babies", values: ["1", "2", "3"], get: (l) => String(l.babies) },
   { id: "package", label: "Package", values: [...PACKAGE_OPTIONS, "None"], get: (l) => l.package || "None" },
@@ -1481,7 +1491,10 @@ const LEAD_COLUMNS = [
   { id: "careStart", label: "Care start date", width: 140, icon: CalendarRange },
   { id: "careEnd", label: "Care end date", width: 135, icon: CalendarRange },
   { id: "serviceDays", label: "Service days", width: 165, icon: Hash, ai: "auto", align: "right" },
-  { id: "due", label: "Due date", width: 120, icon: Calendar },
+  { id: "due", label: "Expected delivery date (EDD)", width: 235, icon: Calendar },
+  { id: "pregWeek", label: "Pregnancy week", width: 165, icon: Baby, ai: "auto", align: "right" },
+  { id: "trimester", label: "Trimester", width: 140, icon: Baby, ai: "auto" },
+  { id: "prenatal", label: "Prenatal program", width: 280, icon: HandHeart },
   { id: "dob", label: "Baby date of birth", width: 165, icon: Calendar },
   { id: "babyAge", label: "Baby age", width: 150, icon: Baby, ai: "auto", align: "right" },
   { id: "babies", label: "Number of babies", width: 160, icon: Users, align: "right" },
@@ -1495,15 +1508,22 @@ const LEAD_COLUMNS = [
   { id: "created", label: "Created", width: 120, icon: CalendarPlus },
 ];
 const COLUMN = Object.fromEntries(LEAD_COLUMNS.map((c) => [c.id, c]));
+const LEAD_COLS_KEY = "cw-crm-lead-columns";
 
 // Default visible columns. Order here = order in the table (after the frozen Customer ID and Name).
-// "Baby born" has its own set, in the order the team works through a postnatal lead.
+// Each tab has its own set; the Columns menu changes them and the choice is remembered per tab.
 const DEFAULT_COLS = {
-  default: LEAD_COLUMNS.slice(0, LEAD_COLUMNS.findIndex((c) => c.id === "payment")).map((c) => c.id),
-  born: ["phone", "stage", "interactionAt", "source", "address", "zone", "care", "hospital", "babies", "dob", "babyAge", "birthWeight", "currentWeight", "programs", "next", "amount", "booking", "reason"],
+  // All uses the Baby born order
+  default: ["phone", "stage", "interactionAt", "source", "address", "zone", "care", "hospital", "babies", "dob", "babyAge", "birthWeight", "currentWeight", "programs", "next", "amount", "booking", "reason"],
+  born:["phone", "stage", "interactionAt", "source", "address", "zone", "care", "hospital", "babies", "dob", "babyAge", "birthWeight", "currentWeight", "programs", "next", "amount", "booking", "reason"],
+  pregnancy: ["phone", "stage", "interactionAt", "source", "address", "zone", "care", "due", "hospital", "pregWeek", "trimester", "prenatal", "next", "amount", "booking", "reason"],
 };
-const TAB_EXCLUDED_COLS = { born: ["due"] };
-const colKeyFor = (tab) => (tab === "born" ? "born" : "default");
+// Columns that only apply to the other kind of lead aren't offered on a tab
+const TAB_EXCLUDED_COLS = {
+  born: ["due", "pregWeek", "trimester", "prenatal"],
+  pregnancy: ["dob", "babyAge", "birthWeight", "currentWeight", "programs"],
+};
+const colKeyFor = (tab) => (tab === "born" || tab === "pregnancy" ? tab : "default");
 
 /* ==========================================================================
    Leads building blocks
@@ -3697,14 +3717,16 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
     { key: "duration", label: "Duration", auto: true, view: days ? `${days} days` : null },
     { key: "value", label: "Package value", view: value ? fmtINR(value) : null },
     { key: "services", label: "Required services", full: true, divider: true, view: lead.services?.join(", "), edit: { type: "multi", value: lead.services || [], options: SERVICES } },
-    ...(born ? [{ key: "programs", label: "Postnatal program", full: true, view: lead.programs?.join(", "), edit: { type: "multi", value: lead.programs || [], options: POSTNATAL_PROGRAMS } }] : []),
+    born
+      ? { key: "programs", label: "Postnatal program", full: true, view: lead.programs?.join(", "), edit: { type: "multi", value: lead.programs || [], options: POSTNATAL_PROGRAMS } }
+      : { key: "prenatalPrograms", label: "Prenatal program", full: true, view: lead.prenatalPrograms?.join(", "), edit: { type: "multi", value: lead.prenatalPrograms || [], options: PRENATAL_PROGRAMS } },
   ];
   const validateCare = (d) => ({
     careEnd: d.careStart && d.careEnd && fromDateInput(d.careEnd) <= fromDateInput(d.careStart) ? "Care end must be after care start." : d.careEnd && !d.careStart ? "Add a care start date first." : null,
   });
   const saveCare = (d) => {
     const [st, sh] = d.shift ? d.shift.split("|") : [null, null];
-    edit({ package: d.package || null, shiftType: st, shiftHours: sh ? +sh : null, careStart: fromDateInput(d.careStart), careEnd: fromDateInput(d.careEnd), services: d.services, ...(born ? { programs: d.programs || [] } : {}) }, "Care requirements");
+    edit({ package: d.package || null, shiftType: st, shiftHours: sh ? +sh : null, careStart: fromDateInput(d.careStart), careEnd: fromDateInput(d.careEnd), services: d.services, ...(born ? { programs: d.programs || [] } : { prenatalPrograms: d.prenatalPrograms || [] }) }, "Care requirements");
     showToast("Care requirements saved");
   };
   const payFields = [
@@ -4081,7 +4103,22 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   const [filters, setFilters] = useState({}); // field id -> [values]
   const [sort, setSort] = useState(DEFAULT_SORT);
   const [groupBy, setGroupBy] = useState("none");
-  const [colsByKey, setColsByKey] = useState(DEFAULT_COLS);
+  // Shown columns per tab, from the Columns menu. Remembered on this device, so they survive a refresh.
+  const [colsByKey, setColsByKey] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LEAD_COLS_KEY) || "{}");
+      const out = { ...DEFAULT_COLS };
+      Object.keys(DEFAULT_COLS).forEach((k) => {
+        if (Array.isArray(saved[k])) out[k] = saved[k].filter((id) => COLUMN[id]);
+      });
+      return out;
+    } catch {
+      return DEFAULT_COLS;
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(LEAD_COLS_KEY, JSON.stringify(colsByKey)); } catch { /* private window: choices last until refresh */ }
+  }, [colsByKey]);
   const colKey = colKeyFor(tab);
   const cols = colsByKey[colKey];
   const setCols = (fn) => setColsByKey((c) => ({ ...c, [colKey]: typeof fn === "function" ? fn(c[colKey]) : fn }));
@@ -4423,6 +4460,16 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
         return l.address ? <span className="block truncate text-ink-3" title={l.address}>{l.address}</span> : NA;
       case "due":
         return dateCell(l.dueDate);
+      case "pregWeek": {
+        const w = pregnancyWeek(l, now);
+        return w == null ? NA : num(`Week ${w}`);
+      }
+      case "trimester": {
+        const t = trimesterOf(l, now);
+        return t ? <span className="text-ink">{t}</span> : NA;
+      }
+      case "prenatal":
+        return <ServiceTags services={l.prenatalPrograms} max={2} />;
       case "dob":
         return dateCell(l.babyDob);
       case "babyAge":
@@ -4511,8 +4558,8 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   const NAME_W = 210;
   const CHECK_W = 44;
   const ID_W = 112;
-  // Baby born lists Customer ID before Name; the other tabs keep Name first
-  const idFirst = tab === "born";
+  // Every tab lists Customer ID before Name
+  const idFirst = true;
   const NAME_LEFT = CHECK_W + (idFirst ? ID_W : 0);
   const ID_LEFT = CHECK_W + (idFirst ? 0 : NAME_W);
   const frozenPair = (name, id) => (idFirst ? [id, name] : [name, id]);
@@ -4596,7 +4643,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
             <span className="mx-1 h-5 w-px bg-surface-active" />
               <HeaderIconButton title="Hide columns" active={menu?.type === "columns"} onClick={(e) => openMenu("columns", e)}>
                 <EyeOff className="h-4 w-4" strokeWidth={1.75} />
-                {hiddenCount > 0 && <span aria-hidden="true">{hiddenCount} hidden</span>}
+                <span aria-hidden="true">Columns{hiddenCount > 0 ? ` · ${hiddenCount} hidden` : ""}</span>
               </HeaderIconButton>
             <HeaderIconButton title="Filter" active={menu?.type === "filter" || menu?.type === "filterValues" || Object.keys(filters).length > 0} onClick={(e) => openMenu("filter", e)}>
               <ListFilter className="h-4 w-4" strokeWidth={1.75} />
@@ -8910,7 +8957,7 @@ function buildSettings() {
   const step = (type, label, delay) => ({ id: sid(), type, label, delay });
   const typeOf = {
     phone: "Phone", dob: "Date", babyAge: "Formula", babies: "Number", birthWeight: "Number", currentWeight: "Number", care: "Select",
-    services: "Multi-select", shiftType: "Select", shiftHours: "Select", careStart: "Date", careEnd: "Date", serviceDays: "Formula",
+    services: "Multi-select", programs: "Multi-select", prenatal: "Multi-select", due: "Date", pregWeek: "Formula", trimester: "Formula", shiftType: "Select", shiftHours: "Select", careStart: "Date", careEnd: "Date", serviceDays: "Formula",
     package: "Select", source: "Select", stage: "Status", interactionAt: "Date & time", interactionType: "Select", next: "Date & time",
     reason: "Text", hospital: "Select", zone: "Select", address: "Long text", payment: "Select", amount: "Currency", booking: "Select",
   };
