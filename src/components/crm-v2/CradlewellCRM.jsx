@@ -1440,6 +1440,21 @@ const LEAD_TABS = [
   { id: "pregnancy", label: "Pregnancy", fn: (l) => l.stage !== "Won" && l.careKind === "P" },
   { id: "born", label: "Baby born", fn: (l) => l.stage !== "Won" && l.careKind === "B" },
 ];
+// Leads and Pipeline search: name, phone number (spaces, dashes and a +91 / 0
+// prefix are ignored, 3+ digits) or customer ID (CW-C-0575, or just 575)
+const leadMatchesSearch = (l, query) => {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return true;
+  if ((l.name || "").toLowerCase().includes(q)) return true;
+  if ((l.customerId || "").toLowerCase().includes(q)) return true;
+  let digits = q.replace(/\D/g, "");
+  if (/[a-z]/.test(q.replace(/^cw-?c?-?/, ""))) return false; // words only match names
+  if (digits.length > 10 && digits.startsWith("91")) digits = digits.slice(2);
+  else if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+  if (digits.length < 3) return false;
+  const phone = (l.phone || "").replace(/\D/g, "").slice(-10);
+  return phone.includes(digits) || (l.customerNo != null && String(l.customerNo) === String(Number(digits)));
+};
 const openLeadsTotal = (leads) => leads.filter((l) => l.stage !== "Won").length;
 
 const SORT_FIELDS = [
@@ -4308,10 +4323,9 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
 
   /* ----- derived rows ----- */
   const q = query.trim().toLowerCase();
-  const qDigits = q.replace(/\D/g, "");
   const tabFn = LEAD_TABS.find((t) => t.id === tab).fn;
   const matchesFilters = (l) => Object.entries(filters).every(([f, vals]) => !vals.length || vals.some((v) => fieldMatches(l, f, v)));
-  const matchesSearch = (l) => !q || l.name.toLowerCase().includes(q) || (qDigits.length >= 3 && l.phone.replace(/\D/g, "").includes(qDigits));
+  const matchesSearch = (l) => leadMatchesSearch(l, q);
 
   const rows = useMemo(() => {
     const sf = SORT_FIELDS.find((s) => s.id === sort.field);
@@ -7806,7 +7820,7 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
     (care === "All" || (care === "Born" ? l.careKind === "B" : l.careKind === "P")) &&
     (source === "All" || l.source === source) &&
     (pkg === "All" || (pkg === "None" ? !l.package : l.package === pkg)) &&
-    (!q || l.name.toLowerCase().includes(q) || (l.hospital || "").toLowerCase().includes(q));
+    (leadMatchesSearch(l, q) || (l.hospital || "").toLowerCase().includes(q));
   const visible = leads.filter(passes);
   const open = visible.filter((l) => PIPE_COLUMNS.includes(l.stage));
   const openValue = open.reduce((s, l) => s + leadValue(l), 0);
@@ -8050,7 +8064,7 @@ function PipelinePage({ leads, setLeads, consults, now, showToast, dismissToast,
           {searchOpen ? (
             <div className="h-8 w-56 rounded-md border border-line-heavy bg-white pl-2.5 pr-1 flex items-center gap-1.5">
               <Search className="h-3.5 w-3.5 text-ink-4" />
-              <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search leads or hospital" className="min-w-0 flex-1 text-body outline-none placeholder:text-ink-placeholder" />
+              <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone or hospital" className="min-w-0 flex-1 text-body outline-none placeholder:text-ink-placeholder" />
               <button onClick={() => { setSearchOpen(false); setQuery(""); }} aria-label="Close search" className="h-6 w-6 rounded-md flex items-center justify-center text-ink-4 hover:bg-surface-hover"><X className="h-3 w-3" /></button>
             </div>
           ) : (
