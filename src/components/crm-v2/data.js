@@ -184,9 +184,9 @@ export function dbLeadToUi(row, ctx) {
   if (lead.nextFollowUp instanceof Date && lead.nextFollowUp < FOLLOWUP_CUTOFF) lead.nextFollowUp = null;
   // The stored number is permanent; the rank is only a fallback for rows saved before customer_no existed
   lead.customerNo = row.customer_no ?? (lead.customerNo || ctx.customerNo.get(row.id));
-  // Same format as the UI's customerId(): CW-P-0001 (pregnancy) / CW-B-0001 (baby born)
   delete lead.lastWin; // only for deals won in this session; after a reload it's in wonDeals
-  lead.customerId = `CW-${lead.careKind === "P" ? "P" : "B"}-${String(lead.customerNo || 0).padStart(4, "0")}`;
+  // Same format as the UI's customerId(): one permanent ID per customer, CW-C-0001
+  lead.customerId = `CW-C-${String(lead.customerNo || 0).padStart(4, "0")}`;
   return lead;
 }
 

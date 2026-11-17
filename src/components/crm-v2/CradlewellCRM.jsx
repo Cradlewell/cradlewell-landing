@@ -1258,6 +1258,8 @@ const ME = "You";
 const HOSPITALS = ["Cloudnine", "Motherhood", "Rainbow", "Manipal", "Apollo Cradle", "Other"];
 const ZONES = ["Whitefield", "Marathahalli", "HSR Layout", "Bellandur", "Sarjapur Road", "Koramangala", "Indiranagar", "Jayanagar", "JP Nagar", "Hebbal", "Yelahanka", "Electronic City"];
 const SOURCES = ["WhatsApp", "Website", "Aria Chat", "Walk-in", "Meta ad", "Instagram", "Hospital referral", "Referral"];
+// Postnatal program a "Baby born" family is interested in (Leads → Baby born, lead record → Care requirements)
+const POSTNATAL_PROGRAMS = ["Nursing care", "Lactation", "Yoga", "Nutrition", "Mental therapy"];
 const SERVICES = ["Nurse care", "Moba / Japa care", "Newborn care", "Mother care", "Night care", "Lactation support", "Massage"];
 const SHIFT_TYPES = ["Day", "Night", "24 hrs"];
 const PAYMENT_STATUSES = ["Not sent", "Link sent", "Partial", "Paid", "Refunded"];
@@ -1336,8 +1338,8 @@ const fmtINR = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
 // One short money format across the app: lakh with one decimal, crore with two (₹4.8L, ₹68.0L, ₹1.67Cr)
 const fmtShortINR = (n) => (n >= 1e7 ? `₹${(n / 1e7).toFixed(2)}Cr` : n >= 1e5 ? `₹${(n / 1e5).toFixed(1)}L` : fmtINR(n));
 const fmtKg = (arr) => (arr && arr.length ? arr.map((w) => (w == null ? "—" : Number(w).toFixed(1))).join(" / ") : "—");
-// Pregnancy leads are CW-P-0001, baby-born leads CW-B-0001 (number stays the same if the baby arrives)
-const customerId = (n, kind = "B") => `CW-${kind === "P" ? "P" : "B"}-${String(n).padStart(4, "0")}`;
+// One permanent ID per customer, CW-C-0001: it doesn't change when a pregnancy lead's baby is born
+const customerId = (n) => `CW-C-${String(n).padStart(4, "0")}`;
 
 // Auto-calculated fields
 const serviceDays = (l) => (l.careStart && l.careEnd ? dayDiff(l.careEnd, l.careStart) + 1 : null);
@@ -1405,6 +1407,7 @@ const FILTER_FIELDS = [
   { id: "stage", label: "Sales stage", values: STAGES.map((s) => s.id), get: (l) => l.stage },
   { id: "care", label: "Care stage", values: ["Pregnancy", "Born"], get: (l) => (l.careKind === "P" ? "Pregnancy" : "Born") },
   { id: "services", label: "Required service", values: SERVICES, get: (l) => l.services },
+  { id: "programs", label: "Postnatal program", values: POSTNATAL_PROGRAMS, get: (l) => l.programs || [] },
   { id: "shiftType", label: "Shift type", values: SHIFT_TYPES, get: (l) => l.shiftType },
   { id: "babies", label: "No. of babies", values: ["1", "2", "3"], get: (l) => String(l.babies) },
   { id: "package", label: "Package", values: [...PACKAGE_OPTIONS, "None"], get: (l) => l.package || "None" },
@@ -1472,6 +1475,7 @@ const LEAD_COLUMNS = [
   { id: "booking", label: "Booking status", width: 145, icon: CalendarCheck },
   { id: "reason", label: "Lost / deferred reason", width: 260, icon: CircleX },
   { id: "services", label: "Required service", width: 250, icon: HandHeart },
+  { id: "programs", label: "Postnatal program", width: 280, icon: HandHeart },
   { id: "shiftType", label: "Shift type", width: 110, icon: SunMoon },
   { id: "shiftHours", label: "Shift hours", width: 120, icon: Timer, align: "right" },
   { id: "careStart", label: "Care start date", width: 140, icon: CalendarRange },
@@ -1486,18 +1490,20 @@ const LEAD_COLUMNS = [
   { id: "hospital", label: "Hospital", width: 140, icon: Building2 },
   { id: "zone", label: "Area / zone", width: 140, icon: MapPin },
   { id: "address", label: "Full address", width: 300, icon: MapPin },
-  { id: "interactionAt", label: "Last interaction at", width: 175, icon: Clock },
+  { id: "interactionAt", label: "Last interaction at", width: 200, icon: Clock },
   { id: "interactionType", label: "Last interaction type", width: 185, icon: MessageCircle },
   { id: "created", label: "Created", width: 120, icon: CalendarPlus },
 ];
 const COLUMN = Object.fromEntries(LEAD_COLUMNS.map((c) => [c.id, c]));
 
-// Default visible columns (same on every tab). Order here = order in the table.
+// Default visible columns. Order here = order in the table (after the frozen Customer ID and Name).
+// "Baby born" has its own set, in the order the team works through a postnatal lead.
 const DEFAULT_COLS = {
   default: LEAD_COLUMNS.slice(0, LEAD_COLUMNS.findIndex((c) => c.id === "payment")).map((c) => c.id),
+  born: ["phone", "stage", "interactionAt", "source", "address", "zone", "care", "hospital", "babies", "dob", "babyAge", "birthWeight", "currentWeight", "programs", "next", "amount", "booking", "reason"],
 };
-const TAB_EXCLUDED_COLS = {};
-const colKeyFor = () => "default";
+const TAB_EXCLUDED_COLS = { born: ["due"] };
+const colKeyFor = (tab) => (tab === "born" ? "born" : "default");
 
 /* ==========================================================================
    Leads building blocks
@@ -3691,13 +3697,14 @@ function LeadRecordSimple({ lead, now, timeline, onBack, onUpdate, onEvent, show
     { key: "duration", label: "Duration", auto: true, view: days ? `${days} days` : null },
     { key: "value", label: "Package value", view: value ? fmtINR(value) : null },
     { key: "services", label: "Required services", full: true, divider: true, view: lead.services?.join(", "), edit: { type: "multi", value: lead.services || [], options: SERVICES } },
+    ...(born ? [{ key: "programs", label: "Postnatal program", full: true, view: lead.programs?.join(", "), edit: { type: "multi", value: lead.programs || [], options: POSTNATAL_PROGRAMS } }] : []),
   ];
   const validateCare = (d) => ({
     careEnd: d.careStart && d.careEnd && fromDateInput(d.careEnd) <= fromDateInput(d.careStart) ? "Care end must be after care start." : d.careEnd && !d.careStart ? "Add a care start date first." : null,
   });
   const saveCare = (d) => {
     const [st, sh] = d.shift ? d.shift.split("|") : [null, null];
-    edit({ package: d.package || null, shiftType: st, shiftHours: sh ? +sh : null, careStart: fromDateInput(d.careStart), careEnd: fromDateInput(d.careEnd), services: d.services }, "Care requirements");
+    edit({ package: d.package || null, shiftType: st, shiftHours: sh ? +sh : null, careStart: fromDateInput(d.careStart), careEnd: fromDateInput(d.careEnd), services: d.services, ...(born ? { programs: d.programs || [] } : {}) }, "Care requirements");
     showToast("Care requirements saved");
   };
   const payFields = [
@@ -4213,7 +4220,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
     const lead = {
       id: `N${t}`,
       customerNo: nextNo,
-      customerId: customerId(nextNo, f.status === "P" ? "P" : "B"),
+      customerId: customerId(nextNo),
       name: f.name.trim() || "New lead",
       phone: f.phone,
       priority: f.priority || null,
@@ -4391,7 +4398,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
           NA
         ) : (
           <span className="text-ink-3 whitespace-nowrap tabular-nums" title={fmtRel(now - l.lastActivity.at)}>
-            {fmtShortDate(l.lastActivity.at)}, {fmtTime(l.lastActivity.at)}
+            {fmtShortDateY(l.lastActivity.at)}, {fmtTime(l.lastActivity.at)}
           </span>
         );
       case "interactionType":
@@ -4428,6 +4435,8 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
         return born && l.currentWeights.length ? num(fmtKg(l.currentWeights)) : NA;
       case "services":
         return <ServiceTags services={l.services} max={2} />;
+      case "programs":
+        return <ServiceTags services={l.programs} max={2} />;
       case "shiftType":
         return l.shiftType ? <span className="text-ink">{l.shiftType}</span> : NA;
       case "shiftHours":
@@ -4502,6 +4511,11 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
   const NAME_W = 210;
   const CHECK_W = 44;
   const ID_W = 112;
+  // Baby born lists Customer ID before Name; the other tabs keep Name first
+  const idFirst = tab === "born";
+  const NAME_LEFT = CHECK_W + (idFirst ? ID_W : 0);
+  const ID_LEFT = CHECK_W + (idFirst ? 0 : NAME_W);
+  const frozenPair = (name, id) => (idFirst ? [id, name] : [name, id]);
   const tableWidth = CHECK_W + ID_W + NAME_W + visibleCols.reduce((s, c) => s + c.width, 0) + 72;
   const frozenShadow = scrolledX ? "shadow-[6px_0_8px_-6px_rgba(0,0,0,0.10)]" : "";
   const rowBg = (isSel, active) =>
@@ -4751,8 +4765,7 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
               <table className="border-separate border-spacing-0 text-body table-fixed" style={{ width: tableWidth, minWidth: "100%" }}>
                 <colgroup>
                   <col style={{ width: CHECK_W }} />
-                  <col style={{ width: NAME_W }} />
-                  <col style={{ width: ID_W }} />
+                  {frozenPair(<col key="n" style={{ width: NAME_W }} />, <col key="i" style={{ width: ID_W }} />)}
                   {visibleCols.map((c) => (
                     <col key={c.id} style={{ width: c.width }} />
                   ))}
@@ -4763,12 +4776,14 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                     <th className={`${th} left-0 z-30 pl-3 border-t`}>
                       <Checkbox checked={allVisibleSelected} indeterminate={!allVisibleSelected && someVisibleSelected} onChange={toggleAll} label="Select all" />
                     </th>
-                    <th className={`${th} z-30 border-t ${GRID} px-2`} style={{ left: CHECK_W }}>
-                      <ColumnHeading icon={UserRound} label="Name" />
-                    </th>
-                    <th className={`${th} z-30 border-t ${GRID} ${frozenShadow} px-2`} style={{ left: CHECK_W + NAME_W }}>
-                      <ColumnHeading icon={IdCard} label="Customer ID" />
-                    </th>
+                    {frozenPair(
+                      <th key="n" className={`${th} z-30 border-t ${GRID} ${idFirst ? frozenShadow : ""} px-2`} style={{ left: NAME_LEFT }}>
+                        <ColumnHeading icon={UserRound} label="Name" />
+                      </th>,
+                      <th key="i" className={`${th} z-30 border-t ${GRID} ${idFirst ? "" : frozenShadow} px-2`} style={{ left: ID_LEFT }}>
+                        <ColumnHeading icon={IdCard} label="Customer ID" />
+                      </th>
+                    )}
                     {visibleCols.map((c) => (
                       <th key={c.id} className={`${th} border-t ${GRID} px-3`}>
                         <ColumnHeading icon={c.icon} label={c.label} ai={c.ai} align={c.align} />
@@ -4801,7 +4816,8 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                             <td className={`${cell} sticky left-0 z-[2] pl-3`}>
                               <Checkbox checked={isSel} onChange={() => toggleRow(l.id)} label={`Select ${l.name}`} />
                             </td>
-                            <td className={`${cell} sticky z-[2] px-2 ${GRID}`} style={{ left: CHECK_W }}>
+                            {frozenPair(
+                            <td key="n" className={`${cell} sticky z-[2] px-2 ${GRID} ${idFirst ? frozenShadow : ""}`} style={{ left: NAME_LEFT }}>
                               <span className="flex items-center gap-2 min-w-0">
                                 <button
                                   onClick={(e) => {
@@ -4813,10 +4829,11 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
                                   {l.name}
                                 </button>
                               </span>
-                            </td>
-                            <td className={`${cell} sticky z-[2] px-2 ${GRID} ${frozenShadow}`} style={{ left: CHECK_W + NAME_W }}>
+                            </td>,
+                            <td key="i" className={`${cell} sticky z-[2] px-2 ${GRID} ${idFirst ? "" : frozenShadow}`} style={{ left: ID_LEFT }}>
                               <button onClick={(e) => { e.stopPropagation(); openRecord(l.id); }} className="text-ink-3 tabular-nums whitespace-nowrap hover:text-ink hover:underline underline-offset-2 decoration-line-heavy">{l.customerId}</button>
                             </td>
+                            )}
                             {visibleCols.map((c) => (
                               <td key={c.id} className={`${cell} px-3 ${GRID} overflow-hidden`}>
                                 {renderCell(c.id, l)}
@@ -9995,10 +10012,10 @@ function CRMApp({ initial }) {
   useEffect(() => {
     if (leads.some((l) => l.stage === "Won" && !l.customerSince)) setLeads((ls) => ls.map((l) => (l.stage === "Won" && !l.customerSince ? asCustomer(l) : l)));
   }, [leads]);
-  // Keep the ID prefix in step with the care stage (CW-P → CW-B when the baby is born)
+  // Every shown ID uses the one format (CW-C-0001), whatever the care stage
   useEffect(() => {
-    const wrong = (l) => l.customerNo && l.customerId !== customerId(l.customerNo, l.careKind);
-    if (leads.some(wrong)) setLeads((ls) => ls.map((l) => (wrong(l) ? { ...l, customerId: customerId(l.customerNo, l.careKind) } : l)));
+    const wrong = (l) => l.customerNo && l.customerId !== customerId(l.customerNo);
+    if (leads.some(wrong)) setLeads((ls) => ls.map((l) => (wrong(l) ? { ...l, customerId: customerId(l.customerNo) } : l)));
   }, [leads]);
   const [timelines, setTimelines] = useState(() => initial.timelines || {});
   LIVE.timelines = timelines;
@@ -10231,7 +10248,7 @@ function CRMApp({ initial }) {
   useEffect(() => {
     setAssignedHandler((assigned) =>
       setLeads((ls) => (ls.some((l) => assigned[l.id] && assigned[l.id] !== l.customerNo)
-        ? ls.map((l) => (assigned[l.id] && assigned[l.id] !== l.customerNo ? { ...l, customerNo: assigned[l.id], customerId: customerId(assigned[l.id], l.careKind) } : l))
+        ? ls.map((l) => (assigned[l.id] && assigned[l.id] !== l.customerNo ? { ...l, customerNo: assigned[l.id], customerId: customerId(assigned[l.id]) } : l))
         : ls)));
     return () => setAssignedHandler(null);
   }, []);
