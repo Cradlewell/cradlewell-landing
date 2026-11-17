@@ -177,6 +177,23 @@ export function dbLeadToUi(row, ctx) {
     careStart,
     careEnd,
   };
+  // Last interaction. The website form (and WhatsApp) write last_activity_at when a
+  // customer enquires; the CRM writes the same time it keeps in meta. So a column
+  // value newer than the CRM's copy is a customer enquiry the CRM hasn't seen, and
+  // a lead that didn't start in the CRM (CRM ids are "N<time>") began with one.
+  const crmMade = /^N\d+$/.test(String(row.id));
+  const kept = m.lastActivity && m.lastActivity.at instanceof Date ? m.lastActivity : null;
+  if (lastAt && !crmMade && (!kept || kept.none || lastAt - kept.at > 60000)) {
+    lead.lastActivity = {
+      type: /website|google|meta|facebook|instagram/i.test(lead.source) ? "Website form" : "Enquiry",
+      by: "Customer",
+      at: lastAt,
+      none: false,
+      inbound: true,
+      // Still nobody from the team has spoken to them (My day keeps it as a new lead to call)
+      uncontacted: !kept || kept.none || !!kept.uncontacted,
+    };
+  }
   // The soonest open follow-up wins over a stale value in meta
   if (nextOpen) lead.nextFollowUp = nextOpen;
   else if (lead.nextFollowUp === undefined) lead.nextFollowUp = null;

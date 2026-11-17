@@ -118,6 +118,10 @@ const STAGE_ORDER = { "Payment pending": 1, "Consult done": 2, "Consult booked":
 
 /* ---------- Lead facts ---------- */
 
+// Nobody from the team has reached this lead yet. The customer's own form
+// submission is a last interaction, but not contact from us.
+export const neverContacted = (l) => !l?.lastActivity || !!l.lastActivity.none || !!l.lastActivity.uncontacted;
+
 export const careLabel = (l) => (l?.careKind === "P" ? "Expecting parent" : l?.careKind === "B" ? "Baby born" : null);
 
 // Money still due on a lead or customer. `known` is false when no total was ever recorded:
@@ -143,7 +147,7 @@ export const isBookingTask = (f) =>
 export function taskKind(f, lead) {
   if (f.type === "Payment") return "payment";
   if (isBookingTask(f)) return "booking";
-  if (lead?.stage === "New" && lead?.lastActivity?.none) return "newLead";
+  if (lead?.stage === "New" && neverContacted(lead)) return "newLead";
   if (lead?.stage === "Consult done") return "postConsult";
   return "contact";
 }
@@ -205,7 +209,7 @@ function schedulingReason(l, now, rules) {
   const stale = limit != null && days != null && days > limit;
   let reason;
   if (l.stage === "Deferred") reason = `Deferral ended ${fmtIstDay(l.deferredUntil, now).toLowerCase()} · no reconnect planned`;
-  else if (l.stage === "New") reason = l.lastActivity?.none ? "New lead · never contacted" : "New lead with no next action";
+  else if (l.stage === "New") reason = neverContacted(l) ? "New lead · never contacted" : "New lead with no next action";
   else if (l.stage === "Qualified") reason = "Qualified lead with no next action";
   else if (l.stage === "Consult booked") reason = "Marked Consult booked, but no consultation is scheduled";
   else if (l.stage === "Consult done") reason = "Consultation done · no next step";
@@ -276,7 +280,7 @@ export function buildMyDay({ leads = [], followups = [], consults = [], timeline
 
   // 2. New leads that need a first human contact (no task yet)
   for (const l of leads) {
-    if (l.stage !== "New" || !l.lastActivity?.none || hasAction.has(l.id)) continue;
+    if (l.stage !== "New" || !neverContacted(l) || hasAction.has(l.id)) continue;
     const created = asDate(l.createdAt);
     if (!created || created < r.newLeadsSince) continue;
     hasAction.add(l.id);
@@ -358,7 +362,7 @@ function summaryCards({ leads, consults, today, overdue, now, followups }) {
   const live = consults.filter((c) => consultLive(c) && leads.some((l) => l.id === c.leadId) && istDayDiff(c.start, now) === 0);
   const t = ms(now);
   return {
-    newLeads: { received: received.length, needContact: received.filter((l) => l.stage === "New" && l.lastActivity?.none).length },
+    newLeads: { received: received.length, needContact: received.filter((l) => l.stage === "New" && neverContacted(l)).length },
     consultations: {
       total: live.length,
       upcoming: live.filter((c) => c.status === "scheduled" && ms(consultEnd(c)) >= t).length,
