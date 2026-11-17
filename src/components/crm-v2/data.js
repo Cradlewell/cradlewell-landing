@@ -735,6 +735,8 @@ export function flush() {
 }
 
 export const hasPending = () => queue.size > 0 || later.size > 0 || stash.size > 0;
+// True while a write for this record is kept on the device because the server didn't take it
+export const isStashed = (coll, id) => stash.has(`${coll}:${id}`);
 
 /* ---------- Diffing (state → write ops) ---------- */
 

@@ -12,29 +12,18 @@ import {
   LogOut, Flag, ChevronUp, Trash2, GripVertical, HeartHandshake, ArrowUpRight,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
-import { FOLLOWUP_CUTOFF, loadCRM, enqueue, enqueueLater, cancelLater, flush, hasPending, restoreStash, retryStash, setSaveStatusHandler, settleTasks, stageKey, leadPatch, mergeRemote, mergeRemoteMap, isBusy, isRemote, setSaveErrorHandler, setAssignedHandler, recordWin, diffById, diffTimelines, uiLeadToDb, uiFollowupToDb, pack } from "./data";
+import { loadCRM, enqueue, enqueueLater, cancelLater, flush, hasPending, restoreStash, retryStash, setSaveStatusHandler, settleTasks, stageKey, leadPatch, mergeRemote, mergeRemoteMap, isBusy, isRemote, setSaveErrorHandler, setAssignedHandler, recordWin, diffById, diffTimelines, uiLeadToDb, uiFollowupToDb, pack, isStashed } from "./data";
+import {
+  buildMyDay, applyOutcome, outcomeProblem, snoozeTask, reconcileTasks, followUpDatesToTasks, taskVisible, balanceOf,
+  OUTCOMES_FOR, CLOSING_OUTCOMES, MYDAY_RULES, istDayDiff, istParts, istAt, fromIstInput, toIstInput, laterToday, tomorrowAt, inDaysAt,
+  fmtIstTime, fmtIstDay, fmtIstWhen, fmtIstLongDate, istGreeting, dueText, lastContactText,
+} from "./myday";
 
 /* ==========================================================================
    LIVE DATA — leads, follow-ups, consultations and timelines are loaded from
-   Supabase on start (see ./data.js). The queue on My day, today's schedule and
-   this month's revenue are derived from that data in the root component.
+   Supabase on start (see ./data.js). My day is built from that same data by
+   ./myday.js (its rules, counts and task lifecycle live there).
    ========================================================================== */
-
-const QUEUE_SECTIONS = [
-  { id: "respond", title: "Respond now", icon: MessageCircle, tone: "amber" },
-  { id: "new", title: "New leads, not yet contacted", icon: UserPlus, tone: "sky" },
-  { id: "overdue", title: "Overdue follow-ups", icon: AlertCircle, tone: "red" },
-  { id: "due", title: "Due today", icon: ListChecks, tone: "neutral", defaultCollapsed: true },
-  { id: "payment", title: "Payment pending", icon: IndianRupee, tone: "green" },
-];
-
-// Today's consultations, placed relative to page load so the demo always looks live
-// Today's consultations — refilled from live consultations on every render of the app root
-const SCHEDULE = [];
-
-// Revenue this month (mock): care plans + expert services vs monthly target
-// Revenue this month — recomputed from paid leads; target comes from Settings (revenueTarget)
-const REVENUE_MONTH = { care: 0, experts: 0, target: 500000 };
 
 // Placeholder activity history for the lead drawer, by section
 const ACTIVITY_TEMPLATES = {
@@ -90,29 +79,6 @@ const fmtTime = (d) => {
 const fmtDay = (d) =>
   `${d.toLocaleDateString("en-GB", { weekday: "short" })}, ${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`;
 
-const fmtLongDate = (d) =>
-  `${d.toLocaleDateString("en-GB", { weekday: "long" })}, ${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`;
-
-const fmtAgo = (ms) => {
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs >= 48) return `${Math.floor(hrs / 24)} days ago`;
-  return `${hrs} hr${hrs > 1 ? "s" : ""} ago`;
-};
-
-const greetingFor = (d) => {
-  const h = d.getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-};
-
-// A slot counts as "past" 30 min after it starts; the first non-past slot is "next".
-const isPastSlot = (e, now) => now - e.at > 30 * 60000;
-const needsOutcome = (e, now, outcomes) => e.type === "Consult" && isPastSlot(e, now) && !outcomes[e.id];
-
 const isTypingTarget = (el) =>
   el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 
@@ -125,23 +91,6 @@ function useOutsideClick(ref, onOutside, active) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [ref, onOutside, active]);
-}
-
-// Number keys 1–9 pick an option while a menu is open
-function useDigitPicker(count, onPick, active = true) {
-  useEffect(() => {
-    if (!active) return;
-    const h = (e) => {
-      if (isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
-      const n = Number(e.key);
-      if (n >= 1 && n <= count) {
-        e.preventDefault();
-        onPick(n - 1);
-      }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [count, onPick, active]);
 }
 
 /* ==========================================================================
@@ -220,14 +169,6 @@ function SmallButton({ onClick, children, className = "" }) {
     <button onClick={onClick} className={`${btn("secondary", "sm")} ${className}`}>
       {children}
     </button>
-  );
-}
-
-function MenuShell({ children, className = "" }) {
-  return (
-    <div className={`absolute right-0 top-full mt-1 z-30 rounded-lg border border-line-control bg-white p-1 shadow-pop ${className}`}>
-      {children}
-    </div>
   );
 }
 
@@ -554,88 +495,6 @@ function CommandPalette({ open, onClose, leads, onSelect }) {
    Queue: menus, rows, sections
    ========================================================================== */
 
-function SnoozeMenu({ onPick }) {
-  const [picking, setPicking] = useState(false);
-  const [date, setDate] = useState("");
-  const minDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-
-  const choose = useCallback(
-    (i) => {
-      const d = new Date();
-      if (i === 0) {
-        d.setHours(d.getHours() + 3, 0, 0, 0);
-        onPick(`later today, ${fmtTime(d)}`);
-      } else if (i === 1) {
-        onPick("tomorrow, 10:00 am");
-      } else if (i === 2) {
-        d.setDate(d.getDate() + 3);
-        onPick(fmtDay(d));
-      } else {
-        setPicking(true);
-      }
-    },
-    [onPick]
-  );
-  useDigitPicker(4, choose, !picking);
-
-  return (
-    <MenuShell className="w-52">
-      {!picking ? (
-        <>
-          <div className="px-2 pt-1 pb-1.5 text-caption text-ink-4">Snooze until</div>
-          {["Later today", "Tomorrow", "In 3 days"].map((label, i) => (
-            <MenuItem key={label} hint={i + 1} onClick={() => choose(i)}>
-              {label}
-            </MenuItem>
-          ))}
-          <MenuItem hint={4} onClick={() => choose(3)}>
-            Pick a date
-          </MenuItem>
-        </>
-      ) : (
-        <div className="p-2 space-y-2">
-          <div className="text-caption text-ink-4">Pick a date</div>
-          <input
-            type="date"
-            autoFocus
-            min={minDate}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && date && onPick(fmtDay(new Date(`${date}T10:00:00`)))}
-            className="w-full rounded-md border border-line-control px-2 h-8 text-body outline-none focus:border-line-heavy"
-          />
-          <div className="flex gap-1.5">
-            <SmallButton onClick={() => setPicking(false)} className="flex-1 justify-center">Back</SmallButton>
-            <button
-              disabled={!date}
-              onClick={() => onPick(fmtDay(new Date(`${date}T10:00:00`)))}
-              className={`flex-1 ${btn("primary", "sm")}`}
-            >
-              Snooze
-            </button>
-          </div>
-        </div>
-      )}
-    </MenuShell>
-  );
-}
-
-function OutcomeMenu({ onPick }) {
-  const pick = useCallback((i) => onPick(OUTCOMES[i]), [onPick]);
-  useDigitPicker(OUTCOMES.length, pick);
-  return (
-    <MenuShell className="w-52">
-      <div className="px-2 pt-1 pb-1.5 text-caption text-ink-4">Log outcome</div>
-      {OUTCOMES.map((o, i) => (
-        <MenuItem key={o} hint={i + 1} onClick={() => onPick(o)}>
-          <span className={`h-1.5 w-1.5 rounded-full ${TAG_DOTS[o]}`} />
-          {o}
-        </MenuItem>
-      ))}
-    </MenuShell>
-  );
-}
-
 /* ==========================================================================
    Right column: timeline
    ========================================================================== */
@@ -658,384 +517,734 @@ function PlaceholderPage({ item }) {
   );
 }
 
-/* ---------- My day: stat cards + three single-column sections ---------- */
+/* ---------- My day ----------
+   The salesperson's daily workspace: who needs attention, why, what to do next
+   and when. Every list and count comes from buildMyDay (./myday.js), and every
+   action works on the same task records as Follow-ups. */
 
-/* ---------- My day: count-up numbers and stat cards ---------- */
+const QUEUE_TABS = [
+  { id: "today", label: "Today", empty: "Nothing due today" },
+  { id: "overdue", label: "Overdue", empty: "Nothing overdue" },
+  { id: "scheduling", label: "Needs scheduling", empty: "Every open lead has a next step" },
+];
+const KIND_FILTERS = { followups: { label: "Follow-ups only", test: (r) => !!r.taskId } };
+const QUEUE_PAGE = 25;
+const KIND_ICON = { reply: MessageCircle, consultOutcome: CalendarCheck, newLead: UserPlus, payment: IndianRupee, booking: CalendarPlus, postConsult: CalendarCheck, contact: Phone, review: Clock, schedule: CalendarClock };
+const WAIT_REASONS = ["Discussing with family", "Waiting for the baby's arrival", "Comparing options", "Will confirm after hospital discharge"];
+const ACTION_DEFAULT = { contact: "Call back", newLead: "Follow-up call", postConsult: "Follow up on the plan", reply: "Follow-up call", review: "Check in", booking: "Call to book a consultation", payment: "Payment follow-up", schedule: "Follow-up call" };
+const mdBtn = (v = "secondary") => `${btn(v, "sm")} h-8`;
 
-// Smoothly counts a number up to its target (and between targets)
-function useCountUp(target, ms = 800) {
-  const [v, setV] = useState(0);
-  const from = useRef(0);
-  useEffect(() => {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) { setV(target); from.current = target; return; }
-    let raf;
-    const start = performance.now();
-    const a = from.current;
-    const tick = (t) => {
-      const p = Math.min(1, (t - start) / ms);
-      const e = 1 - Math.pow(1 - p, 3);
-      const val = a + (target - a) * e;
-      setV(val);
-      from.current = val;
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
-  return v;
+// Fields for picking a due time: shortcuts plus a custom IST date-time, with a plain-language preview
+function WhenPicker({ label, value, onChange, now, idPrefix }) {
+  const presets = [
+    ["later", "Later today", laterToday(now)],
+    ["tomorrow", "Tomorrow", tomorrowAt(now)],
+    ["custom", "Custom", null],
+  ];
+  const at = value.preset === "custom" ? fromIstInput(value.custom) : presets.find((p) => p[0] === value.preset)?.[2];
+  return (
+    <fieldset>
+      <legend className="block text-small leading-4 text-ink-3 mb-1.5">{label}</legend>
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={label}>
+        {presets.map(([id, text]) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={value.preset === id}
+            onClick={() => onChange({ ...value, preset: id, custom: value.custom || toIstInput(tomorrowAt(now)) })}
+            className={`h-8 rounded-md border px-2.5 text-small transition-colors duration-150 ${value.preset === id ? "border-ink bg-surface-hover text-ink" : "border-line-control text-ink-3 hover:border-line-strong"}`}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+      {value.preset === "custom" && (
+        <input
+          id={`${idPrefix}-custom`}
+          aria-label={`${label}: date and time (IST)`}
+          type="datetime-local"
+          value={value.custom}
+          min={toIstInput(now)}
+          onChange={(e) => onChange({ ...value, custom: e.target.value })}
+          className={`${inputCls} mt-2 tabular-nums`}
+        />
+      )}
+      <p className="mt-1.5 text-small leading-4 text-ink-3 tabular-nums" aria-live="polite">
+        {at ? <>Due {fmtIstWhen(at, now)} <span className="text-ink-4">IST</span></> : "Pick a date and time"}
+      </p>
+    </fieldset>
+  );
 }
-const CountUp = ({ value, format = (n) => Math.round(n), ms }) => <>{format(useCountUp(value, ms))}</>;
+const whenOf = (v, now) => (v.preset === "later" ? laterToday(now) : v.preset === "tomorrow" ? tomorrowAt(now) : fromIstInput(v.custom));
 
-const ATTN_ORDER = ["respond", "overdue", "new", "payment", "due"];
-const ATTN_ICON = { respond: MessageCircle, new: UserPlus, overdue: AlertCircle, due: ListChecks, payment: IndianRupee };
-const ACTION_SHORT = { "Open chat": "Reply", Call: "Call", "Resend link": "Resend" };
-const ATTN_FILTERS = { new: { label: "New leads", sections: ["new"] }, followups: { label: "Follow-ups", sections: ["overdue", "due"] }, payment: { label: "Pending payments", sections: ["payment"] } };
-// One short money format across the app: lakh with one decimal, crore with two (₹4.8L, ₹68.0L, ₹1.67Cr)
-const fmtShortINR = (n) => (n >= 1e7 ? `₹${(n / 1e7).toFixed(2)}Cr` : n >= 1e5 ? `₹${(n / 1e5).toFixed(1)}L` : fmtINR(n));
-const fmtL = (n) => fmtShortINR(n);
+// Record outcome (mode "outcome") or plan the next step for an unscheduled lead (mode "schedule")
+function ActionDialog({ mode, row, lead, now, onCancel, onSubmit, onHandoff }) {
+  const kind = row.kind;
+  const options = mode === "outcome" ? OUTCOMES_FOR[kind] || OUTCOMES_FOR.contact : [];
+  const balance = balanceOf(lead);
+  const [ids] = useState(() => ({ nextId: uid(), done: uid(), next: uid() }));
+  const [outcome, setOutcome] = useState(null);
+  const [note, setNote] = useState("");
+  const [amount, setAmount] = useState("");
+  const [nextKind, setNextKind] = useState("task");
+  const [type, setType] = useState(row.type && FU_TYPES.includes(row.type) ? row.type : kind === "payment" ? "Payment" : "Call");
+  const [action, setAction] = useState(ACTION_DEFAULT[kind] || "Follow-up call");
+  const [when, setWhen] = useState({ preset: "tomorrow", custom: "" });
+  const [waitReason, setWaitReason] = useState(WAIT_REASONS[0]);
+  const [review, setReview] = useState({ preset: "custom", custom: toIstInput(inDaysAt(now, 3)) });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
-function StatCard({ label, icon: Icon, value, sub, onClick, title, children, index = 0 }) {
+  const closing = outcome && CLOSING_OUTCOMES.has(outcome);
+  // Booking a consultation, and a payment on a lead that isn't a customer yet, go through the existing forms
+  const handoff = outcome === "Consultation booked" ? "Consult booked" : outcome === "Payment received" && lead.stage !== "Won" ? "Won" : null;
+  const payingNow = outcome === "Payment received" && !handoff;
+  const paid = Number(amount) || 0;
+  const settles = payingNow && balance.known && paid >= balance.due;
+  const needsNext = mode === "schedule" || (!!outcome && !closing && !handoff && !settles && (MYDAY_RULES.activeStages.includes(lead.stage) || lead.stage === "Deferred" || kind === "payment" || lead.stage === "Won"));
+  const next = !needsNext ? null : nextKind === "task" ? { kind: "task", type, action: action.trim(), due: whenOf(when, now) } : { kind: "wait", reason: waitReason.trim(), reviewAt: whenOf(review, now) };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (saving) return;
+    if (handoff) return onHandoff(handoff);
+    const problem =
+      mode === "schedule"
+        ? outcomeProblem({ outcome: "Scheduled", next, now: new Date() })
+        : payingNow && !(paid > 0)
+          ? "Enter the amount received."
+          : outcomeProblem({ outcome, next, payment: payingNow ? { amount: paid } : null, balance, now: new Date(), needsNext });
+    if (problem) return setError(problem);
+    setError(null);
+    setSaving(true);
+    const res = await onSubmit({ outcome: mode === "schedule" ? null : outcome, note: note.trim(), next, payment: payingNow ? { amount: paid } : null, ids, closing });
+    if (!res?.ok) {
+      setSaving(false);
+      setError(res?.error || "Couldn't save. Your entries are still here: try again.");
+    }
+  };
+
+  const title = mode === "schedule" ? `Plan the next step · ${lead.name}` : `Record outcome · ${lead.name}`;
+  return (
+    <Modal title={title} onClose={saving ? null : onCancel} width={500}>
+      <form onSubmit={submit} className="p-5 space-y-5 max-h-[70vh] overflow-y-auto" aria-busy={saving}>
+        <div className="text-body text-ink-3">
+          {row.reason}
+          {row.due && <span className="text-ink-4"> · {dueText(row, now)}</span>}
+        </div>
+
+        {mode === "outcome" && (
+          <fieldset>
+            <legend className="block text-small leading-4 text-ink-3 mb-1.5">What happened? <span className="text-brand">*</span></legend>
+            <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Outcome">
+              {options.map((o) => (
+                <button key={o} type="button" role="radio" aria-checked={outcome === o} onClick={() => { setOutcome(o); setError(null); }} className={`min-h-9 rounded-md border px-3 py-1.5 text-left text-body flex items-center justify-between gap-2 transition-colors duration-150 ${outcome === o ? "border-ink ring-1 ring-ink bg-surface-hover text-ink font-medium" : "border-line-control text-ink-2 hover:border-line-strong"}`}>
+                  {o}
+                  {outcome === o && <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} aria-hidden="true" />}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
+        {payingNow && (
+          <Field label={balance.known ? `Amount received now (₹) · ${fmtINR(balance.due)} due` : "Amount received now (₹)"} required>
+            <input type="number" inputMode="numeric" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} className={`${inputCls} tabular-nums`} />
+            {balance.known && paid > 0 && paid <= balance.due && (
+              <span className="mt-1 block text-small text-ink-4">{settles ? "Paid in full: the payment follow-up closes." : `${fmtINR(balance.due - paid)} will still be due, so plan the next payment follow-up.`}</span>
+            )}
+          </Field>
+        )}
+
+        {handoff === "Consult booked" && <p className="text-small leading-5 text-ink-3">Next, pick the slot in the booking form. The booking task closes once the consultation is on the calendar.</p>}
+        {handoff === "Won" && <p className="text-small leading-5 text-ink-3">Next, record the package and amount in the payment form. The payment task closes only when the full amount is received.</p>}
+        {closing && <p className="text-small leading-5 text-ink-3">After saving, confirm the lost reason. If you cancel that, the lead stays open under Needs scheduling.</p>}
+
+        {mode === "outcome" && outcome && !handoff && (
+          <Field label="Note">
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Optional · what was said" className="w-full rounded-md border border-line-control px-3 py-2 text-body outline-none resize-none placeholder:text-ink-placeholder focus:border-line-heavy" />
+          </Field>
+        )}
+
+        {needsNext && (
+          <div className="space-y-4 rounded-lg border border-line p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-body font-medium">Next step</div>
+              <div className="h-8 flex items-center rounded-md border border-line-control p-0.5" role="radiogroup" aria-label="Next step">
+                {[["task", "Schedule an action"], ["wait", "Wait for customer"]].map(([k, l]) => (
+                  <button key={k} type="button" role="radio" aria-checked={nextKind === k} onClick={() => setNextKind(k)} className={`h-[26px] rounded px-2 text-small transition-colors duration-150 ${nextKind === k ? "bg-surface-active text-ink" : "text-ink-4 hover:text-ink"}`}>{l}</button>
+                ))}
+              </div>
+            </div>
+            {nextKind === "task" ? (
+              <>
+                <fieldset>
+                  <legend className="block text-small leading-4 text-ink-3 mb-1.5">Type</legend>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FU_TYPES.map((t) => (
+                      <button key={t} type="button" aria-pressed={type === t} onClick={() => setType(t)} className={`h-8 rounded-md border px-2.5 text-small inline-flex items-center gap-1.5 transition-colors duration-150 ${type === t ? "border-ink bg-surface-hover" : "border-line-control text-ink-3 hover:border-line-strong"}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${FU_TYPE_COLOR[t].dot}`} />
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <Field label="Next action" required>
+                  <input value={action} onChange={(e) => setAction(e.target.value)} className={inputCls} />
+                </Field>
+                <WhenPicker label="When" value={when} onChange={setWhen} now={now} idPrefix="due" />
+              </>
+            ) : (
+              <>
+                <Field label="Waiting for" required>
+                  <input list="cw-wait-reasons" value={waitReason} onChange={(e) => setWaitReason(e.target.value)} className={inputCls} />
+                  <datalist id="cw-wait-reasons">{WAIT_REASONS.map((w) => <option key={w} value={w} />)}</datalist>
+                </Field>
+                <WhenPicker label="Review on" value={review} onChange={setReview} now={now} idPrefix="review" />
+              </>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div role="alert" className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-small leading-5 text-red-800">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" /> {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <SecondaryButton type="button" onClick={onCancel} disabled={saving}>Cancel</SecondaryButton>
+          <PrimaryButton type="submit" disabled={saving || (mode === "outcome" && !outcome)}>
+            {saving ? "Saving…" : handoff === "Consult booked" ? "Open booking form" : handoff === "Won" ? "Open payment form" : closing ? "Save and choose lost reason" : mode === "schedule" ? "Save next step" : "Save outcome"}
+          </PrimaryButton>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function SnoozeDialog({ row, now, onCancel, onSubmit }) {
+  const [when, setWhen] = useState({ preset: "tomorrow", custom: "" });
+  const [ids] = useState(() => ({ taskId: uid() }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (saving) return;
+    const at = whenOf(when, now);
+    if (!at) return setError("Pick a date and time.");
+    if (at <= new Date()) return setError("Pick a time in the future.");
+    setSaving(true);
+    const res = await onSubmit(at, ids);
+    if (!res?.ok) {
+      setSaving(false);
+      setError(res?.error || "Couldn't save. Try again.");
+    }
+  };
+  return (
+    <Modal title={`Snooze · ${row.name}`} onClose={saving ? null : onCancel} width={420}>
+      <form onSubmit={submit} className="p-5 space-y-4" aria-busy={saving}>
+        <p className="text-body text-ink-3">{row.reason}. The same task moves to the new time and comes back to the queue then.</p>
+        <WhenPicker label="Snooze until" value={when} onChange={setWhen} now={now} idPrefix="snooze" />
+        {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-small text-red-800">{error}</div>}
+        <div className="flex justify-end gap-2">
+          <SecondaryButton type="button" onClick={onCancel} disabled={saving}>Cancel</SecondaryButton>
+          <PrimaryButton type="submit" disabled={saving}>{saving ? "Saving…" : "Snooze"}</PrimaryButton>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function PaymentsDialog({ payments, now, onOpenLead, onClose }) {
+  return (
+    <Modal title="Outstanding payments" onClose={onClose} width={560}>
+      <div className="max-h-[65vh] overflow-y-auto">
+        {payments.list.length === 0 ? (
+          <div className="p-8 text-center text-body text-ink-4">No outstanding payments</div>
+        ) : (
+          <ul className="divide-y divide-line-subtle">
+            {payments.list.map(({ lead, known, due, total, task }) => (
+              <li key={lead.id} className="flex items-center gap-3 px-5 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-body font-medium text-ink truncate">{lead.name} <span className="font-normal text-ink-4">· {lead.stage === "Won" ? "Customer" : lead.stage}</span></div>
+                  <div className="text-small text-ink-4 tabular-nums">
+                    {known ? `${fmtINR(due)} due of ${fmtINR(total)}` : "Amount not recorded yet"} · {task ? `Payment follow-up ${dueText({ due: task.due, overdueBy: Math.max(0, now - task.due) }, now)}` : "No payment follow-up scheduled"}
+                  </div>
+                </div>
+                <button type="button" onClick={() => onOpenLead(lead.id)} className={mdBtn()}>Open</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="px-5 py-3 border-t border-line text-small text-ink-4">A payment appears in your queue when its follow-up is due.</div>
+    </Modal>
+  );
+}
+
+function SummaryCard({ label, icon: Icon, onClick, ariaLabel, children }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      title={title}
-      className="cw-card-in group/stat text-left rounded-xl border border-line bg-white px-[14px] py-3 transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-[2px] hover:border-line-strong hover:shadow-lift active:translate-y-0 active:duration-75 min-w-0"
-      style={{ animationDelay: `${40 + Math.min(index, 6) * 40}ms` }}
+      aria-label={ariaLabel}
+      className="group/c text-left rounded-xl border border-line bg-white px-4 py-3.5 min-h-[92px] transition-[border-color,box-shadow] duration-150 hover:border-line-strong hover:shadow-lift min-w-0"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-small text-ink-4 truncate">{label}</span>
-        <Icon className="h-[14px] w-[14px] text-ink-4 shrink-0 transition-[color,transform] duration-200 group-hover/stat:text-ink-3 group-hover/stat:scale-110" strokeWidth={1.75} />
+        <span className="text-small leading-4 text-ink-4">{label}</span>
+        <Icon className="h-[15px] w-[15px] text-ink-4 shrink-0 group-hover/c:text-ink-3" strokeWidth={1.75} />
       </div>
-      <div className="mt-1.5 text-title leading-none font-medium tracking-[-0.01em] tabular-nums text-ink">{typeof value === "number" ? <CountUp value={value} /> : value}</div>
       {children}
-      <div className="mt-1.5 text-caption text-ink-4 truncate tabular-nums">{sub}</div>
     </button>
   );
 }
 
-function DaySection({ id, title, count, right, flash, collapsed, onToggle, children, delay = 0 }) {
-  // Clip only while collapsed or animating open; once open, row menus (Snooze, Done) can drop below the last row
-  const [clip, setClip] = useState(collapsed);
-  useEffect(() => {
-    if (collapsed) { setClip(true); return; }
-    const t = setTimeout(() => setClip(false), 300);
-    return () => clearTimeout(t);
-  }, [collapsed]);
-  return (
-    <section id={id} className={`cw-fade-in scroll-mt-6 rounded-lg transition-colors duration-500 ${flash ? "bg-brand-tint" : ""}`} style={{ animationDelay: `${delay}ms` }}>
-      <div className={`flex items-center gap-2 pb-2 ${collapsed ? "" : "border-b border-line"}`}>
-        <button onClick={onToggle} aria-expanded={!collapsed} className="group/h -ml-1 pl-1 pr-1.5 h-6 rounded-md flex items-center gap-1.5 hover:bg-surface-hover transition-colors duration-150">
-          <h2 className="text-body font-medium text-ink">{title}</h2>
-          <span className="text-small text-ink-4 tabular-nums"><CountUp value={count} ms={500} /></span>
-          <ChevronDown className={`h-3.5 w-3.5 text-ink-4 group-hover/h:text-ink transition-transform duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${collapsed ? "-rotate-90" : ""}`} />
-        </button>
-        <div className="ml-auto text-small text-ink-4">{right}</div>
-      </div>
-      <div className={`grid transition-[grid-template-rows,opacity] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"}`} aria-hidden={collapsed} inert={collapsed}>
-        <div className={`min-h-0 ${clip ? "overflow-hidden" : ""}`}>
-          <div className="divide-y divide-line-subtle border-b border-line-subtle">{children}</div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// One-line row shell: lead | middle (name · short · context) | status | action | hover icons
-function DayRow({ rowId, selected, onSelect, highlight, lead, name, short, context, contextTone, status, action, hoverIcons, onName, leaving, menu, index = 0, onSwipeRight, onSwipeLeft }) {
+function ActionRow({ row, now, selected, called, onSelect, onOpenLead, onCall, onWhatsApp, onRecord, onSnooze, onSchedule, onRecordConsult }) {
+  const Icon = KIND_ICON[row.kind] || Phone;
+  const late = row.overdueBy > 0;
   const ref = useRef(null);
-  const layerRef = useRef(null);
-  const swipe = useRowSwipe(ref, layerRef, { onRight: onSwipeRight, onLeft: onSwipeLeft });
-  const swipeable = !!(onSwipeRight || onSwipeLeft);
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selected]);
+  const primary =
+    row.kind === "schedule" ? { label: "Schedule follow-up", run: onSchedule }
+      : row.kind === "consultOutcome" ? { label: "Record outcome", run: onRecordConsult }
+      : { label: "Record outcome", run: onRecord };
+  const canSnooze = row.kind !== "schedule" && row.kind !== "consultOutcome" && row.kind !== "reply";
   return (
-    <div className={`grid transition-[grid-template-rows,opacity] duration-150 ease-out ${leaving ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"}`}>
-      <div className={`min-w-0 cw-row-in transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] ${leaving ? "overflow-hidden translate-x-2" : ""}`} style={{ animationDelay: `${Math.min(index, 7) * 40}ms` }}>
-        {/* Clip sideways only: the swipe needs it, but the Snooze / Done menus drop down below the row */}
-        <div className="relative overflow-x-clip">
-        {swipeable && (
-          <div ref={layerRef} aria-hidden="true" data-past="" className="md:hidden absolute inset-0 flex opacity-0 text-small font-medium text-white [&[data-past='1']_svg]:scale-125">
-            <div className="flex-1 bg-emerald-700 flex items-center gap-1.5 pl-4">{onSwipeRight && <><Check className="h-4 w-4 transition-transform duration-150" /> Done</>}</div>
-            <div className="flex-1 bg-amber-700 flex items-center justify-end gap-1.5 pr-4">{onSwipeLeft && <>Tomorrow <AlarmClock className="h-4 w-4 transition-transform duration-150" /></>}</div>
-          </div>
-        )}
-        <div
-          ref={ref}
-          data-row={rowId}
-          onClick={() => onSelect(rowId)}
-          {...(swipeable ? swipe : {})}
-          className={`group relative flex items-center gap-3 h-11 px-2 text-body transition-colors duration-150 ${swipeable ? "touch-pan-y" : ""} ${swipeable && !selected && !highlight ? "bg-white" : ""} ${selected ? "bg-surface-hover" : highlight ? "bg-blue-50 hover:bg-blue-50" : "hover:bg-surface-subtle"}`}
-        >
-          {selected && <span className="absolute left-0 top-2.5 bottom-2.5 w-[2px] rounded-full" style={{ backgroundColor: ACCENT }} />}
-          {lead}
-          <div className="min-w-0 flex-1 flex items-center gap-1.5 whitespace-nowrap">
-            <button onClick={(e) => { e.stopPropagation(); onSelect(rowId); onName?.(); }} className="font-medium text-ink hover:underline underline-offset-2 decoration-line-heavy shrink-0">
-              {name}
+    <li
+      ref={ref}
+      data-row={row.id}
+      onClick={() => onSelect(row.id)}
+      className={`relative grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2.5 px-3 sm:px-4 py-3 transition-colors duration-150 ${selected ? "bg-surface-hover" : "hover:bg-surface-subtle"}`}
+    >
+      {selected && <span className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full" style={{ backgroundColor: ACCENT }} aria-hidden="true" />}
+      <div className="min-w-0 flex gap-3">
+        <span className={`mt-0.5 h-7 w-7 shrink-0 rounded-md flex items-center justify-center ${late ? "bg-red-50 text-red-600" : row.kind === "reply" ? "bg-amber-50 text-amber-700" : "bg-surface-hover text-ink-3"}`} aria-hidden="true">
+          <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-baseline gap-x-1.5">
+            <button type="button" onClick={(e) => { e.stopPropagation(); onOpenLead(); }} className="font-medium text-ink hover:underline underline-offset-2 decoration-line-heavy text-left">
+              {row.name}
             </button>
-            {short && <span className="text-ink-4 shrink-0">· {short}</span>}
-            {context && <span className={`min-w-0 truncate ${contextTone || "text-ink-4"}`}>· {context}</span>}
+            {row.care && <span className="text-small text-ink-4">· {row.care}</span>}
+            {row.stage && row.kind === "schedule" && <span className="text-small text-ink-4">· {row.stage}</span>}
           </div>
-          <div className="shrink-0 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-            {status}
-            <div className="relative flex items-center gap-0.5">
-              {action}
-              <div className={`flex items-center transition-opacity duration-150 ${selected || menu ? "opacity-100" : "opacity-0 [@media(hover:none)]:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"}`}>{hoverIcons}</div>
-              {menu && <div data-row-menu>{menu}</div>}
+          <div className="mt-0.5 text-body text-ink-2">
+            {row.reason}
+            {row.nextAction && row.nextAction !== row.reason && row.kind !== "schedule" && <span className="text-ink-4"> · Next: {row.nextAction}</span>}
+          </div>
+          <div className="mt-1 text-small leading-4 text-ink-4 tabular-nums">
+            {row.kind !== "schedule" && (
+              <>
+                <span className={late ? "text-red-700 font-medium" : row.due && istDayDiff(row.due, now) === 0 ? "text-ink-3" : ""}>{dueText(row, now)}</span>
+                {" · "}
+              </>
+            )}
+            {lastContactText(row.lastContact, now)}
+          </div>
+          {(row.note || row.automation || row.amount) && (
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-small leading-4 text-ink-4">
+              {row.amount && <span>{row.amount.known ? `${fmtINR(row.amount.due)} due of ${fmtINR(row.amount.total)}` : "Amount not recorded yet"}</span>}
+              {row.note && <span>{row.note[0].toUpperCase() + row.note.slice(1)}</span>}
+              {row.automation && <span className="inline-flex items-center gap-1"><WhatsAppIcon className="h-3 w-3" /> {row.automation}</span>}
             </div>
-          </div>
-        </div>
+          )}
         </div>
       </div>
-    </div>
+      <div className="flex flex-wrap items-center gap-1.5 pl-10 sm:pl-0 sm:justify-end sm:self-center" onClick={(e) => e.stopPropagation()}>
+        {row.phone && row.kind !== "schedule" && (
+          <>
+            <button type="button" onClick={onWhatsApp} className={mdBtn()} aria-label={`WhatsApp ${row.name}`}><WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp</button>
+            <button type="button" onClick={onCall} className={mdBtn()} aria-label={`Call ${row.name}`}><Phone className="h-3.5 w-3.5" /> Call</button>
+          </>
+        )}
+        {row.kind === "schedule" && <button type="button" onClick={onOpenLead} className={mdBtn()}>Review lead</button>}
+        {canSnooze && <button type="button" onClick={onSnooze} className={mdBtn("ghost")} aria-label={`Snooze ${row.name}`}><AlarmClock className="h-3.5 w-3.5" /> Snooze</button>}
+        <button type="button" onClick={primary.run} className={`${mdBtn("primary")} ${called ? "ring-2 ring-brand/40" : ""}`} aria-label={`${primary.label} for ${row.name}`}>
+          {primary.label}
+        </button>
+      </div>
+    </li>
   );
 }
 
-const StatusText = ({ dot, tone, children, pulse }) => (
-  <span className={`hidden sm:inline-flex items-center gap-1.5 text-small whitespace-nowrap tabular-nums ${tone}`}>
-    <span className="relative flex h-1.5 w-1.5">
-      {pulse === "live" && <span className={`cw-ping absolute inset-0 rounded-full ${dot}`} />}
-      <span className={`relative h-1.5 w-1.5 rounded-full ${dot}`} />
-    </span>
-    {children}
-  </span>
-);
 
-function MyDay({ now, items, leads = [], onOpen, showToast, md }) {
-  const { daySections, toggleDaySection, selectedId, setSelectedId, rowMenu, setRowMenu, actions, scheduleOutcomes, logScheduleOutcome, opps, oppTotal, onSellOpp, onCallOpp, dismissOpp, attnFilter, setAttnFilter, jumpTo, flash, onViewAllOpps, onCalendar } = md;
-  const open = items.filter((i) => i.status === "open" || i.status === "leaving");
-  const count = (sections) => items.filter((i) => i.status === "open" && sections.includes(i.section));
-  const newItems = count(["new"]);
-  // Leads created today (any stage)
-  const newToday = leads.filter((l) => l.createdAt && dayDiff(l.createdAt, now) === 0);
-  const overdue = count(["overdue"]);
-  const followups = count(["overdue", "due"]);
-  const payments = count(["payment"]);
-  const consults = SCHEDULE.map((s) => ({ ...s, outcome: scheduleOutcomes[s.id] }));
-  const nextConsult = consults.filter((c) => c.at > now).sort((a, b) => a.at - b.at)[0];
-  const pendingOutcomes = consults.filter((c) => needsOutcome(c, now, scheduleOutcomes)).length;
-  const openCount = items.filter((i) => i.status === "open").length + pendingOutcomes;
-  const rev = REVENUE_MONTH.care + REVENUE_MONTH.experts;
-  const revPct = Math.min(1, rev / REVENUE_MONTH.target);
-  const monthName = now.toLocaleDateString("en-GB", { month: "short" });
-  // How much of the month has gone, so the revenue bar can show whether we're on pace
-  const monthPace = now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const paceWord = revPct >= monthPace + 0.03 ? "ahead" : revPct <= monthPace - 0.03 ? "behind" : "on pace";
+function MyDay({ now, leads, followups, consults, timelines, rules, revenue, dataStatus, opportunities, setFollowups, setLeads, setTimelines, showToast, onOpenLead, onOpenConsult, onOpenNewLeads, onRequestStage, onEditTarget }) {
+  const minute = Math.floor(now / 60000);
+  const day = useMemo(() => buildMyDay({ leads, followups, consults, timelines, now, rules }), [leads, followups, consults, timelines, rules, minute]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { queue, cards, consultations } = day;
+  const [tab, setTab] = useState(() => (queue.overdue.length && !queue.today.length ? "overdue" : "today"));
+  const [kindFilter, setKindFilter] = useState(null);
+  const [shownBy, setShownBy] = useState({}); // group id → rows shown
+  const [olderOpen, setOlderOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [dialog, setDialog] = useState(null); // { type: "outcome" | "schedule" | "snooze", row }
+  const [paymentsOpen, setPaymentsOpen] = useState(false);
+  const [called, setCalled] = useState(() => new Set());
+  const queueRef = useRef(null);
 
-  const attnRows = open
-    .filter((i) => !attnFilter || ATTN_FILTERS[attnFilter].sections.includes(i.section))
-    .sort((a, b) => ATTN_ORDER.indexOf(a.section) - ATTN_ORDER.indexOf(b.section) || (a.waitingSince || 0) - (b.waitingSince || 0));
+  const filterRows = (rows) => (kindFilter ? rows.filter(KIND_FILTERS[kindFilter].test) : rows);
+  const counts = Object.fromEntries(QUEUE_TABS.map((t) => [t.id, filterRows(queue[t.id]).length]));
+  const rows = filterRows(queue[tab]);
+  const recentDays = rules?.schedulingRecentDays ?? MYDAY_RULES.schedulingRecentDays;
+  // Needs scheduling: leads active recently first; the older backlog stays listed, folded away
+  const groups =
+    tab === "scheduling"
+      ? [
+          { id: "recent", label: `Active in the last ${recentDays} days`, rows: rows.filter((r) => r.recent) },
+          { id: "older", label: `Older backlog · nothing happened for ${recentDays}+ days`, rows: rows.filter((r) => !r.recent), folded: !olderOpen },
+        ].filter((g) => g.rows.length)
+      : [{ id: "all", label: null, rows }];
+  const shownIn = (g) => g.rows.slice(0, shownBy[g.id] || QUEUE_PAGE);
+  const visible = groups.flatMap((g) => (g.folded ? [] : shownIn(g)));
+  const leadOf = (id) => leads.find((l) => l.id === id);
+  useEffect(() => setShownBy({}), [tab, kindFilter]);
 
-  const menuFor = (id) => (rowMenu?.id === id ? rowMenu.kind : null);
-  const toggleMenu = (id, kind) => setRowMenu((m) => (m?.id === id && m.kind === kind ? null : { id, kind }));
+  const goQueue = (t, k = null) => {
+    setTab(t);
+    setKindFilter(k);
+    setTimeout(() => queueRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 20);
+  };
 
-  const attnStatus = (item) => {
-    if (item.section === "respond") {
-      const mins = Math.floor((now - item.waitingSince) / 60000);
-      const t = mins < 3 ? ["bg-emerald-500", "text-emerald-700"] : mins <= 5 ? ["bg-amber-500", "text-amber-700"] : ["bg-red-500", "text-red-700"];
-      return <StatusText dot={t[0]} tone={t[1]}>Waiting {mins}m</StatusText>;
+  // Writes go through the CRM's save queue. This waits for the server and reports
+  // whether the change reached it; if not, it stays queued on this device.
+  const confirmSaved = async (keys) => {
+    await new Promise((r) => setTimeout(r, 60)); // let the save effect queue the change
+    // A retry after a failure sends the kept write again right away
+    if (keys.some(([coll, id]) => isStashed(coll, id))) await retryStash();
+    else await flush();
+    if (keys.some(([coll, id]) => isStashed(coll, id))) {
+      return { ok: false, error: "Couldn't reach the server, so this isn't saved yet. It's kept on this device and will retry automatically. You can also try again now." };
     }
-    if (item.section === "overdue") return <StatusText dot="bg-red-500" tone="text-red-700">{item.late}</StatusText>;
-    if (item.section === "new") return <StatusText dot="bg-blue-500" tone="text-blue-700">New · {fmtAgo(now - item.createdAt)}</StatusText>;
-    if (item.section === "payment") return <StatusText dot="bg-amber-500" tone="text-amber-700">{fmtINR(item.amount)} · {item.late}</StatusText>;
-    return <StatusText dot="bg-line-heavy" tone="text-ink-4">Due today</StatusText>;
+    return { ok: true };
   };
 
-  const hoverPair = (id, onSnooze, onDone) => (
-    <>
-      <GhostIcon title="Snooze (S)" active={menuFor(id) === "snooze"} onClick={onSnooze || (() => toggleMenu(id, "snooze"))}>
-        <AlarmClock className="h-[15px] w-[15px]" strokeWidth={1.75} />
-      </GhostIcon>
-      <GhostIcon title="Done (E)" active={menuFor(id) === "done"} onClick={onDone || (() => toggleMenu(id, "done"))}>
-        <Check className="h-[15px] w-[15px]" strokeWidth={2} />
-      </GhostIcon>
-    </>
-  );
+  const addEvents = (lead, events) =>
+    setTimelines((t) => {
+      const cur = t[lead.id] || buildTimeline(lead);
+      const have = new Set(cur.map((e) => e.id));
+      return { ...t, [lead.id]: [...events.filter((e) => !have.has(e.id)), ...cur] };
+    });
 
-  const scheduleStatus = (c) => {
-    const mins = Math.round((c.at - now) / 60000);
-    if (c.outcome) return { node: <StatusText dot={TAG_DOTS[c.outcome] || "bg-line-heavy"} tone="text-ink-3">{c.outcome}</StatusText> };
-    if (needsOutcome(c, now, scheduleOutcomes)) return { node: <StatusText dot="bg-amber-500" tone="text-amber-700">Outcome needed</StatusText>, outcome: true };
-    if (mins <= 0) return { node: <StatusText dot="bg-blue-500" tone="text-blue-700" pulse="live">In progress</StatusText>, hot: true };
-    if (mins <= 60) return { node: <StatusText dot="bg-blue-500" tone="text-blue-700">In {mins} min</StatusText>, hot: true };
-    return c.confirm === "confirmed"
-      ? { node: <StatusText dot="bg-emerald-500" tone="text-emerald-700">Confirmed</StatusText> }
-      : { node: <StatusText dot="bg-line-heavy" tone="text-ink-4">Awaiting reply</StatusText> };
+  const call = (row) => { openCall(row.phone); setCalled((s) => new Set(s).add(row.id)); };
+  const whatsapp = (row) => { openWhatsApp(row.phone); setCalled((s) => new Set(s).add(row.id)); };
+
+  const submitAction = async (row, { outcome, note, next, payment, ids, closing }) => {
+    const lead = leadOf(row.leadId);
+    if (!lead) return { ok: false, error: "This lead no longer exists." };
+    const input = { lead, row: dialog.type === "schedule" ? null : row, outcome, note, next, payment, now: new Date(), by: ME, nextId: ids.nextId, eventIds: { done: ids.done, next: ids.next } };
+    const res = applyOutcome({ ...input, followups });
+    setFollowups((fs) => applyOutcome({ ...input, followups: fs }).followups);
+    setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, ...res.leadPatch } : l)));
+    addEvents(lead, res.events);
+    const keys = [["leads", lead.id], ...(row.taskId ? [["followups", row.taskId]] : []), ...(next?.kind === "task" ? [["followups", ids.nextId]] : [])];
+    const saved = await confirmSaved(keys);
+    if (!saved.ok) return saved;
+    setDialog(null);
+    setCalled((s) => { const n = new Set(s); n.delete(row.id); return n; });
+    if (closing) onRequestStage(lead.id, "Lost");
+    else
+      showToast(
+        next?.kind === "task" ? `Saved · next: ${next.action}, ${fmtIstWhen(next.due, new Date())}` : next?.kind === "wait" ? `Saved · review ${fmtIstWhen(next.reviewAt, new Date())}` : `Saved · ${outcome}`,
+      );
+    return { ok: true };
   };
+
+  const submitSnooze = async (row, at, ids) => {
+    const lead = leadOf(row.leadId);
+    if (!lead) return { ok: false, error: "This lead no longer exists." };
+    const now2 = new Date();
+    let keys;
+    if (row.taskId) {
+      setFollowups((fs) => snoozeTask(fs, row.taskId, at, now2, ME));
+      keys = [["followups", row.taskId]];
+    } else if (row.kind === "review") {
+      setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, waiting: { ...l.waiting, reviewAt: at } } : l)));
+      keys = [["leads", lead.id]];
+    } else {
+      // A new lead without a task: the snooze becomes its first-contact task
+      setFollowups((fs) => (fs.some((f) => f.id === ids.taskId) ? fs.map((f) => (f.id === ids.taskId ? { ...f, due: at } : f)) : [...fs, { id: ids.taskId, leadId: lead.id, type: "Call", action: NEXT_ACTION_BY_STAGE.New, due: at, owner: lead.owner || ME, status: "open", createdAt: now2 }]));
+      setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, nextFollowUp: at } : l)));
+      keys = [["followups", ids.taskId]];
+    }
+    addEvents(lead, [{ id: `ev-snooze-${row.id}-${at.getTime()}`, type: "followup", by: ME, at: now2, when: at, snoozed: true, action: row.nextAction || row.reason }]);
+    const saved = await confirmSaved(keys);
+    if (!saved.ok) return saved;
+    setDialog(null);
+    showToast(`Snoozed until ${fmtIstWhen(at, new Date())}`);
+    return { ok: true };
+  };
+
+  // Keyboard: J/K move, Enter opens the lead, C call, W WhatsApp, E record outcome, S snooze
+  useEffect(() => {
+    const onKey = (e) => {
+      if (dialog || paymentsOpen || isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      const key = e.key.toLowerCase();
+      const idx = visible.findIndex((r) => r.id === selectedId);
+      if (key === "j" || key === "k") {
+        e.preventDefault();
+        if (!visible.length) return;
+        const n = idx === -1 ? 0 : key === "j" ? Math.min(idx + 1, visible.length - 1) : Math.max(idx - 1, 0);
+        setSelectedId(visible[n].id);
+        return;
+      }
+      const row = visible[idx];
+      if (!row) return;
+      if (e.key === "Enter") onOpenLead(row.leadId);
+      else if (key === "c" && row.phone) call(row);
+      else if (key === "w" && row.phone) whatsapp(row);
+      else if (key === "e") row.kind === "consultOutcome" ? onOpenConsult(row.consultId, "outcome") : setDialog({ type: row.kind === "schedule" ? "schedule" : "outcome", row });
+      else if (key === "s" && row.taskId) setDialog({ type: "snooze", row });
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  const consultSummary =
+    consultations.length === 0
+      ? "No consultations scheduled today"
+      : consultations.every((c) => c.status === "completed" || c.status === "noshow")
+        ? "All consultations completed"
+        : [cards.consultations.upcoming && `${cards.consultations.upcoming} upcoming`, cards.consultations.toRecord && `${cards.consultations.toRecord} to record`, cards.consultations.completed && `${cards.consultations.completed} completed`].filter(Boolean).join(" · ");
+  const summary = [`${queue.today.length} action${queue.today.length === 1 ? "" : "s"} due today`, `${queue.overdue.length} overdue`, `${consultations.length} consultation${consultations.length === 1 ? "" : "s"}`].join(" · ");
+  const dialogLead = dialog ? leadOf(dialog.row.leadId) : null;
 
   return (
-    <div className="px-5 md:px-12 pt-6 sm:pt-10 pb-16 max-w-[1080px]">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-small leading-4 text-ink-4 tabular-nums">{fmtLongDate(now)}</div>
-          <h1 className="cw-fade-in mt-1.5 text-h1 font-medium tracking-[-0.01em] text-ink">{greetingFor(now)}</h1>
-          <p className="cw-fade-in mt-1 text-body-lg text-ink-4 tabular-nums" style={{ animationDelay: "60ms" }}>{openCount === 0 ? "Nothing needs you right now" : <><CountUp value={openCount} /> {openCount === 1 ? "thing needs" : "things need"} you today</>}</p>
+    <div className="px-4 sm:px-6 md:px-12 pt-6 sm:pt-10 pb-16 max-w-[1080px]">
+      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <div className="text-small leading-4 text-ink-4">{fmtIstLongDate(now)}</div>
+          <h1 className="mt-1.5 text-h1 font-medium tracking-[-0.01em] text-ink">{istGreeting(now)}</h1>
+          <p className="mt-1 text-body-lg text-ink-3 tabular-nums">{summary}</p>
+        </div>
+        <div className="sm:text-right text-small leading-5 text-ink-4 tabular-nums">
+          {revenue && (
+            <button type="button" onClick={onEditTarget} className="hover:text-ink transition-colors duration-150" title="Received on deals closed this month · change the target in Settings">
+              Revenue · {revenue.month} <span className="text-ink-2 font-medium">{fmtShortINR(revenue.amount)}</span> of {fmtShortINR(revenue.target)}
+            </button>
+          )}
+          <div role="status" className={dataStatus.error ? "text-amber-700" : ""}>
+            {dataStatus.error ? (
+              <>Couldn&apos;t refresh · showing data from {fmtIstTime(dataStatus.updatedAt)} · <button type="button" onClick={dataStatus.onRetry} className="underline underline-offset-2">Retry</button></>
+            ) : (
+              <>Updated {fmtIstTime(dataStatus.updatedAt)}</>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* Stat cards */}
-      {/* Phones: one swipeable row so "Needs your attention" is on the first screen */}
-      <div className="mt-5 sm:mt-8 -mx-5 px-5 sm:mx-0 sm:px-0 flex sm:grid overflow-x-auto sm:overflow-visible snap-x snap-mandatory scroll-px-5 [scrollbar-width:none] sm:grid-cols-3 lg:grid-cols-5 gap-2 [&>*]:shrink-0 [&>*]:w-[148px] sm:[&>*]:w-auto [&>*]:snap-start">
-        <StatCard index={0} label="New leads today" icon={UserPlus} value={newToday.length} sub={[...new Set(newToday.map((l) => (l.source || "").replace(" ad", "").replace(" form", "")).filter(Boolean))].join(", ") || "None yet today"} onClick={() => { setAttnFilter("new"); jumpTo("sec-attention", []); }} />
-        <StatCard index={1} label="Consultations" icon={CalendarDays} value={consults.length} sub={nextConsult ? `Next ${fmtTime(nextConsult.at)}` : pendingOutcomes ? `${pendingOutcomes} outcome${pendingOutcomes > 1 ? "s" : ""} to log` : "All done"} onClick={() => jumpTo("sec-consults", [])} />
-        <StatCard
-          index={2}
-          label="Follow-ups"
-          icon={ListChecks}
-          value={followups.length}
-          sub={overdue.length ? <span className="text-red-700">● {overdue.length} overdue</span> : "None overdue"}
-          onClick={() => { setAttnFilter("followups"); jumpTo("sec-attention", []); }}
-        />
-        <StatCard index={3} label="Pending payments" icon={IndianRupee} value={payments.length} sub={`${fmtINR(payments.reduce((s, i) => s + (i.amount || 0), 0))} awaiting`} onClick={() => { setAttnFilter("payment"); jumpTo("sec-attention", []); }} />
-        <StatCard
-          index={4}
-          label={`Revenue · ${monthName}`}
-          icon={BarChart3}
-          value={<CountUp value={rev} format={fmtL} ms={1000} />}
-          sub={<>{Math.round(revPct * 100)}% of {fmtL(REVENUE_MONTH.target)} · <span className={paceWord === "behind" ? "text-red-700" : ""}>{paceWord}</span></>}
-          title={`${SELL_EXPERTS ? `Care ${fmtL(REVENUE_MONTH.care)} · Experts ${fmtL(REVENUE_MONTH.experts)}` : `Received on deals closed in ${monthName}`} · tick marks where we should be today (${Math.round(monthPace * 100)}% of the month gone) · click to change the target`}
-          onClick={() => md.onEditTarget?.()}
-        >
-          <div className="relative mt-2">
-            <div className="h-[3px] rounded-full bg-surface-active overflow-hidden">
-              <div className="cw-bar-grow relative h-full rounded-full origin-left overflow-hidden" style={{ width: `${revPct * 100}%`, backgroundColor: ACCENT, animationDelay: "320ms" }}>
-              </div>
-            </div>
-            {/* Pace tick: where revenue should be by today if it came in evenly */}
-            <span className="absolute -top-[3px] h-[9px] w-px bg-ink-3" style={{ left: `${monthPace * 100}%` }} aria-hidden="true" />
+      {/* Summary cards */}
+      <div className="mt-6 sm:mt-8 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <SummaryCard label="New leads today" icon={UserPlus} onClick={onOpenNewLeads} ariaLabel={`New leads today: ${cards.newLeads.received}, ${cards.newLeads.needContact} need first contact. Open the list.`}>
+          <div className="mt-1.5 text-title leading-none font-medium tabular-nums text-ink">{cards.newLeads.received}</div>
+          <div className="mt-1.5 text-caption text-ink-4 tabular-nums">{cards.newLeads.received ? (cards.newLeads.needContact ? `${cards.newLeads.needContact} need first contact` : "All contacted") : "None yet today"}</div>
+        </SummaryCard>
+        <SummaryCard label="Consultations today" icon={CalendarDays} onClick={() => document.getElementById("sec-consults")?.scrollIntoView({ behavior: "smooth", block: "start" })} ariaLabel={`Consultations today: ${consultations.length}. ${consultSummary}.`}>
+          <div className="mt-1.5 text-title leading-none font-medium tabular-nums text-ink">{consultations.length}</div>
+          <div className={`mt-1.5 text-caption tabular-nums ${cards.consultations.toRecord ? "text-amber-700" : "text-ink-4"}`}>{consultations.length ? consultSummary : "None scheduled"}</div>
+        </SummaryCard>
+        <SummaryCard label="Follow-ups" icon={ListChecks} onClick={() => goQueue(cards.followups.overdue && !cards.followups.dueToday ? "overdue" : "today", "followups")} ariaLabel={`Follow-ups: ${cards.followups.dueToday} due today, ${cards.followups.overdue} overdue. Show them in the queue.`}>
+          <div className="mt-1.5 flex items-baseline gap-2 tabular-nums">
+            <span className="text-title leading-none font-medium text-ink">{cards.followups.dueToday}</span>
+            <span className="text-small text-ink-4">due today</span>
           </div>
-        </StatCard>
+          <div className={`mt-1.5 text-caption tabular-nums ${cards.followups.overdue ? "text-red-700 font-medium" : "text-ink-4"}`}>{cards.followups.overdue ? `${cards.followups.overdue} overdue` : "None overdue"}</div>
+        </SummaryCard>
+        <SummaryCard label="Outstanding payments" icon={IndianRupee} onClick={() => setPaymentsOpen(true)} ariaLabel={`Outstanding payments: ${cards.payments.customers} customers, ${fmtINR(cards.payments.amount)} outstanding${cards.payments.unknown ? `, ${cards.payments.unknown} without an amount` : ""}. Open the list.`}>
+          <div className="mt-1.5 flex items-baseline gap-2 tabular-nums">
+            <span className="text-title leading-none font-medium text-ink">{cards.payments.customers}</span>
+            <span className="text-small text-ink-4">customer{cards.payments.customers === 1 ? "" : "s"}</span>
+          </div>
+          <div className="mt-1.5 text-caption text-ink-4 tabular-nums truncate">
+            {cards.payments.customers ? `${fmtINR(cards.payments.amount)} outstanding${cards.payments.unknown ? ` · ${cards.payments.unknown} amount not set` : ""}` : "Nothing outstanding"}
+          </div>
+        </SummaryCard>
       </div>
 
-      <div className="mt-6 sm:mt-10 space-y-6">
-        {/* a) Needs your attention */}
-        <DaySection
-          id="sec-attention"
-          collapsed={daySections["sec-attention"]}
-          onToggle={() => toggleDaySection("sec-attention")}
-          title="Needs your attention"
-          count={attnRows.filter((i) => i.status === "open").length}
-          flash={flash === "sec-attention"}
-          right={
-            attnFilter ? (
-              <span className="inline-flex items-center gap-1 h-6 rounded-md border border-brand-line bg-brand-tint pl-2 pr-1 text-brand-strong">
-                {ATTN_FILTERS[attnFilter].label}
-                <button onClick={() => setAttnFilter(null)} aria-label="Clear filter" className="h-4 w-4 flex items-center justify-center rounded hover:bg-brand-line"><X className="h-3 w-3" /></button>
-              </span>
-            ) : "by urgency"
-          }
-        >
-          {attnRows.length === 0 && <div className="py-10 text-center text-body text-ink-4">You&apos;re all caught up here</div>}
-          {attnRows.map((item, rowI) => {
-            const Icon = ATTN_ICON[item.section];
-            const m = menuFor(item.id);
-            return (
-              <DayRow
-                key={item.id}
-                index={rowI}
-                rowId={item.id}
-                selected={selectedId === item.id}
-                onSelect={setSelectedId}
-                leaving={item.status === "leaving"}
-                lead={<span className={`w-5 flex justify-center shrink-0 ${item.section === "respond" ? "text-amber-600" : item.section === "overdue" ? "text-red-500" : "text-ink-4"}`}><Icon className="h-4 w-4" strokeWidth={1.75} /></span>}
-                name={item.name}
-                short={item.short}
-                context={item.reason || item.note}
-                onName={() => onOpen(item)}
-                status={attnStatus(item)}
-                action={<SmallButton onClick={() => actions.primary(item)}>{ACTION_SHORT[item.action] || item.action}</SmallButton>}
-                hoverIcons={hoverPair(item.id)}
-                onSwipeRight={() => actions.done(item, "Done")}
-                onSwipeLeft={() => actions.snooze(item, "tomorrow, 10:00 am")}
-                menu={
-                  m === "snooze" ? <SnoozeMenu onPick={(label) => { setRowMenu(null); actions.snooze(item, label); }} /> : m === "done" ? <OutcomeMenu onPick={(o) => { setRowMenu(null); actions.done(item, o); }} /> : null
-                }
-              />
-            );
-          })}
-        </DaySection>
+      {/* Action queue */}
+      <section ref={queueRef} id="sec-attention" aria-labelledby="h-attention" className="mt-8 sm:mt-10 scroll-mt-6">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line">
+          <div>
+            <h2 id="h-attention" className="text-body-lg font-medium text-ink">Needs your attention</h2>
+            <div role="tablist" aria-label="Action queue" className="mt-2 flex items-center gap-5">
+              {QUEUE_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  id={`tab-${t.id}`}
+                  aria-selected={tab === t.id}
+                  aria-controls="queue-panel"
+                  onClick={() => setTab(t.id)}
+                  className={`relative h-9 flex items-center gap-1.5 text-body transition-colors duration-150 ${tab === t.id ? "text-ink font-medium" : "text-ink-4 hover:text-ink"}`}
+                >
+                  {t.label}
+                  <span className={`text-caption tabular-nums ${t.id === "overdue" && counts.overdue ? "text-red-700 font-medium" : "text-ink-4 font-normal"}`}>{counts[t.id]}</span>
+                  {tab === t.id && <span className="absolute -bottom-px left-0 right-0 h-[1.5px] rounded-full bg-ink" />}
+                </button>
+              ))}
+            </div>
+          </div>
+          {kindFilter && (
+            <span className="mb-2 inline-flex items-center gap-1 h-7 rounded-md border border-brand-line bg-brand-tint pl-2 pr-1 text-small text-brand-strong">
+              {KIND_FILTERS[kindFilter].label}
+              <button type="button" onClick={() => setKindFilter(null)} aria-label="Show all actions" className="h-5 w-5 flex items-center justify-center rounded hover:bg-brand-line"><X className="h-3 w-3" /></button>
+            </span>
+          )}
+        </div>
+        <div id="queue-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+          {tab === "scheduling" && rows.length > 0 && (
+            <p className="px-1 pt-3 text-small leading-5 text-ink-4">Open leads with no task, no booked consultation and no waiting date. Give each a next step or a date to wait until.</p>
+          )}
+          {rows.length === 0 ? (
+            <div className="py-12 text-center">
+              <Check className="h-5 w-5 mx-auto text-ink-4 mb-2" />
+              <div className="text-body text-ink-3">{QUEUE_TABS.find((t) => t.id === tab).empty}</div>
+            </div>
+          ) : (
+            groups.map((g) => {
+              const list = shownIn(g);
+              return (
+                <div key={g.id}>
+                  {g.label && (
+                    <div className="flex items-center justify-between gap-3 px-1 pt-4 pb-1.5">
+                      <h3 className="text-small font-medium text-ink-3">{g.label} <span className="font-normal text-ink-4 tabular-nums">· {g.rows.length}</span></h3>
+                      {g.id === "older" && (
+                        <button type="button" onClick={() => setOlderOpen((o) => !o)} aria-expanded={!g.folded} className="text-small text-ink-3 hover:text-ink underline-offset-2 hover:underline">
+                          {g.folded ? "Show" : "Hide"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {!g.folded && (
+                    <>
+                      <ul className="divide-y divide-line-subtle border-y border-line-subtle" aria-label={`${g.label || QUEUE_TABS.find((t) => t.id === tab).label}: ${g.rows.length} action${g.rows.length === 1 ? "" : "s"}`}>
+                        {list.map((row) => (
+                          <ActionRow
+                            key={row.id}
+                            row={row}
+                            now={now}
+                            selected={selectedId === row.id}
+                            called={called.has(row.id)}
+                            onSelect={setSelectedId}
+                            onOpenLead={() => onOpenLead(row.leadId)}
+                            onCall={() => call(row)}
+                            onWhatsApp={() => whatsapp(row)}
+                            onRecord={() => setDialog({ type: "outcome", row })}
+                            onSchedule={() => setDialog({ type: "schedule", row })}
+                            onSnooze={() => setDialog({ type: "snooze", row })}
+                            onRecordConsult={() => onOpenConsult(row.consultId, "outcome")}
+                          />
+                        ))}
+                      </ul>
+                      {g.rows.length > list.length && (
+                        <button type="button" onClick={() => setShownBy((m) => ({ ...m, [g.id]: list.length + QUEUE_PAGE }))} className="mt-1 w-full h-9 rounded-md text-small text-ink-3 hover:bg-surface-hover hover:text-ink transition-colors duration-150">
+                          Show {Math.min(QUEUE_PAGE, g.rows.length - list.length)} more · {g.rows.length - list.length} not shown
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
 
-        {/* b) Today's consultations */}
-        <DaySection
-          id="sec-consults"
-          delay={160}
-          collapsed={daySections["sec-consults"]}
-          onToggle={() => toggleDaySection("sec-consults")}
-          title="Today's consultations"
-          count={consults.length}
-          flash={flash === "sec-consults"}
-          right={<button onClick={onCalendar} className="hover:text-ink transition-colors duration-150">Calendar</button>}
-        >
-          {consults.map((c, rowI) => {
-            const rid = `s:${c.id}`;
-            const st = scheduleStatus(c);
-            const m = menuFor(rid);
-            return (
-              <DayRow
-                key={c.id}
-                index={rowI + 4}
-                rowId={rid}
-                selected={selectedId === rid}
-                onSelect={setSelectedId}
-                highlight={st.hot}
-                lead={<span className="w-[62px] shrink-0 text-small text-ink-3 tabular-nums">{fmtTime(c.at)}</span>}
-                name={c.name}
-                short={c.short}
-                context={c.note}
-                onName={() => onOpen({ ...c, section: "schedule", tag: c.type })}
-                status={st.node}
-                action={
-                  st.outcome ? (
-                    <SmallButton onClick={() => toggleMenu(rid, "outcome")}><Pencil className="h-3.5 w-3.5" /> Log outcome</SmallButton>
-                  ) : c.outcome ? null : c.mode === "video" ? (
-                    <SmallButton onClick={() => openWhatsApp(c.phone)}><Video className="h-3.5 w-3.5" /> Join</SmallButton>
-                  ) : (
-                    <SmallButton onClick={() => openCall(c.phone)}><Phone className="h-3.5 w-3.5" /> Call</SmallButton>
-                  )
-                }
-                menu={m === "outcome" ? <OutcomeMenu onPick={(o) => { setRowMenu(null); logScheduleOutcome(c, o); }} /> : null}
-              />
-            );
-          })}
-        </DaySection>
+      {/* Today's consultations */}
+      <section id="sec-consults" aria-labelledby="h-consults" className="mt-10 scroll-mt-6">
+        <div className="flex items-center justify-between gap-3 pb-2 border-b border-line">
+          <h2 id="h-consults" className="text-body-lg font-medium text-ink">Today&apos;s consultations</h2>
+          <span className="text-small text-ink-4 tabular-nums">{consultSummary}</span>
+        </div>
+        {consultations.length === 0 ? (
+          <div className="py-8 text-center text-body text-ink-4">No consultations scheduled today</div>
+        ) : (
+          <ul className="divide-y divide-line-subtle border-b border-line-subtle">
+            {consultations.map((c) => {
+              // Same status wording as the Consultations page
+              const st = consultStatus(c.raw, now);
+              const care = leadCareLine(c.lead, now);
+              const services = (c.lead.services || []).join(", ");
+              return (
+                <li key={c.id} className="grid grid-cols-1 sm:grid-cols-[72px_minmax(0,1fr)_auto] gap-x-4 gap-y-2 px-3 sm:px-4 py-3">
+                  <div className="text-body font-medium text-ink tabular-nums">{fmtIstTime(c.start)}</div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-1.5">
+                      <button type="button" onClick={() => onOpenLead(c.leadId)} className="font-medium text-ink hover:underline underline-offset-2 decoration-line-heavy">{c.name}</button>
+                      {c.care && <span className="text-small text-ink-4">· {c.care}</span>}
+                    </div>
+                    <div className="mt-0.5 text-small text-ink-4 truncate">{[services, care, c.mode && `${c.mode[0].toUpperCase()}${c.mode.slice(1)} consultation`].filter(Boolean).join(" · ") || "Care requirement not recorded"}</div>
+                    <div className={`mt-1 inline-flex items-center gap-1.5 h-[22px] rounded-md px-2 text-small ${st.cls}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} aria-hidden="true" />
+                      {st.label}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:justify-end sm:self-center">
+                    {(c.status === "upcoming" || c.status === "live") && c.phone && (
+                      c.mode === "video"
+                        ? <button type="button" onClick={() => openWhatsApp(c.phone)} className={mdBtn()} aria-label={`Join meeting with ${c.name} on WhatsApp`}><Video className="h-3.5 w-3.5" /> Join meeting</button>
+                        : <button type="button" onClick={() => openCall(c.phone)} className={mdBtn()} aria-label={`Call ${c.name}`}><Phone className="h-3.5 w-3.5" /> Call</button>
+                    )}
+                    <button type="button" onClick={() => onOpenLead(c.leadId)} className={mdBtn()}>Open lead</button>
+                    {(c.status === "upcoming" || c.status === "live" || c.status === "needsOutcome") && (
+                      <button type="button" onClick={() => onOpenConsult(c.id, "notes")} className={mdBtn("ghost")}>Reschedule</button>
+                    )}
+                    {c.status === "needsOutcome" && (
+                      <button type="button" onClick={() => onOpenConsult(c.id, "outcome")} className={mdBtn("primary")}>Record outcome</button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
-        {/* c) Customer opportunities */}
-        <DaySection
-          id="sec-opps"
-          delay={260}
-          collapsed={daySections["sec-opps"]}
-          onToggle={() => toggleDaySection("sec-opps")}
-          title="Customer opportunities"
-          count={oppTotal}
-          flash={flash === "sec-opps"}
-          right={<button onClick={onViewAllOpps} className="hover:text-ink transition-colors duration-150">View all</button>}
-        >
-          {opps.length === 0 && <div className="py-10 text-center text-body text-ink-4">No suggestions right now</div>}
-          {opps.map(({ lead, sugg, plan }, rowI) => {
-            const rid = `o:${lead.id}`;
-            const renew = sugg.kind === "renew";
-            return (
-              <DayRow
-                key={lead.id}
-                index={rowI + 7}
-                rowId={rid}
-                selected={selectedId === rid}
-                onSelect={setSelectedId}
-                lead={<span className="w-5 flex justify-center shrink-0 text-teal-600"><HeartHandshake className="h-4 w-4" strokeWidth={1.75} /></span>}
-                name={lead.name}
-                short={renew ? `care ends in ${plan.left} day${plan.left === 1 ? "" : "s"}` : `baby ${babyAge(lead, now) || "—"}`}
-                context={<span className="text-teal-700">{sugg.label}</span>}
-                contextTone="text-teal-700"
-                status={null}
-                action={renew ? <SmallButton onClick={() => onCallOpp(lead)}><Phone className="h-3.5 w-3.5" /> Call</SmallButton> : <SmallButton onClick={() => onSellOpp(lead, sugg)}>Sell</SmallButton>}
-                hoverIcons={hoverPair(rid, () => dismissOpp(lead, "snooze"), () => dismissOpp(lead, "done"))}
-              />
-            );
-          })}
-        </DaySection>
+      {/* Customer opportunities: only evidence-based ones (care plan ending), hidden when there are none */}
+      {opportunities.length > 0 && (
+        <section aria-labelledby="h-opps" className="mt-10">
+          <div className="flex items-center justify-between gap-3 pb-2 border-b border-line">
+            <h2 id="h-opps" className="text-body-lg font-medium text-ink">Customer opportunities</h2>
+            <span className="text-small text-ink-4">Care plans ending soon</span>
+          </div>
+          <ul className="divide-y divide-line-subtle border-b border-line-subtle">
+            {opportunities.map(({ lead, plan }) => (
+              <li key={lead.id} className="flex flex-wrap items-center gap-3 px-3 sm:px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <button type="button" onClick={() => onOpenLead(lead.id)} className="font-medium text-ink hover:underline underline-offset-2 decoration-line-heavy">{lead.name}</button>
+                  <div className="text-small text-ink-4">Care ends in {plan.left} day{plan.left === 1 ? "" : "s"}{lead.careEnd ? ` · ${fmtIstDay(lead.careEnd, now)}` : ""} · ask about extending</div>
+                </div>
+                {lead.phone && <button type="button" onClick={() => openCall(lead.phone)} className={mdBtn()}><Phone className="h-3.5 w-3.5" /> Call</button>}
+                <button type="button" onClick={() => onOpenLead(lead.id)} className={mdBtn()}>Open</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      </div>
+      {dialog && dialogLead && (dialog.type === "snooze" ? (
+        <SnoozeDialog row={dialog.row} now={now} onCancel={() => setDialog(null)} onSubmit={(at, ids) => submitSnooze(dialog.row, at, ids)} />
+      ) : (
+        <ActionDialog
+          key={dialog.row.id}
+          mode={dialog.type}
+          row={dialog.row}
+          lead={dialogLead}
+          now={now}
+          onCancel={() => setDialog(null)}
+          onSubmit={(p) => submitAction(dialog.row, p)}
+          onHandoff={(stage) => { setDialog(null); onRequestStage(dialogLead.id, stage); }}
+        />
+      ))}
+      {paymentsOpen && <PaymentsDialog payments={cards.payments} now={now} onClose={() => setPaymentsOpen(false)} onOpenLead={(id) => { setPaymentsOpen(false); onOpenLead(id); }} />}
     </div>
   );
 }
@@ -1124,6 +1333,8 @@ const digits = (s) => (s || "").replace(/\D/g, "").slice(-10);
 // Raw mobile digits for validation: drops a leading 91 or 0, keeps typos visible (no truncation)
 const mobileDigits = (s) => (s || "").replace(/\D/g, "").replace(/^(91(?=\d{10}$)|0(?=\d{10}$))/, "");
 const fmtINR = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
+// One short money format across the app: lakh with one decimal, crore with two (₹4.8L, ₹68.0L, ₹1.67Cr)
+const fmtShortINR = (n) => (n >= 1e7 ? `₹${(n / 1e7).toFixed(2)}Cr` : n >= 1e5 ? `₹${(n / 1e5).toFixed(1)}L` : fmtINR(n));
 const fmtKg = (arr) => (arr && arr.length ? arr.map((w) => (w == null ? "—" : Number(w).toFixed(1))).join(" / ") : "—");
 // Pregnancy leads are CW-P-0001, baby-born leads CW-B-0001 (number stays the same if the baby arrives)
 const customerId = (n, kind = "B") => `CW-${kind === "P" ? "P" : "B"}-${String(n).padStart(4, "0")}`;
@@ -1204,6 +1415,8 @@ const FILTER_FIELDS = [
   { id: "source", label: "Lead source", values: SOURCES, get: (l) => l.source },
   { id: "tag", label: "Outcome tag", values: OUTCOME_TAGS, get: (l) => l.tag || "" },
   { id: "priority", label: "Priority", values: ["High", "Medium", "Low"], get: (l) => leadPriority(l) },
+  // Leads that arrived (or enquired again) today, by the IST calendar day
+  { id: "received", label: "Received", values: ["Today"], get: (l) => (istDayDiff(l.enquiredAt || l.createdAt, new Date()) === 0 ? "Today" : "") },
 ];
 const FIELD = Object.fromEntries(FILTER_FIELDS.map((f) => [f.id, f]));
 const fieldMatches = (l, f, value) => [].concat(FIELD[f].get(l)).includes(value);
@@ -1504,6 +1717,23 @@ const inr = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
 function wonFields(extra) {
   return { package: extra.package, dealValue: extra.dealValue, amountPaid: extra.amountPaid, paymentMethod: extra.paymentMethod || null, customerSince: null, lastWin: { at: new Date(), paid: extra.amountPaid || 0 } };
 }
+
+// What a stage change does to a lead, wherever it's made from
+const stagePatch = (l, stage, extra = {}) => ({
+  prevStage: stage === "Lost" || stage === "Deferred" ? (PIPELINE.includes(l.stage) ? l.stage : l.prevStage) : null,
+  nextAction: NEXT_ACTION_BY_STAGE[stage] || null,
+  stage,
+  lostReason: stage === "Lost" ? extra.lostReason : null,
+  deferredUntil: stage === "Deferred" ? extra.deferredUntil : null,
+  deferNote: stage === "Deferred" ? extra.deferNote || "" : "",
+  ...(stage === "Deferred" ? { nextFollowUp: extra.deferredUntil, needsReply: false } : {}),
+  ...(stage === "Lost" || stage === "Won" ? { nextFollowUp: null, needsReply: false } : {}),
+  ...(stage === "Lost" || stage === "Won" || stage === "Deferred" ? { waiting: null } : {}),
+  ...(stage === "Won" && extra.dealValue ? wonFields(extra) : {}),
+  ...(extra.consult ? { nextFollowUp: extra.consult.start, needsReply: false, waiting: null } : {}),
+});
+const stageEventExtra = (stage, extra = {}) =>
+  stage === "Lost" ? extra.lostReason : stage === "Deferred" ? [extra.deferredUntil && `Until ${fmtShortDate(extra.deferredUntil)}`, extra.deferNote].filter(Boolean).join(" · ") : extra.consult ? `${extra.consult.mode} consult · ${fmtDay(extra.consult.start)}, ${fmtTime(extra.consult.start)}` : null;
 
 function WonForm({ lead, count, onCancel, onConfirm, newDeal = false }) {
   const [pkg, setPkg] = useState(newDeal ? "" : lead?.package || "");
@@ -1986,70 +2216,6 @@ const SheetHandle = () => (
     <span className="h-1 w-10 rounded-full bg-line-strong" />
   </div>
 );
-
-// Swipe a row on touch screens: right = done, left = snooze.
-// Vertical movement is left to the page so the list still scrolls; a horizontal drag follows the finger 1:1.
-// Release past 35% of the row or with a quick flick commits; otherwise it springs back.
-function useRowSwipe(rowRef, layerRef, { onRight, onLeft }) {
-  const st = useRef(null);
-  const swiped = useRef(false);
-  const onPointerDown = (e) => {
-    if (e.pointerType !== "touch" || (!onRight && !onLeft)) return;
-    st.current = { x0: e.clientX, y0: e.clientY, dx: 0, axis: null, lastX: e.clientX, lastT: performance.now(), v: 0, past: false, id: e.pointerId };
-    swiped.current = false;
-  };
-  const onPointerMove = (e) => {
-    const s = st.current, el = rowRef.current;
-    if (!s || !el) return;
-    const dx = e.clientX - s.x0, dy = e.clientY - s.y0;
-    if (!s.axis) {
-      if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { st.current = null; return; }
-      if (Math.abs(dx) < 8) return;
-      s.axis = "x";
-      el.setPointerCapture?.(s.id);
-      el.style.transition = "none";
-      if (layerRef.current) layerRef.current.style.opacity = "1";
-    }
-    const w = el.offsetWidth;
-    const allowed = (dx > 0 && onRight) || (dx < 0 && onLeft);
-    const limit = w * 0.6;
-    let x = allowed ? dx : dx * 0.15;
-    if (Math.abs(x) > limit) x = Math.sign(x) * (limit + (Math.abs(x) - limit) * 0.2);
-    s.dx = x;
-    const t = performance.now();
-    s.v = (e.clientX - s.lastX) / Math.max(1, t - s.lastT);
-    s.lastX = e.clientX; s.lastT = t;
-    el.style.transform = `translateX(${x}px)`;
-    const past = allowed && Math.abs(x) > w * 0.35;
-    if (past !== s.past) { s.past = past; if (past) navigator.vibrate?.(6); layerRef.current?.setAttribute("data-past", past ? "1" : ""); }
-  };
-  const end = (cancel) => {
-    const s = st.current, el = rowRef.current;
-    st.current = null;
-    if (!s || !s.axis || !el) return;
-    swiped.current = true;
-    const w = el.offsetWidth;
-    const dir = Math.sign(s.dx);
-    const commit = !cancel && ((dir > 0 && onRight) || (dir < 0 && onLeft)) && (Math.abs(s.dx) > w * 0.35 || (Math.abs(s.v) > 0.6 && Math.sign(s.v) === dir && Math.abs(s.dx) > 30));
-    const reset = () => { el.style.transition = ""; el.style.transform = ""; if (layerRef.current) { layerRef.current.style.opacity = ""; layerRef.current.setAttribute("data-past", ""); } };
-    if (commit) {
-      el.style.transition = "transform 200ms cubic-bezier(0.22, 1, 0.36, 1)";
-      el.style.transform = `translateX(${dir * w}px)`;
-      setTimeout(() => { (dir > 0 ? onRight : onLeft)(); }, 170);
-      setTimeout(reset, 600); // ready again if the action is undone
-    } else {
-      el.style.transition = "transform 260ms cubic-bezier(0.34, 1.36, 0.64, 1)";
-      el.style.transform = "";
-      setTimeout(reset, 280);
-    }
-  };
-  return {
-    onPointerDown, onPointerMove,
-    onPointerUp: () => end(false),
-    onPointerCancel: () => end(true),
-    onClickCapture: (e) => { if (swiped.current) { e.stopPropagation(); e.preventDefault(); swiped.current = false; } },
-  };
-}
 
 // Side panels: move focus in on open, Esc closes, focus goes back to whatever opened it
 function usePanelFocus(open, ref, onClose) {
@@ -4110,25 +4276,11 @@ function LeadsPage({ leads, setLeads, now, showToast, dismissToast, setToastRais
     ids.forEach((id) => {
       const l = leads.find((x) => x.id === id);
       if (l && l.stage !== stage)
-        logEvent(id, {
-          id: uid(), type: "stage", from: l.stage, to: stage, by: ME, at: new Date(),
-          extra: stage === "Lost" ? extra.lostReason : stage === "Deferred" ? [extra.deferredUntil && `Until ${fmtShortDate(extra.deferredUntil)}`, extra.deferNote].filter(Boolean).join(" · ") : extra.consult ? `${extra.consult.mode} consult · ${fmtDay(extra.consult.start)}, ${fmtTime(extra.consult.start)}` : null,
-        });
+        logEvent(id, { id: uid(), type: "stage", from: l.stage, to: stage, by: ME, at: new Date(), extra: stageEventExtra(stage, extra) });
     });
     mutate(
       ids,
-      (l) => ({
-        prevStage: stage === "Lost" || stage === "Deferred" ? (PIPELINE.includes(l.stage) ? l.stage : l.prevStage) : null,
-        nextAction: NEXT_ACTION_BY_STAGE[stage] || null,
-        stage,
-        lostReason: stage === "Lost" ? extra.lostReason : null,
-        deferredUntil: stage === "Deferred" ? extra.deferredUntil : null,
-        deferNote: stage === "Deferred" ? extra.deferNote || "" : "",
-        ...(stage === "Deferred" ? { nextFollowUp: extra.deferredUntil, needsReply: false } : {}),
-        ...(stage === "Lost" || stage === "Won" ? { nextFollowUp: null, needsReply: false } : {}),
-        ...(stage === "Won" && extra.dealValue ? wonFields(extra) : {}),
-        ...(extra.consult ? { nextFollowUp: extra.consult.start, needsReply: false } : {}),
-      }),
+      (l) => stagePatch(l, stage, extra),
       stage === "Won" ? `${nameOrCount(ids)} ${ids.length > 1 ? "are" : "is"} now in Paid customers` : extra.consult ? `Consult booked for ${nameOrCount(ids)} · ${fmtDay(extra.consult.start)}, ${fmtTime(extra.consult.start)}` : `Moved ${nameOrCount(ids)} to ${stage}`
     );
   };
@@ -5707,8 +5859,8 @@ const FU_TYPE_COLOR = {
 /* ---------- Helpers ---------- */
 
 const fuGroup = (f, now) => {
-  const diff = dayDiff(f.due, now);
-  if (diff < 0) return "overdue";
+  if (f.due < now) return "overdue"; // past its due time, same as My day
+  const diff = istDayDiff(f.due, now);
   if (diff === 0) return "today";
   if (diff === 1) return "tomorrow";
   if (diff <= 6) return "week";
@@ -5741,10 +5893,7 @@ const leadCareLine = (l, now) =>
   l ? [`${l.careKind === "B" ? (babyAge(l, now) ? `Baby ${babyAge(l, now)}` : "Baby born") : (careStage(l, now).split(" · ")[1] ? `Expecting ${careStage(l, now).split(" · ")[1]}` : "Expecting")}${l.babies > 1 ? " · twins" : ""}`, l.package].filter(Boolean).join(" · ") : "";
 
 const fuDueLabel = (f, now, group) => {
-  if (group === "overdue") {
-    const n = -dayDiff(f.due, now);
-    return { text: `${n} day${n > 1 ? "s" : ""} late`, late: true };
-  }
+  if (group === "overdue") return { text: dueText({ due: f.due, overdueBy: now - f.due }, now).replace(/ · was .*/, ""), late: true };
   if (group === "today") return { text: fmtTime(f.due), late: f.due < now };
   if (group === "tomorrow") return { text: fmtTime(f.due), late: false };
   return { text: `${f.due.toLocaleDateString("en-GB", { weekday: "short" })} ${f.due.getDate()} · ${fmtTime(f.due)}`, late: false };
@@ -6013,7 +6162,7 @@ function FollowUpsPage({ followups, setFollowups, leads, setLeads, now, showToas
     return (!types.length || types.includes(f.type)) && (!stages.length || stages.includes(l?.stage)) && (!tags.length || tags.includes(l?.tag));
   };
 
-  const open = followups.filter((f) => (f.status === "open" || f.status === "leaving") && passes(f));
+  const open = followups.filter((f) => (f.status === "open" || f.status === "leaving") && leadById(f.leadId)?.stage !== "Lost" && passes(f));
   const openCount = open.filter((f) => f.status === "open").length;
   const rangeStart = range === "today" ? startOfDay(now) : range === "week" ? new Date(startOfDay(now) - 6 * DAY) : new Date(startOfDay(now) - 29 * DAY);
   const completed = followups.filter((f) => f.status === "done" && passes(f) && f.completedAt >= rangeStart).sort((a, b) => b.completedAt - a.completedAt);
@@ -6952,7 +7101,7 @@ function MonthGrid({ anchorDate, consults, leadOf, now, nextId, onPick, onDay })
 
 /* ---------- Page ---------- */
 
-function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showToast, dismissToast, timelines, setTimelines, setFollowups, onOpenRecord }) {
+function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showToast, dismissToast, timelines, setTimelines, setFollowups, onOpenRecord, request }) {
   const [view, setView] = useState("list");
   const [tab, setTab] = useState("today");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -7002,6 +7151,10 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
     }
     setDrawerOpen(true);
   };
+  // My day's "Record outcome" and "Reschedule" open the consultation here, in the existing forms
+  useEffect(() => {
+    if (request?.id && consults.some((c) => c.id === request.id)) openConsult(request.id, request.mode || "notes");
+  }, [request]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const k = (e) => {
       if (e.key === "Escape" && drawerOpen && !confirmNoShow && !confirmCancel && !bookOpen) setDrawerOpen(false);
@@ -7054,7 +7207,7 @@ function ConsultationsPage({ consults, setConsults, leads, setLeads, now, showTo
   const patchConsult = (id, p) => setConsults((cs) => cs.map((c) => (c.id === id ? { ...c, ...p } : c)));
 
   const book = (b) => {
-    const nc = { id: uid(), duration: 30, status: "scheduled", ...b };
+    const nc = { id: uid(), duration: 30, status: "scheduled", bookedAt: new Date(), ...b };
     const l = leadById(b.leadId);
     setConsults((cs) => [...cs, nc]);
     const evs = [{ id: uid(), type: "followup", by: ME, at: new Date(), when: b.start, action: `Consult booked · ${b.mode}` }];
@@ -9887,58 +10040,6 @@ export default function CradlewellCRM() {
   );
 }
 
-// My day "needs your attention" queue, built from live leads and follow-ups
-function buildQueueItems(leads, followups, now) {
-  const byId = new Map(leads.map((l) => [l.id, l]));
-  const shortOf = (l) => (l.careKind === "B" ? "Born" : l.dueDate ? `${Math.min(42, Math.max(4, 40 - Math.ceil((l.dueDate - now) / (7 * DAY))))}w` : "Exp.");
-  const base = (l) => ({ leadId: l.id, name: l.name, phone: l.phone, tag: l.tag || l.stage, stage: careStage(l, now), short: shortOf(l), source: l.source || "" });
-  const out = [];
-  // New leads nobody has contacted yet (last 14 days, so an old backlog doesn't flood the day)
-  // A new lead's first-call task is shown once, as the new-lead row (done/snooze act on that task)
-  const firstTask = new Map();
-  followups
-    .filter((f) => f.status === "open")
-    .forEach((f) => { const cur = firstTask.get(f.leadId); if (!cur || f.due < cur.due) firstTask.set(f.leadId, f); });
-  const shownAsNew = new Set();
-  leads
-    .filter((l) => l.stage === "New" && l.lastActivity?.none && l.createdAt >= FOLLOWUP_CUTOFF)
-    .forEach((l) => {
-      const f = firstTask.get(l.id);
-      if (f) shownAsNew.add(f.id);
-      out.push({ ...base(l), id: `n:${l.id}`, ...(f ? { fuId: f.id } : {}), section: "new", note: l.notes || "", reason: "New lead · not contacted", createdAt: l.createdAt.getTime(), action: "Call" });
-    });
-  followups
-    .filter((f) => f.status === "open" && !shownAsNew.has(f.id) && byId.has(f.leadId) && dayDiff(f.due, now) <= 0)
-    .forEach((f) => {
-      const l = byId.get(f.leadId);
-      const late = -dayDiff(f.due, now);
-      out.push({
-        ...base(l),
-        id: `f:${f.id}`,
-        fuId: f.id,
-        section: late > 0 ? "overdue" : "due",
-        note: f.action,
-        reason: `${late > 0 ? "Follow-up overdue" : "Follow-up due today"} · ${f.action}`,
-        late: late > 0 ? `${late}d overdue` : undefined,
-        action: f.type === "WhatsApp" ? "Open chat" : f.type === "Payment" ? "Resend link" : "Call",
-      });
-    });
-  leads
-    .filter((l) => l.stage === "Payment pending")
-    .forEach((l) => out.push({ ...base(l), id: `p:${l.id}`, section: "payment", note: l.package ? `${l.package} plan` : "", reason: "Payment pending", amount: Math.max(0, packageValue(l) - (l.amountPaid || 0)), late: l.paymentStatus || "Link sent", action: "Resend link" }));
-  return out;
-}
-
-// Snooze labels from SnoozeMenu → a date
-function snoozeDate(label) {
-  const d = new Date();
-  if (label.startsWith("later today")) { d.setHours(d.getHours() + 3, 0, 0, 0); return d; }
-  if (label.startsWith("tomorrow")) { d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); return d; }
-  const parsed = new Date(`${label.replace(/^\w+, /, "")} ${d.getFullYear()} 10:00`);
-  if (!isNaN(parsed)) { if (parsed < d) parsed.setFullYear(d.getFullYear() + 1); return parsed; }
-  d.setDate(d.getDate() + 3); d.setHours(10, 0, 0, 0); return d;
-}
-
 const telHref = (phone) => `tel:${String(phone || "").replace(/[^\d+]/g, "")}`;
 const waHref = (phone, text) => {
   let d = String(phone || "").replace(/\D/g, "");
@@ -9959,17 +10060,10 @@ function CRMApp({ initial }) {
     return () => { clearInterval(t); window.removeEventListener("focus", onFocus); };
   }, []);
 
-  // Queue status overlay for My day rows (open | leaving | done | snoozed), keyed by row id
-  const [itemState, setItemState] = useState({});
-
-  const [collapsed, setCollapsed] = useState(() =>
-    Object.fromEntries(QUEUE_SECTIONS.map((s) => [s.id, !!s.defaultCollapsed]))
-  );
   const [activeNav, setActiveNav] = useState("my-day");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [drawerLead, setDrawerLead] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
   const [rowMenu, setRowMenu] = useState(null); // { id, kind: "snooze" | "done" }
   // Close an open row menu (Snooze, Done, outcome) on any press outside it or its own button
   useEffect(() => {
@@ -10070,8 +10164,36 @@ function CRMApp({ initial }) {
     if (moved.length) setFollowups((fs) => settleTasks(fs, moved, new Map([...before].map(([id, v]) => [id, v.stage]))));
   }, [leads]);
   const [consults, setConsults] = useState(() => initial.consults);
+  // Follow-up dates set on a lead (Snooze / Set follow-up on Leads and the lead
+  // record) become real tasks, so they show in Follow-ups and My day.
+  const fuDateSeen = useRef(null);
+  const fuDatePending = useRef(new Set());
+  useEffect(() => {
+    const before = fuDateSeen.current;
+    fuDateSeen.current = new Map(leads.map((l) => [l.id, l.nextFollowUp instanceof Date ? l.nextFollowUp.getTime() : null]));
+    if (!before) return;
+    leads.forEach((l) => {
+      const t = l.nextFollowUp instanceof Date ? l.nextFollowUp.getTime() : null;
+      if (t && before.has(l.id) && before.get(l.id) !== t && !isRemote(l)) fuDatePending.current.add(l.id);
+    });
+  }, [leads]);
+  // Bookings close booking tasks, full payment closes payment tasks, a part
+  // payment keeps one payment follow-up. Runs after changes settle; idempotent.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const ids = new Set(fuDatePending.current);
+      fuDatePending.current.clear();
+      const now2 = new Date();
+      setFollowups((fs) => {
+        let out = reconcileTasks(fs, leads, consults, now2);
+        if (ids.size) out = followUpDatesToTasks(out, leads.filter((l) => ids.has(l.id)), consults, now2);
+        return out;
+      });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [leads, followups, consults]);
   // Booking from a stage change (Leads, Pipeline, lead record) — same shape as the Consultations page
-  const bookConsult = (b) => setConsults((cs) => [...cs, { id: uid(), duration: 30, status: "scheduled", ...b }]);
+  const bookConsult = (b) => setConsults((cs) => [...cs, { id: uid(), duration: 30, status: "scheduled", bookedAt: new Date(), ...b }]);
 
   /* ---------- Saving: every change to leads / follow-ups / consults / timelines / settings is diffed and queued ---------- */
   const saved = useRef({ leads, followups, consults, timelines, settings, customViews });
@@ -10117,10 +10239,12 @@ function CRMApp({ initial }) {
   // minutes while it's visible. Anything this tab is still saving keeps its
   // local version; the rest takes the server's.
   const lastRefresh = useRef(Date.now());
+  const [refreshState, setRefreshState] = useState(() => ({ updatedAt: new Date(), error: false }));
+  const refreshNow = useRef(null);
   useEffect(() => {
     let busy = false;
-    const refresh = async () => {
-      if (busy || document.hidden) return;
+    const refresh = async (force = false) => {
+      if (busy || (document.hidden && !force)) return;
       busy = true;
       const since = Date.now();
       try {
@@ -10134,12 +10258,15 @@ function CRMApp({ initial }) {
         setFollowups((cur) => mergeRemote(cur, d.followups, take("followups"), gone("followups")));
         setConsults((cur) => mergeRemote(cur, d.consults, take("consults"), gone("consults")));
         setTimelines((cur) => mergeRemoteMap(cur, d.timelines, take("timelines")));
+        setRefreshState({ updatedAt: new Date(), error: false });
       } catch {
-        // offline or signed out: the next attempt picks it up
+        // offline or signed out: the next attempt picks it up. My day says it's showing older data.
+        setRefreshState((st) => ({ ...st, error: true }));
       } finally {
         busy = false;
       }
     };
+    refreshNow.current = refresh;
     const onFocus = () => {
       if (Date.now() - lastRefresh.current > 60000) refresh();
     };
@@ -10156,53 +10283,28 @@ function CRMApp({ initial }) {
     };
   }, []);
 
-  // Live data → My day queue, today's schedule, this month's revenue, report rows
+  // My day inputs: this month's revenue, and the stale-stage limits from Settings → Pipeline stages
   const minuteKey = Math.floor(now / 60000);
-  const baseItems = useMemo(() => buildQueueItems(leads, followups, new Date()), [leads, followups, minuteKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  const items = useMemo(() => baseItems.map((i) => ({ ...i, status: "open", ...(itemState[i.id] || {}) })), [baseItems, itemState]);
-  const setItems = (fn) => {
-    const next = fn(items);
-    setItemState((st) => {
-      const out = { ...st };
-      next.forEach((i) => {
-        if (i.status === "open") delete out[i.id];
-        else out[i.id] = { status: i.status, outcome: i.outcome, snoozedUntil: i.snoozedUntil };
-      });
-      return out;
-    });
-  };
-  {
-    const leadOf = new Map(leads.map((l) => [l.id, l]));
-    const today = consults
-      .filter((c) => c.status !== "cancelled" && c.start && dayDiff(c.start, now) === 0)
-      .sort((a, b) => a.start - b.start)
-      .map((c) => {
-        const l = leadOf.get(c.leadId);
-        const at = c.start;
-        return {
-          id: c.id, consultId: c.id, leadId: c.leadId, type: "Consult", at,
-          time: `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`,
-          name: l?.name || "Lead", phone: l?.phone || "", short: l ? (l.careKind === "B" ? "Born" : "Exp.") : "", stage: l ? careStage(l, now) : "",
-          note: c.note || "", mode: String(c.mode || "").toLowerCase(), confirm: c.confirmed ? "confirmed" : "awaiting", source: l?.source || "",
-          doneOutcome: c.status === "done" ? c.outcome || "Done" : c.status === "noshow" ? "No-show" : null,
-        };
-      });
-    SCHEDULE.splice(0, SCHEDULE.length, ...today);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    let care = 0;
-    let experts = 0;
+  const revenue = useMemo(() => {
+    const p = istParts(now);
+    const monthStart = istAt(p.y, p.mo, 1).getTime();
+    let amount = 0;
     leads.forEach((l) => {
       // Money received on deals closed this month (a customer can have several: trial, month, extension)
-      (l.wonDeals || []).forEach((d) => { if (d.at && d.at.getTime() >= monthStart) care += d.paid || 0; });
-      if (l.lastWin && new Date(l.lastWin.at).getTime() >= monthStart) care += l.lastWin.paid || 0;
-      (l.sessions || []).forEach((x) => { if (x.paid && x.at && new Date(x.at).getTime() >= monthStart) experts += x.price || 0; });
+      (l.wonDeals || []).forEach((d) => { if (d.at && d.at.getTime() >= monthStart) amount += d.paid || 0; });
+      if (l.lastWin && new Date(l.lastWin.at).getTime() >= monthStart) amount += l.lastWin.paid || 0;
     });
-    Object.assign(REVENUE_MONTH, { care, experts, target: Number(settings.revenueTarget) || 500000 });
-  }
+    return { amount, target: Number(settings.revenueTarget) || 500000, month: new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", month: "short" }).format(now) };
+  }, [leads, settings.revenueTarget, minuteKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mydayRules = useMemo(
+    () => ({ stuckDays: Object.fromEntries(settings.stages.filter((st) => st.stuck != null && st.name).map((st) => [st.name, Number(st.stuck)])) }),
+    [settings.stages],
+  );
   if (REPORT_INPUT.leads !== leads || REPORT_INPUT.consults !== consults || REPORT_INPUT.timelines !== timelines)
     Object.assign(REPORT_INPUT, { leads, consults, timelines, version: REPORT_INPUT.version + 1 });
   const consultsToday = consults.filter((c) => dayDiff(c.start, now) === 0).length;
-  const fuOverdue = followups.filter((f) => f.status === "open" && dayDiff(f.due, now) < 0).length;
+  const leadIndex = useMemo(() => new Map(leads.map((l) => [l.id, l])), [leads]);
+  const fuOverdue = followups.filter((f) => taskVisible(f, leadIndex.get(f.leadId)) && f.due < now).length;
 
   const showToast = useCallback((message, undo) => {
     clearTimeout(toastTimer.current);
@@ -10224,156 +10326,41 @@ function CRMApp({ initial }) {
     return () => setAssignedHandler(null);
   }, []);
 
-  // My day: attention filter (from stat cards), customer opportunities, and J/K order across all three sections
-  const [attnFilter, setAttnFilter] = useState(null);
-  const [daySections, setDaySections] = useState({}); // section id -> collapsed
-  const toggleDaySection = (id) => {
-    setDaySections((d) => ({ ...d, [id]: !d[id] }));
-    setRowMenu(null);
-    const prefix = { "sec-attention": null, "sec-consults": "s:", "sec-opps": "o:" }[id];
-    if (selectedId && !daySections[id] && (prefix ? selectedId.startsWith(prefix) : !selectedId.includes(":"))) setSelectedId(null);
-  };
-  const [oppHidden, setOppHidden] = useState(() => new Set());
-  const [customersTabRequest, setCustomersTabRequest] = useState(null);
-  const oppAll = useMemo(() => {
+  // My day: customer opportunities backed by data only (a care plan ending soon)
+  const [customersTabRequest] = useState(null);
+  const opportunities = useMemo(() => {
     const t = Date.now();
     return leads
       .filter((l) => l.stage === "Won")
       .map((lead) => ({ lead, plan: carePlan(lead, t), sugg: suggestFor(lead, t) }))
-      .filter((o) => o.plan && o.plan.status !== "completed" && ["expert", "renew"].includes(o.sugg?.kind))
-      .sort((a, b) => (a.sugg.kind === "renew") === (b.sugg.kind === "renew") ? (a.sugg.kind === "renew" ? a.plan.left - b.plan.left : ageDays(a.lead, t) - ageDays(b.lead, t)) : a.sugg.kind === "renew" ? -1 : 1);
-  }, [leads, Math.floor(now / 60000)]); // eslint-disable-line react-hooks/exhaustive-deps
-  const oppVisible = oppAll.filter((o) => !oppHidden.has(o.lead.id));
-  // Top 6: the two most urgent renewals, then expert sales for the youngest babies, then the rest
-  const opps = (() => {
-    const ren = oppVisible.filter((o) => o.sugg.kind === "renew");
-    const exp = oppVisible.filter((o) => o.sugg.kind !== "renew");
-    return [...ren.slice(0, 2), ...exp, ...ren.slice(2)].slice(0, 6);
-  })();
-  const attnIds = items
-    .filter((i) => i.status === "open" && (!attnFilter || ATTN_FILTERS[attnFilter].sections.includes(i.section)))
-    .sort((a, b) => ATTN_ORDER.indexOf(a.section) - ATTN_ORDER.indexOf(b.section) || (a.waitingSince || 0) - (b.waitingSince || 0))
-    .map((i) => i.id);
-  const navIds = [
-    ...(daySections["sec-attention"] ? [] : attnIds),
-    ...(daySections["sec-consults"] ? [] : SCHEDULE.map((s) => `s:${s.id}`)),
-    ...(daySections["sec-opps"] ? [] : opps.map((o) => `o:${o.lead.id}`)),
-  ];
-  const dismissOpp = (lead, how) => {
-    setOppHidden((h) => new Set([...h, lead.id]));
-    const rid = `o:${lead.id}`;
-    if (selectedId === rid) {
-      const idx = navIds.indexOf(rid);
-      setSelectedId(navIds[idx + 1] ?? navIds[idx - 1] ?? null);
-    }
-    showToast(how === "snooze" ? `Snoozed ${lead.name} until tomorrow` : `Dismissed suggestion for ${lead.name}`, () => {
-      setOppHidden((h) => { const n = new Set(h); n.delete(lead.id); return n; });
-      dismissToast();
-    });
-  };
+      .filter((o) => o.plan && o.plan.status !== "completed" && o.sugg?.kind === "renew")
+      .sort((a, b) => a.plan.left - b.plan.left)
+      .slice(0, 6);
+  }, [leads, minuteKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openLeadRecord = (id) => {
     setRecordRequest({ id, key: Date.now() });
     setActiveNav("leads");
   };
-  const removeItem = (id, finalStatus, extra, message, apply, revert) => {
-    if (selectedId === id) {
-      const idx = navIds.indexOf(id);
-      setSelectedId(navIds[idx + 1] ?? navIds[idx - 1] ?? null);
-    }
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status: "leaving" } : i)));
-    setTimeout(() => {
-      setItems((prev) => prev.map((i) => (i.id === id && i.status === "leaving" ? { ...i, status: finalStatus, ...extra } : i)));
-      apply?.();
-    }, 160);
-    showToast(message, () => {
-      revert?.();
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status: "open", outcome: undefined, snoozedUntil: undefined } : i)));
-      dismissToast();
-    });
+  // Stage changes My day hands to the existing forms: lost reason, booking, payment (Won)
+  const [pendingStage, setPendingStage] = useState(null); // { id, stage }
+  const applyStage = (id, stage, extra = {}) => {
+    const l = leads.find((x) => x.id === id);
+    if (!l) return;
+    if (stage === "Won" && extra.dealValue) recordWin(id, extra);
+    if (stage === "Consult booked" && extra.consult) bookConsult(extra.consult);
+    if (l.stage !== stage)
+      setTimelines((t) => ({ ...t, [id]: [{ id: uid(), type: "stage", from: l.stage, to: stage, by: ME, at: new Date(), extra: stageEventExtra(stage, extra) }, ...(t[id] || buildTimeline(l))] }));
+    setLeads((ls) => ls.map((x) => (x.id === id ? { ...x, ...stagePatch(x, stage, extra) } : x)));
+    showToast(stage === "Won" ? `${l.name} is now in Paid customers` : extra.consult ? `Consult booked for ${l.name} · ${fmtDay(extra.consult.start)}, ${fmtTime(extra.consult.start)}` : `Moved ${l.name} to ${stage}`);
+  };
+  const [consultRequest, setConsultRequest] = useState(null);
+  const openConsult = (id, mode) => {
+    setConsultRequest({ id, mode, key: Date.now() });
+    setActiveNav("consultations");
   };
 
-  // Outcomes logged against past consults in Today's schedule
-  const [scheduleOutcomesLocal, setScheduleOutcomes] = useState({});
-  const scheduleOutcomes = { ...Object.fromEntries(SCHEDULE.filter((e) => e.doneOutcome).map((e) => [e.id, e.doneOutcome])), ...scheduleOutcomesLocal };
-  const logScheduleOutcome = (entry, outcome) => {
-    setScheduleOutcomes((o) => ({ ...o, [entry.id]: outcome }));
-    if (entry.consultId) setConsults((cs) => cs.map((c) => (c.id === entry.consultId ? { ...c, status: "done", outcome } : c)));
-    showToast(`Marked as ${outcome}`, () => {
-      setScheduleOutcomes((o) => {
-        const { [entry.id]: _, ...rest } = o;
-        return rest;
-      });
-      dismissToast();
-    });
-  };
-
-  // Stat cards: expand the related sections, scroll to the target and flash it
-  const [flash, setFlash] = useState(null);
-  const flashTimer = useRef(null);
-  const jumpTo = (elementId, sectionIds) => {
-    setDaySections((d) => ({ ...d, [elementId]: false }));
-    if (sectionIds.length) setCollapsed((c) => ({ ...c, ...Object.fromEntries(sectionIds.map((id) => [id, false])) }));
-    setTimeout(() => {
-      document.getElementById(elementId)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      clearTimeout(flashTimer.current);
-      setFlash(elementId);
-      flashTimer.current = setTimeout(() => setFlash(null), 1400);
-    }, 30);
-  };
-
-  const actions = {
-    open: (item) => item.leadId && openLeadRecord(item.leadId),
-    whatsapp: (item) => openWhatsApp(item.phone),
-    call: (item) => openCall(item.phone),
-    primary: (item) => (item.action === "Call" ? openCall(item.phone) : openWhatsApp(item.phone)),
-    // Follow-up rows really move / complete the follow-up; other rows are hidden for this session
-    snooze: (item, label) => {
-      const fu = item.fuId && followups.find((f) => f.id === item.fuId);
-      const due = snoozeDate(label);
-      removeItem(item.id, "snoozed", { snoozedUntil: label }, `Snoozed until ${label}`,
-        fu ? () => {
-          setFollowups((fs) => fs.map((f) => (f.id === fu.id ? { ...f, due } : f)));
-          setLeads((ls) => ls.map((l) => (l.id === fu.leadId ? { ...l, nextFollowUp: due } : l)));
-        } : null,
-        fu ? () => setFollowups((fs) => fs.map((f) => (f.id === fu.id ? fu : f))) : null);
-    },
-    done: (item, outcome) => {
-      const fu = item.fuId && followups.find((f) => f.id === item.fuId);
-      removeItem(item.id, "done", { outcome }, `Marked as ${outcome}`,
-        fu ? () => {
-          setFollowups((fs) => fs.map((f) => (f.id === fu.id ? { ...f, status: "done", completedAt: new Date(), completedBy: ME, outcome } : f)));
-          setLeads((ls) => ls.map((l) => (l.id === fu.leadId ? { ...l, tag: OUTCOME_TAGS.includes(outcome) ? outcome : l.tag, lastActivity: { type: fu.type || "Call", by: ME, at: new Date() } } : l)));
-          setTimelines((t) => {
-            const l = leads.find((x) => x.id === fu.leadId);
-            if (!l) return t;
-            return { ...t, [l.id]: [{ id: uid(), type: "followup", done: true, by: ME, at: new Date(), outcome, action: fu.action }, ...(t[l.id] || buildTimeline(l))] };
-          });
-        } : null,
-        fu ? () => setFollowups((fs) => fs.map((f) => (f.id === fu.id ? fu : f))) : null);
-    },
-  };
-
-  const rowProps = (item) => ({
-    selected: selectedId === item.id,
-    menu: rowMenu?.id === item.id ? rowMenu.kind : null,
-    setMenu: (kind) => setRowMenu(kind ? { id: item.id, kind } : null),
-    onSelect: setSelectedId,
-    onOpen: actions.open,
-    onAction: actions.primary,
-    onWhatsApp: actions.whatsapp,
-    onSnooze: actions.snooze,
-    onDone: actions.done,
-  });
-
-  // Live counts
-  const openItems = items.filter((i) => i.status === "open");
-  const countIn = (s) => openItems.filter((i) => i.section === s).length;
-  const overdueCount = countIn("overdue");
-  const dueCount = countIn("due");
-  const pendingOutcomes = SCHEDULE.filter((e) => needsOutcome(e, now, scheduleOutcomes)).length;
-
-  // Keyboard: Ctrl/Cmd+K palette, Esc closes, J/K/C/W/S/E/Enter on the queue
+  // Keyboard: Ctrl/Cmd+K palette, Esc closes (My day handles its own queue keys)
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -10388,52 +10375,6 @@ function CRMApp({ initial }) {
         setSidebarOpen(false);
         return;
       }
-      if (activeNav !== "my-day" || paletteOpen || drawerLead) return;
-      if (isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
-
-      const key = e.key.toLowerCase();
-      const idx = navIds.indexOf(selectedId);
-      const current = items.find((i) => i.id === selectedId && i.status === "open");
-
-      if (key === "j" || key === "k") {
-        e.preventDefault();
-        setRowMenu(null);
-        if (!navIds.length) return;
-        if (idx === -1) return setSelectedId(navIds[0]);
-        const next = key === "j" ? Math.min(idx + 1, navIds.length - 1) : Math.max(idx - 1, 0);
-        setSelectedId(navIds[next]);
-        return;
-      }
-      // Consultation rows
-      if (selectedId?.startsWith("s:")) {
-        const c = SCHEDULE.find((s) => `s:${s.id}` === selectedId);
-        const needs = needsOutcome(c, now, scheduleOutcomes);
-        if (key === "c" || (e.key === "Enter" && !rowMenu && !needs)) (c.mode === "video" ? openWhatsApp(c.phone) : openCall(c.phone));
-        else if ((key === "e" || e.key === "Enter") && needs) setRowMenu((m) => (m?.id === selectedId ? null : { id: selectedId, kind: "outcome" }));
-        else return;
-        e.preventDefault();
-        return;
-      }
-      // Customer opportunity rows
-      if (selectedId?.startsWith("o:")) {
-        const o = opps.find((x) => `o:${x.lead.id}` === selectedId);
-        if (!o) return;
-        if (key === "c") openCall(o.lead.phone);
-        else if (e.key === "Enter") o.sugg.kind === "renew" ? openCall(o.lead.phone) : openSell(o.lead.id, o.sugg.expert);
-        else if (key === "s") dismissOpp(o.lead, "snooze");
-        else if (key === "e") dismissOpp(o.lead, "done");
-        else return;
-        e.preventDefault();
-        return;
-      }
-      if (!current) return;
-      if (key === "c") actions.call(current);
-      else if (key === "w") actions.whatsapp(current);
-      else if (key === "s") setRowMenu((m) => (m?.id === current.id && m.kind === "snooze" ? null : { id: current.id, kind: "snooze" }));
-      else if (key === "e") setRowMenu((m) => (m?.id === current.id && m.kind === "done" ? null : { id: current.id, kind: "done" }));
-      else if (e.key === "Enter" && !rowMenu) actions.open(current);
-      else return;
-      e.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -10581,20 +10522,23 @@ function CRMApp({ initial }) {
           {activeNav === "my-day" ? (
             <MyDay
               now={now}
-              items={items}
               leads={leads}
-              onOpen={actions.open}
+              followups={followups}
+              consults={consults}
+              timelines={timelines}
+              rules={mydayRules}
+              revenue={revenue}
+              dataStatus={{ ...refreshState, onRetry: () => refreshNow.current?.(true) }}
+              opportunities={opportunities}
+              setFollowups={setFollowups}
+              setLeads={setLeads}
+              setTimelines={setTimelines}
               showToast={showToast}
-              md={{
-                daySections, toggleDaySection, selectedId, setSelectedId, rowMenu, setRowMenu, actions, scheduleOutcomes, logScheduleOutcome,
-                opps, oppTotal: oppVisible.length,
-                onSellOpp: (lead, sugg) => openSell(lead.id, sugg.expert),
-                onCallOpp: (lead) => openCall(lead.phone),
-                dismissOpp, attnFilter, setAttnFilter, jumpTo, flash,
-                onEditTarget: () => { setSettingsPageRequest({ page: "targets", key: Date.now() }); setActiveNav("settings"); },
-                onViewAllOpps: () => { setCustomersTabRequest({ tab: SELL_EXPERTS ? "ready" : "ending", key: Date.now() }); setActiveNav("customers"); },
-                onCalendar: () => setActiveNav("consultations"),
-              }}
+              onOpenLead={openLeadRecord}
+              onOpenConsult={openConsult}
+              onOpenNewLeads={() => { setLeadsFilterRequest({ filters: { received: ["Today"] }, key: Date.now() }); setActiveNav("leads"); }}
+              onRequestStage={(id, stage) => setPendingStage({ id, stage })}
+              onEditTarget={() => { setSettingsPageRequest({ page: "targets", key: Date.now() }); setActiveNav("settings"); }}
             />
           ) : activeNav === "customers" ? (
             <CustomersPage
@@ -10652,6 +10596,7 @@ function CRMApp({ initial }) {
               timelines={timelines}
               setTimelines={setTimelines}
               setFollowups={setFollowups}
+              request={consultRequest}
               onOpenRecord={(id) => {
                 setRecordRequest({ id, key: Date.now() });
                 setActiveNav("leads");
@@ -10753,6 +10698,19 @@ function CRMApp({ initial }) {
           openLeadRecord(l.id);
         }}
       />
+      {pendingStage && (
+        <StageExtraModal
+          pending={{ ids: [pendingStage.id], stage: pendingStage.stage }}
+          count={1}
+          lead={leads.find((l) => l.id === pendingStage.id)}
+          consults={consults}
+          onCancel={() => setPendingStage(null)}
+          onConfirm={(extra) => {
+            applyStage(pendingStage.id, pendingStage.stage, extra);
+            setPendingStage(null);
+          }}
+        />
+      )}
       <Toast toast={toast} onClose={dismissToast} raised={toastRaised} />
     </div>
   );
