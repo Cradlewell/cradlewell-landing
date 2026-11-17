@@ -10049,6 +10049,8 @@ const waHref = (phone, text) => {
 const openCall = (phone) => { if (phone) window.location.href = telHref(phone); };
 const openWhatsApp = (phone, text) => { if (phone) window.open(waHref(phone, text), "_blank", "noopener"); };
 
+const CRM_SECTIONS = ["my-day", "leads", "customers", "pipeline", "consultations", "follow-ups", "reports", "inbox", "settings"];
+
 function CRMApp({ initial }) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -10060,7 +10062,24 @@ function CRMApp({ initial }) {
     return () => { clearInterval(t); window.removeEventListener("focus", onFocus); };
   }, []);
 
-  const [activeNav, setActiveNav] = useState("my-day");
+  // The open section lives in the address (/crm#follow-ups), so a refresh or a
+  // shared link opens the same section instead of going back to My day.
+  const [activeNav, setActiveNav] = useState(() => {
+    const id = typeof window === "undefined" ? "" : decodeURIComponent(window.location.hash.slice(1));
+    return CRM_SECTIONS.includes(id) ? id : "my-day";
+  });
+  useEffect(() => {
+    const hash = activeNav === "my-day" ? "" : `#${activeNav}`;
+    if (window.location.hash !== hash) window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${hash}`);
+  }, [activeNav]);
+  useEffect(() => {
+    const onHash = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      setActiveNav(CRM_SECTIONS.includes(id) ? id : "my-day");
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [drawerLead, setDrawerLead] = useState(null);
